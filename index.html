@@ -2,11 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="hc-version" content="3.0-chiptune-album">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="hc-version" content="4.0-cozy">
+<meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
-<link rel="icon" href="data:,">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Critters">
+<meta name="application-name" content="Happy Critters">
+<meta name="format-detection" content="telephone=no">
 <title>Happy Critters — Hug the Gloom Away</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,6 +35,7 @@
   body { position: fixed; inset: 0; }
   #wrap {
     width: 100%; height: 100%;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     display: flex; align-items: center; justify-content: center;
     background: radial-gradient(ellipse at center, #2a2035 0%, #120e18 100%);
   }
@@ -46,7 +57,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v3 — chiptune soundtrack, Critter Album, accessories, events, power-ups, daily gifts
+// Happy Critters v4 — the Cozy Update: PWA/offline, tutorial, haptics, juicier hugs
 
 const W = 360;
 let H = 540;
@@ -55,7 +66,7 @@ const COMBO_WINDOW = 1.4;
 const SPAWN_BASE = 0.95;
 const SAVE_KEY = "happyCritters_v2";
 const SAVE_KEY_V1 = "happyCritters_v1";
-const SAVE_VER = 3;
+const SAVE_VER = 4;
 
 const C = {
   white: "#fffaf5", text: "#4a3050", textSoft: "#7a5a70",
@@ -1962,8 +1973,12 @@ let critterHugs = {}, friendLvl = {}, ownedAcc = {}, equipped = {};
 let lastGiftDay = "", giftStreak = 0, bestGiftStreak = 0, giftsOpened = 0;
 let stats = { parades: 0, storms: 0, rainDrops: 0, goldenHours: 0, powerups: 0, naps: 0, events: 0 };
 let albumNew = false;
+// v4 additions (cozy polish)
+let hapticsOn = true, tutorialDone = false, lastVersionSeen = 0;
+let freshSave = true; // true until a save is found in localStorage
 
-let shake = 0, shakeX = 0, shakeY = 0;
+let frameDt = 1 / 60;
+let comboPop = 0, comboBump = 0; // HUD combo counter "pop" (no screen shake)
 let screenPulse = 0;
 let spawnTimer = 0;
 let gloomSpawnTimer = 3;
@@ -2025,7 +2040,8 @@ function load() {
         localStorage.setItem(SAVE_KEY, JSON.stringify(d));
       }
     }
-    if (!d) return;
+    if (!d || typeof d !== "object") return;
+    freshSave = false;
     joy = d.joy || 0;
     mood = Math.max(0, Math.min(100, d.mood != null ? d.mood : 8));
     moodPeak = Math.max(mood, d.moodPeak || 0);
@@ -2056,6 +2072,13 @@ function load() {
     giftsOpened = d.giftsOpened || 0;
     stats = Object.assign({ parades: 0, storms: 0, rainDrops: 0, goldenHours: 0, powerups: 0, naps: 0, events: 0 }, isObj(d.stats) ? d.stats : {});
     albumNew = !!d.albumNew;
+    // v4: existing players skip the tutorial and see "What's new" once
+    hapticsOn = d.hapticsOn != null ? !!d.hapticsOn : true;
+    tutorialDone = d.tutorialDone != null ? !!d.tutorialDone : true;
+    lastVersionSeen = typeof d.lastVersionSeen === "number" && isFinite(d.lastVersionSeen) ? d.lastVersionSeen : 3;
+    if (!isFinite(joy)) joy = 0;
+    if (!isFinite(mood)) mood = 8;
+    if (!isFinite(moodPeak)) moodPeak = mood;
     if (mood >= 100) victoryDone = true;
   } catch (e) {}
 }
@@ -2068,8 +2091,18 @@ function save() {
       cloudsShooed, sadCheered, dawnCount, highJoyStreak, joyStreak, storySeen,
       critterHugs, friendLvl, ownedAcc, equipped,
       lastGiftDay, giftStreak, bestGiftStreak, giftsOpened, stats, albumNew,
+      hapticsOn, tutorialDone, lastVersionSeen,
     }));
+    saveDirty = false;
   } catch (e) {}
+}
+// Hot paths (hugs, shoos, drops) mark the save dirty; the main loop flushes it every couple of seconds.
+let saveDirty = false, saveFlushT = 0;
+function saveSoon() { saveDirty = true; }
+function flushSave(dt) {
+  if (!saveDirty) return;
+  saveFlushT -= dt;
+  if (saveFlushT <= 0) { saveFlushT = 2; save(); }
 }
 
 // ===================== AUDIO =====================
@@ -2088,8 +2121,10 @@ function ensureAudio() {
     try { buildAudioGraph(); } catch (e) { A = null; }
   }
   resumeAudio();
-  if (!audioUnlocked && A) {
-    // iOS Safari: start a silent 1-sample buffer inside the gesture to unlock output
+  // iOS Safari: start a silent 1-sample buffer inside a gesture to unlock output. Keep retrying on
+  // later gestures until the context is really running (pointerdown alone doesn't count on iOS,
+  // and returning from the background can leave the context "interrupted").
+  if (A && (!audioUnlocked || audioCtx.state !== "running")) {
     try {
       const b = audioCtx.createBuffer(1, 1, 22050);
       const s = audioCtx.createBufferSource();
@@ -2636,7 +2671,7 @@ function sfxWake() {
 // ===================== LAYOUT =====================
 function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const vw = window.innerWidth, vh = window.innerHeight;
+  const [vw, vh] = viewportSize();
   const m = vw < 520 ? 4 : 16;
   const availW = Math.max(200, Math.min(vw - m, 900)), availH = Math.max(300, vh - m);
   // Keep a 360-wide logical canvas, but grow taller on portrait phones so nothing is letterboxed.
@@ -2655,7 +2690,25 @@ window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", () => setTimeout(resize, 120));
 if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
 
-function font(px, bold) { ctx.font = (bold ? "bold " : "") + px + 'px "Segoe UI", system-ui, sans-serif'; }
+function viewportSize() {
+  let vw = window.innerWidth, vh = window.innerHeight;
+  const wrap = document.getElementById("wrap");
+  if (wrap && wrap !== canvas && window.getComputedStyle && wrap.clientWidth > 0) {
+    const cs = window.getComputedStyle(wrap);
+    const px = k => parseFloat(cs[k]) || 0;
+    vw = wrap.clientWidth - px("paddingLeft") - px("paddingRight");
+    vh = wrap.clientHeight - px("paddingTop") - px("paddingBottom");
+  }
+  return [vw, vh];
+}
+
+const fontCache = new Map();
+function font(px, bold) {
+  const k = bold ? -px : px;
+  let f = fontCache.get(k);
+  if (!f) { f = (bold ? "bold " : "") + px + 'px "Segoe UI", system-ui, sans-serif'; if (fontCache.size < 300) fontCache.set(k, f); }
+  ctx.font = f;
+}
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
 // ===================== SPRITES =====================
@@ -2756,23 +2809,26 @@ function getSpriteCanvas(animal, shiny, sad, phaseSeed, forceBlink) {
 
 // Pixel pattern drawer in sprite units, with optional auto 1px outline
 const OUTLINE = "#2c2030";
-function drawPattern(rows, cmap, sx, sy, ox, oy, u, outline) {
+const NEIGH4 = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+function drawPattern(rows, cmap, sx, sy, ox, oy, u, outline, g) {
+  g = g || ctx;
+  const pad = g === ctx ? 0.3 : 0; // on the main canvas overlap slightly to hide seams; offscreen stays exact
   sx = Math.round(sx); sy = Math.round(sy);
   const filled = (x, y) => y >= 0 && y < rows.length && x >= 0 && x < rows[y].length && rows[y][x] !== ".";
   if (outline) {
-    ctx.fillStyle = OUTLINE;
+    g.fillStyle = OUTLINE;
     for (let y = 0; y < rows.length; y++) for (let x = 0; x < rows[y].length; x++) {
       if (!filled(x, y)) continue;
-      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-        if (!filled(x + dx, y + dy)) ctx.fillRect(ox + (sx + x + dx) * u, oy + (sy + y + dy) * u, u + 0.3, u + 0.3);
+      for (const d of NEIGH4) {
+        if (!filled(x + d[0], y + d[1])) g.fillRect(ox + (sx + x + d[0]) * u, oy + (sy + y + d[1]) * u, u + pad, u + pad);
       }
     }
   }
   for (let y = 0; y < rows.length; y++) for (let x = 0; x < rows[y].length; x++) {
     const ch = rows[y][x];
     if (ch === ".") continue;
-    ctx.fillStyle = cmap[ch] || "#fff";
-    ctx.fillRect(ox + (sx + x) * u, oy + (sy + y) * u, u + 0.3, u + 0.3);
+    g.fillStyle = cmap[ch] || "#fff";
+    g.fillRect(ox + (sx + x) * u, oy + (sy + y) * u, u + pad, u + pad);
   }
 }
 
@@ -2785,7 +2841,28 @@ const ACC_ART = {
   crown: { rows: ["a.a.a", "aaaaa", "abara"], cmap: { a: "#ffd700", r: "#ff4f6f", b: "#60c0ff" }, at: (hx, top) => [hx - 2.5, top - 3] },
 };
 
+const ACC_PAD = 8;
+const accCache = new Map();
 function drawAccessory(accId, animalId, ox, oy, u) {
+  const key = accId + "|" + animalId;
+  let off = accCache.get(key);
+  if (off === undefined) {
+    off = null;
+    try {
+      off = document.createElement("canvas");
+      off.width = off.height = SPRITE_SIZE + ACC_PAD * 2;
+      const g = off.getContext("2d");
+      if (!g) off = null; else drawAccessoryTo(g, accId, animalId, ACC_PAD, ACC_PAD, 1);
+    } catch (e) { off = null; }
+    accCache.set(key, off);
+  }
+  if (!off) { drawAccessoryTo(ctx, accId, animalId, ox, oy, u); return; }
+  const a = ctx.globalAlpha;
+  if (accId === "halo") ctx.globalAlpha = a * (0.75 + Math.sin(time * 4) * 0.25);
+  ctx.drawImage(off, ox - ACC_PAD * u, oy - ACC_PAD * u, off.width * u, off.height * u);
+  ctx.globalAlpha = a;
+}
+function drawAccessoryTo(g, accId, animalId, ox, oy, u) {
   const [hx, top, ey, edx, ny] = ANCHOR[animalId] || ANCHOR.cat;
   if (accId === "shades") {
     const l = Math.round(hx - edx - 2), r = Math.round(hx + edx - 2), y0 = Math.round(ey - 1);
@@ -2802,25 +2879,22 @@ function drawAccessory(accId, animalId, ox, oy, u) {
       }
       rows.push(row);
     }
-    drawPattern(rows, { d: "#1a1520", h: "#a0a8d0" }, l, y0, ox, oy, u, false);
+    drawPattern(rows, { d: "#1a1520", h: "#a0a8d0" }, l, y0, ox, oy, u, false, g);
     return;
   }
   if (accId === "scarf") {
     const rows = ["aaaaaaaaaaa", "abaabaabaab", "......aa...", "......ab...", "......aa..."];
-    drawPattern(rows, { a: "#ff5a6a", b: "#fff0d0" }, hx - 5.5, ny - 1, ox, oy, u, true);
+    drawPattern(rows, { a: "#ff5a6a", b: "#fff0d0" }, hx - 5.5, ny - 1, ox, oy, u, true, g);
     return;
   }
   if (accId === "halo") {
-    ctx.save();
-    ctx.globalAlpha *= 0.75 + Math.sin(time * 4) * 0.25;
-    drawPattern([".aaaaa.", "a.....a", ".aaaaa."], { a: "#fff27a" }, hx - 3.5, top - 6, ox, oy, u, false);
-    ctx.restore();
+    drawPattern([".aaaaa.", "a.....a", ".aaaaa."], { a: "#fff27a" }, hx - 3.5, top - 6, ox, oy, u, false, g);
     return;
   }
   const art = ACC_ART[accId];
   if (!art) return;
   const [sx, sy] = art.at(hx, top);
-  drawPattern(art.rows, art.cmap, sx, sy, ox, oy, u, true);
+  drawPattern(art.rows, art.cmap, sx, sy, ox, oy, u, true, g);
 }
 
 function drawHeartEyes(animalId, ox, oy, u) {
@@ -2857,7 +2931,7 @@ function equippedFor(animalId) {
   return e && accAvailable(e, animalId) ? e : null;
 }
 
-// fx: { acc, heartEyes, rot, nap }
+// fx: { acc, heartEyes, rot, nap, sq }  (sq > 0 = squash wide, < 0 = stretch tall)
 function drawSprite(animal, x, y, scale, shiny, bounce, sad, phaseSeed, fx) {
   const spr = getSpriteCanvas(animal, shiny, sad, phaseSeed == null ? x * 10 + y : phaseSeed, fx && fx.nap);
   if (!spr) return;
@@ -2874,6 +2948,12 @@ function drawSprite(animal, x, y, scale, shiny, bounce, sad, phaseSeed, fx) {
   ctx.save();
   ctx.translate(x, y + by);
   if (fx && fx.rot) ctx.rotate(fx.rot);
+  if (fx && fx.sq) {
+    const foot = s * 0.42;
+    ctx.translate(0, foot);
+    ctx.scale(1 + fx.sq, 1 - fx.sq * 0.9);
+    ctx.translate(0, -foot);
+  }
   ctx.drawImage(spr, -s / 2, -s / 2, s, s);
   if (fx) {
     const u = s / SPRITE_SIZE;
@@ -2935,21 +3015,34 @@ function checkStory(prev, cur) {
     if (s.at === 0) continue;
     if (prev < s.at && cur >= s.at && !storySeen[s.at]) {
       storySeen[s.at] = true;
-      if (s.at !== 100) { showStory(s.title, s.sub); sfxUnlock(); }
+      if (s.at !== 100) { showStory(s.title, s.sub); sfxUnlock(); buzz("unlock"); }
     }
   }
 }
 
 function showBanner(title, sub, life) {
-  const b = { title, sub, life: life || 3.0, max: life || 3.0 };
+  const b = { title, sub, life: life || 3.0, max: life || 3.0, fit: null };
   if (!storyBanner) storyBanner = b;
   else if (bannerQueue.length < 4) bannerQueue.push(b);
 }
 function showStory(title, sub) { showBanner(title, sub, 3.6); }
 
+// Toasts: at most 3 on screen in tidy slots; extras wait their turn instead of piling up.
+const toastQueue = [];
 function toast(text, color) {
-  const n = floatTexts.filter(f => f.toast && f.life > 1.2).length;
-  floatTexts.push({ x: W / 2, y: 104 + (n % 4) * 18, text, life: 2.4, vy: -16, color: color || "#7a40a0", size: 12, toast: true });
+  if (toastQueue.length < 12) toastQueue.push([text, color]);
+  pumpToasts();
+}
+function pumpToasts() {
+  while (toastQueue.length) {
+    let used = 0;
+    for (const f of floatTexts) if (f.toast && f.life > 0) used |= 1 << f.slot;
+    let slot = -1;
+    for (let i = 0; i < 3; i++) if (!(used & (1 << i))) { slot = i; break; }
+    if (slot < 0) return;
+    const [text, color] = toastQueue.shift();
+    addFloat({ x: W / 2, y: 106 + slot * 24, text, life: 2.2, vy: 0, color: color || "#7a40a0", size: 12, toast: true, slot });
+  }
 }
 
 function triggerVictory() {
@@ -2958,10 +3051,11 @@ function triggerVictory() {
   showBanner("Joy cured the day!", "Confetti rains. Critters dance!", 3.6);
   spawnConfetti(80);
   screenPulse = 1;
-  shake = 12;
+  popFx(W / 2, H * 0.45, "#ffe080", 1.6);
+  buzz("friend");
   if (!unlocked.rainbow) {
     unlocked.rainbow = true;
-    floatTexts.push({ x: W / 2, y: H / 2 - 40, text: "✦ Rainbow Critter unlocked!", life: 3.5, vy: -18, color: C.gold, size: 15 });
+    addFloat({ x: W / 2, y: H / 2 - 40, text: "✦ Rainbow Critter unlocked!", life: 3.5, vy: -18, color: C.gold, size: 15 });
   }
   if (!unlockedBgs.bloom) unlockedBgs.bloom = true;
   bgId = "bloom";
@@ -2999,6 +3093,7 @@ function makeCritter(animal, opts) {
     dancing: false, parade: !!opts.parade,
     hugs: 0, pets: 0, heartEyesT: 0, spinT: 0, stay: false,
     idle: null, idleDur: 0, idleT: 5 + Math.random() * 9,
+    sqT: 9, sqAmp: 0,
   };
 }
 
@@ -3042,9 +3137,9 @@ function checkFriendship(animal) {
   albumNew = true;
   levelUpFx = { animal, lvl: nl, reward, hearts, t: 0, dur: 2.8 };
   sfxFriend();
+  buzz("friend");
   spawnConfetti(28);
   screenPulse = Math.max(screenPulse, 0.6);
-  shake = Math.max(shake, 6);
 }
 
 const JOY_PACE = 0.84; // global Joy-per-hug pacing (tuned with test/balance.mjs)
@@ -3055,7 +3150,8 @@ function hugCritter(c, moodScale) {
   c.idle = null; c.idleT = 6 + Math.random() * 8;
   c.state = "happy";
   c.stateT = 0;
-  c.hugScale = 1.35;
+  c.hugScale = 1.12;
+  c.sqT = 0; c.sqAmp = wasSad || c.shiny ? 0.34 : 0.27;
   c.sad = false;
   c.dancing = mood >= 100;
   c.hugs++;
@@ -3092,44 +3188,51 @@ function hugCritter(c, moodScale) {
   if (wasNapping) {
     stats.naps++;
     sfxWake();
-    floatTexts.push({ x: c.x, y: c.y - 58, text: "Good morning!", life: 1.2, vy: -24, color: "#6070c0", size: 13 });
+    addFloat({ x: c.x, y: c.y - 58, text: "Good morning!", life: 1.2, vy: -24, color: "#6070c0", size: 13 });
   }
+  const milestone = COMBO_TITLES.some(t => t.at === mult);
   if (wasSad) {
     sadCheered++;
     sfxSadCheer();
     spawnSpecialCheer(c.x, c.y);
-    shake = 7;
+    popFx(c.x, c.y, "#a0e8ff", 1);
   } else if (c.shiny) {
     achievements._shinyHugged = true;
     sfxShiny();
-    shake = 8;
+    popFx(c.x, c.y, "#ffe27a", 1.1);
   } else {
     sfxHug(mult);
-    if (mult >= 5) shake = Math.min(7, 2 + mult * 0.25);
   }
   if (mult >= 3) sfxCombo(mult);
-  if (mult >= 5) screenPulse = Math.min(1, 0.25 + mult * 0.04);
+  if (mult >= 5) screenPulse = Math.min(0.6, 0.15 + mult * 0.025);
+  comboBump = 1;
+  if (milestone) { comboPop = 1; popFx(c.x, c.y - 6, mult >= 12 ? "#ffd700" : "#ff9ec8", 0.9 + Math.min(0.8, mult * 0.03)); }
+  buzz(milestone || wasSad || c.shiny ? "combo" : "hug");
 
-  spawnHearts(c.x, c.y - 10, wasSad ? 12 : c.shiny ? 10 : golden ? 9 : 5);
-  spawnSparkles(c.x, c.y, wasSad ? 16 : c.shiny ? 14 : 7);
-  floatTexts.push({
+  spawnHearts(c.x, c.y - 10, wasSad ? 12 : c.shiny ? 10 : golden ? 9 : 6, true);
+  spawnSparkles(c.x, c.y, wasSad ? 14 : c.shiny ? 12 : 6);
+  particles.push({ kind: "ring", x: c.x, y: c.y, life: 0.38, max: 0.38, size: 8, color: wasSad ? "#bdf0ff" : "#ffd0e6", t: 0 });
+  addFloat({
     x: c.x, y: c.y - 20,
     text: (wasSad ? ("+" + pts + " Joy!") : (mult > 1 ? ("+" + pts + "  ×" + mult) : ("+" + pts))) + (golden ? " ☀" : ""),
     life: 1.2, vy: -42,
     color: golden ? "#e09000" : wasSad ? "#60d0ff" : c.shiny ? C.gold : C.heart,
     size: wasSad || c.shiny ? 16 : 13,
   });
-  if (wasSad) floatTexts.push({ x: c.x, y: c.y - 44, text: "Cheer!", life: 1.0, vy: -28, color: "#80e0ff", size: 14 });
-  const ct = [...COMBO_TITLES].reverse().find(t => mult >= t.at);
+  if (wasSad) addFloat({ x: c.x, y: c.y - 44, text: "Cheer!", life: 1.0, vy: -28, color: "#80e0ff", size: 14 });
+  // combo titles only on the milestone hug itself (not on every hug after it) — cute, not noisy
+  let ct = null;
+  for (const t of COMBO_TITLES) if (mult === t.at) ct = t;
   if (ct) {
-    floatTexts.push({
+    addFloat({
       x: c.x, y: c.y - (wasSad ? 62 : 48), text: ct.text,
-      life: 1.1, vy: -32, color: "#ff80b0", size: 13 + Math.min(4, Math.floor(mult / 5)),
+      life: 1.1, vy: -32, color: "#ff80b0", size: 13 + Math.min(4, Math.floor(mult / 5)), big: milestone,
     });
   }
   checkFriendship(c.animal);
   checkAchievements();
-  save();
+  if (tut) tutEvent("hug");
+  saveSoon();
 }
 
 // Tapping a critter that is mid-hug: pets it (heart eyes, then a spin)
@@ -3137,16 +3240,18 @@ function petCritter(c) {
   c.pets++;
   c.stay = true;
   c.stateT = Math.min(c.stateT, 0.15);
-  c.hugScale = 1.25;
+  c.hugScale = 1.08;
+  c.sqT = 0; c.sqAmp = 0.16;
   joy += 1;
   spawnHearts(c.x, c.y - 14, 2);
   sfxPet();
+  buzz("pet");
   if (c.pets >= 2) c.heartEyesT = 1.8;
   if (c.pets % 4 === 0) {
     c.spinT = 0.6;
     joy += 5;
     sfxSpin();
-    floatTexts.push({ x: c.x, y: c.y - 40, text: "Spin! +5", life: 1.0, vy: -30, color: "#ff60a0", size: 13 });
+    addFloat({ x: c.x, y: c.y - 40, text: "Spin! +5", life: 1.0, vy: -30, color: "#ff60a0", size: 13 });
   }
 }
 
@@ -3167,6 +3272,7 @@ function endIdle(c) { c.idle = null; c.idleT = 7 + Math.random() * 9; }
 function updateCritter(c, dt) {
   c.phase += dt * (c.dancing ? 5 : c.idle === "nap" ? 0.8 : 2.2);
   c.life -= dt;
+  if (c.sqT < 9) c.sqT += dt;
   if (c.heartEyesT > 0) c.heartEyesT -= dt;
   if (c.spinT > 0) c.spinT = Math.max(0, c.spinT - dt);
   if (c.state === "float") {
@@ -3210,7 +3316,7 @@ function updateCritter(c, dt) {
   } else if (c.state === "happy") {
     c.stateT += dt;
     c.y = c.baseY + Math.sin(c.stateT * 18) * 10 * Math.max(0, 1 - c.stateT);
-    c.hugScale = 1 + Math.sin(c.stateT * 12) * 0.15 * Math.max(0, 1 - c.stateT);
+    c.hugScale = 1 + Math.sin(c.stateT * 12) * 0.06 * Math.max(0, 1 - c.stateT);
     if (c.stateT > 0.55) {
       if (c.parade) {
         c.state = "leave"; c.stateT = 0; c.vx = (c.vx >= 0 ? 1 : -1) * 70;
@@ -3234,16 +3340,48 @@ function updateCritter(c, dt) {
   }
 }
 
-function spawnHearts(x, y, n) {
+const HEART_COLS = ["#ff6b9d", "#ff6b9d", "#ff8ab8", "#ffd0e0", "#ff5a8a"];
+function spawnHearts(x, y, n, burst) {
   for (let i = 0; i < n; i++) {
+    // burst: fan out upward in an arc, then drift up with a gentle wobble
+    const a = burst ? -Math.PI / 2 + ((i + 0.5) / n - 0.5) * 2.4 + (Math.random() - 0.5) * 0.3 : 0;
+    const sp = burst ? 85 + Math.random() * 55 : 0;
+    const life = 0.85 + Math.random() * 0.45;
     particles.push({
-      kind: "heart", x: x + (Math.random() - 0.5) * 20, y: y + (Math.random() - 0.5) * 10,
-      vx: (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 50,
-      life: 0.8 + Math.random() * 0.5, max: 1.2, size: 4 + Math.random() * 4,
-      color: Math.random() < 0.3 ? "#ffd0e0" : C.heart,
+      kind: "heart", x: x + (Math.random() - 0.5) * (burst ? 6 : 20), y: y + (Math.random() - 0.5) * (burst ? 6 : 10),
+      vx: burst ? Math.cos(a) * sp : (Math.random() - 0.5) * 40,
+      vy: burst ? Math.sin(a) * sp : -40 - Math.random() * 50,
+      life, max: life, size: (burst ? 5 : 4) + Math.random() * 4, t: 0, wob: Math.random() * 6.28, drag: burst ? 3.2 : 0,
+      color: HEART_COLS[Math.floor(Math.random() * HEART_COLS.length)],
     });
   }
 }
+// A soft, screen-shake-free "pop": a quick glow disc + a crisp expanding ring
+function popFx(x, y, color, k) {
+  k = k || 1;
+  particles.push({ kind: "glow", x, y, life: 0.32, max: 0.32, size: 18 * k, color, t: 0 });
+  particles.push({ kind: "ring", x, y, life: 0.5, max: 0.5, size: 10 * k, color, t: 0, grow: 110 * k, lw: 3 });
+}
+function addFloat(f) {
+  f.t = 0; f.max = f.life;
+  if (floatTexts.length >= 28) {
+    const i = floatTexts.findIndex(o => !o.toast);
+    if (i >= 0) floatTexts.splice(i, 1);
+  }
+  floatTexts.push(f);
+}
+// in-place filter: avoids allocating a new array every frame
+function prune(arr, keep) {
+  let j = 0;
+  for (let i = 0; i < arr.length; i++) if (keep(arr[i])) arr[j++] = arr[i];
+  arr.length = j;
+  return arr;
+}
+const alive = p => p.life > 0;
+function countIf(arr, pred) { let n = 0; for (let i = 0; i < arr.length; i++) if (pred(arr[i])) n++; return n; }
+const isRoamer = c => !c.parade;
+const isFloating = c => c.state === "float";
+const notDead = o => !o.dead;
 function spawnSparkles(x, y, n) {
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
@@ -3271,19 +3409,25 @@ function spawnConfetti(n) {
 function updateParticles(dt) {
   for (const p of particles) {
     p.life -= dt;
-    if (p.kind === "ring") { p.size += 80 * dt; continue; }
+    p.t = (p.t || 0) + dt;
+    if (p.kind === "ring") { p.size += (p.grow || 80) * dt; continue; }
+    if (p.kind === "glow") continue;
+    if (p.drag) { const k = Math.max(0, 1 - p.drag * dt); p.vx *= k; if (p.vy < -30) p.vy *= k; }
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     p.vy += (p.kind === "heart" ? -10 : 40) * dt;
   }
-  particles = particles.filter(p => p.life > 0);
-  if (particles.length > 400) particles = particles.slice(-400);
+  prune(particles, alive);
+  if (particles.length > 400) particles.splice(0, particles.length - 400);
+  const fk = Math.pow(0.96, dt * 60);
   for (const f of floatTexts) {
     f.life -= dt;
+    f.t = (f.t || 0) + dt;
     f.y += f.vy * dt;
-    f.vy *= 0.96;
+    f.vy *= fk;
   }
-  floatTexts = floatTexts.filter(f => f.life > 0);
+  prune(floatTexts, alive);
+  if (toastQueue.length) pumpToasts();
   for (const cf of confetti) {
     cf.life -= dt;
     cf.x += cf.vx * dt;
@@ -3291,12 +3435,15 @@ function updateParticles(dt) {
     cf.rot += cf.vr * dt;
     cf.vy += 20 * dt;
   }
-  confetti = confetti.filter(c => c.life > 0 && c.y < H + 20);
-  if (storyBanner) {
+  prune(confetti, c => c.life > 0 && c.y < H + 20);
+  // banners wait politely while a friendship level-up card is showing
+  if (storyBanner && !levelUpFx) {
     storyBanner.life -= dt;
     if (storyBanner.life <= 0) storyBanner = bannerQueue.shift() || null;
   }
   if (screenPulse > 0) screenPulse = Math.max(0, screenPulse - dt * 1.8);
+  if (comboPop > 0) comboPop = Math.max(0, comboPop - dt * 1.6);
+  if (comboBump > 0) comboBump = Math.max(0, comboBump - dt * 6);
   if (levelUpFx) { levelUpFx.t += dt; if (levelUpFx.t > levelUpFx.dur) levelUpFx = null; }
 }
 
@@ -3329,7 +3476,9 @@ function shooGloom(gc, moodAmt) {
     label = "+23 ♥ ✦";
   }
   sfxShoo();
-  spawnSparkles(gc.x + 16 * gc.s, gc.y, 18);
+  buzz("shoo");
+  popFx(gc.x + 16 * gc.s, gc.y, "#e8e0ff", 0.8);
+  spawnSparkles(gc.x + 16 * gc.s, gc.y, 16);
   for (let i = 0; i < 6; i++) {
     particles.push({
       kind: "poof", x: gc.x + 10 + Math.random() * 20, y: gc.y + (Math.random() - 0.5) * 10,
@@ -3337,13 +3486,14 @@ function shooGloom(gc, moodAmt) {
       life: 0.6, max: 0.6, size: 10 + Math.random() * 10, color: "#c0b8d0",
     });
   }
-  floatTexts.push({ x: gc.x + 16 * gc.s, y: gc.y, text: label, life: 1.0, vy: -35, color: "#e0d0ff", size: 14 });
+  addFloat({ x: gc.x + 16 * gc.s, y: gc.y, text: label, life: 1.0, vy: -35, color: "#b8a0f0", size: 14 });
   checkAchievements();
-  save();
+  if (tut) tutEvent("shoo");
+  saveSoon();
 }
 
 function updateGloom(dt) {
-  gloomSpawnTimer -= dt;
+  if (!tut) gloomSpawnTimer -= dt; // the tutorial brings its own single cloud
   const rate = mood < 30 ? 2.8 : mood < 60 ? 4.2 : mood < 90 ? 5.5 : 8;
   if (gloomSpawnTimer <= 0) {
     spawnGloomCloud(false);
@@ -3355,6 +3505,11 @@ function updateGloom(dt) {
     gc.y += Math.sin(time * 1.2 + gc.phase) * 8 * dt;
     gc.life -= dt;
     if (mood < 100) gloomDrain += 0.11 * dt;
+    if (gc.tut) {
+      // tutorial cloud politely stays on screen until shooed
+      gc.life = Math.max(gc.life, 5);
+      if ((gc.x > W - 70 && gc.vx > 0) || (gc.x < 16 && gc.vx < 0)) gc.vx *= -1;
+    }
     if (gc.storm && gc.life > 2) {
       // storm clouds linger on screen
       if (gc.x > W - 40 && gc.vx > 0) gc.vx *= -1;
@@ -3370,7 +3525,7 @@ function updateGloom(dt) {
       for (const gc of gloomClouds) gc.drainAcc = 0;
     }
   }
-  gloomClouds = gloomClouds.filter(g => !g.dead);
+  prune(gloomClouds, notDead);
 }
 
 // ===================== EVENTS =====================
@@ -3433,6 +3588,7 @@ function endEvent(title, sub) {
 
 function updateEvents(dt, wdt) {
   if (!activeEvent) {
+    if (tut) return;
     eventTimer -= dt;
     if (eventTimer <= 0 && !storyBanner) startEvent();
     return;
@@ -3500,7 +3656,7 @@ function updateDrops(wdt) {
       particles.push({ kind: "ring", x: d.x, y: d.y, life: 0.35, max: 0.35, size: 3, color: "hsl(" + d.hue + ",80%,75%)" });
     }
   }
-  drops = drops.filter(d => !d.dead);
+  prune(drops, notDead);
 }
 
 function catchDrop(d) {
@@ -3513,8 +3669,9 @@ function catchDrop(d) {
   if (activeEvent && activeEvent.type === "rain") activeEvent.caught++;
   sfxDrop();
   spawnSparkles(d.x, d.y, 8);
-  floatTexts.push({ x: d.x, y: d.y - 12, text: "+" + pts, life: 0.8, vy: -30, color: "hsl(" + d.hue + ",70%,55%)", size: 12 });
+  addFloat({ x: d.x, y: d.y - 12, text: "+" + pts, life: 0.8, vy: -30, color: "hsl(" + d.hue + ",70%,55%)", size: 12 });
   checkAchievements();
+  saveSoon();
 }
 
 // ===================== POWER-UPS =====================
@@ -3529,7 +3686,7 @@ function spawnPowerup() {
 }
 
 function updatePowerups(dt, wdt) {
-  powerTimer -= dt;
+  if (!tut) powerTimer -= dt;
   if (powerTimer <= 0) {
     if (powerups.length < 1) spawnPowerup();
     powerTimer = 26 + Math.random() * 16;
@@ -3541,7 +3698,7 @@ function updatePowerups(dt, wdt) {
     p.life -= dt;
     if (p.life <= 0 || p.x < -40 || p.x > W + 40) p.dead = true;
   }
-  powerups = powerups.filter(p => !p.dead);
+  prune(powerups, notDead);
   if (slowT > 0) slowT = Math.max(0, slowT - dt);
   if (magnetT > 0) magnetT = Math.max(0, magnetT - dt);
 }
@@ -3550,9 +3707,10 @@ function activatePowerup(p) {
   p.dead = true;
   stats.powerups++;
   sfxPowerup();
+  buzz("combo");
   spawnSparkles(p.x, p.y, 20);
-  particles.push({ kind: "ring", x: p.x, y: p.y, life: 0.6, max: 0.6, size: 10, color: POWERUPS[p.type].col });
-  floatTexts.push({ x: W / 2, y: H * 0.42, text: POWERUPS[p.type].name, life: 1.4, vy: -20, color: "#ff60a0", size: 20 });
+  popFx(p.x, p.y, POWERUPS[p.type].col, 1.2);
+  addFloat({ x: W / 2, y: H * 0.42, text: POWERUPS[p.type].name, life: 1.4, vy: -20, color: "#ff60a0", size: 20, big: true });
   if (p.type === "bighug") {
     const targets = critters.filter(c => c.state === "float");
     for (const c of targets) hugCritter(c, 0.25);
@@ -3602,6 +3760,7 @@ function openGift() {
   spawnSparkles(gift.x, gift.y, 24);
   spawnHearts(gift.x, gift.y, 10);
   sfxGift();
+  buzz("gift");
   showBanner("Daily Gift! Day " + giftStreak + (giftStreak > 1 ? " streak ♥" : ""),
     "+" + hearts + " ♥" + (streakBonus ? " (streak +" + streakBonus + ")" : "") + (found ? " · Found: " + found + "!" : ""), 3.4);
   gift = null;
@@ -3620,7 +3779,12 @@ function startPlay() {
   eventTimer = 40 + Math.random() * 20;
   powerTimer = 18 + Math.random() * 10;
   giftCheckT = 0;
-  if (!storySeen[0] && mood < 20) {
+  storyBanner = null; bannerQueue.length = 0;
+  tut = null;
+  if (!tutorialDone) {
+    storySeen[0] = true;
+    startTutorial();
+  } else if (!storySeen[0] && mood < 20) {
     storySeen[0] = true;
     showStory(STORY[0].title, STORY[0].sub);
   }
@@ -3631,36 +3795,34 @@ function startPlay() {
 function updatePlay(dt) {
   const wdt = dt * (slowT > 0 ? 0.45 : 1);
   spawnTimer -= wdt;
-  if (spawnTimer <= 0 && critters.filter(c => !c.parade).length < MAX_CRITTERS) {
+  if (spawnTimer <= 0 && countIf(critters, isRoamer) < MAX_CRITTERS) {
     spawnCritter();
     const density = 0.75 + unlockedList().length * 0.04;
     spawnTimer = SPAWN_BASE / density * (0.5 + Math.random() * 0.8);
   }
-  if (critters.filter(c => c.state === "float").length < 2 && Math.random() < dt * 0.5) spawnCritter();
+  if (countIf(critters, isFloating) < 2 && Math.random() < dt * 0.5) spawnCritter();
 
   updateGloom(wdt);
   updateEvents(dt, wdt);
   updatePowerups(dt, wdt);
   updateDrops(wdt);
 
-  giftCheckT -= dt;
-  if (giftCheckT <= 0) { giftCheckT = 15; checkDailyGift(); }
+  if (!tut) {
+    giftCheckT -= dt;
+    if (giftCheckT <= 0) { giftCheckT = 15; checkDailyGift(); }
+  }
   if (gift) gift.t += dt;
 
   if (comboTimer > 0) {
     comboTimer -= wdt;
     if (comboTimer <= 0) { combo = 0; joyStreak = Math.max(0, joyStreak - 1); }
   }
-  if (shake > 0) {
-    shake *= 0.85;
-    if (shake < 0.3) shake = 0;
-    shakeX = (Math.random() - 0.5) * shake;
-    shakeY = (Math.random() - 0.5) * shake;
-  } else { shakeX = shakeY = 0; }
-
-  for (const c of critters) updateCritter(c, wdt);
-  critters = critters.filter(c => !c.dead);
+  // critters drift slower while the tutorial asks for a first hug
+  const cdt = tut && tut.step === 0 ? wdt * 0.55 : wdt;
+  for (const c of critters) updateCritter(c, cdt);
+  prune(critters, notDead);
   updateParticles(dt);
+  if (tut) updateTutorial(dt);
 }
 
 function drawHeart(x, y, s, color) {
@@ -3683,23 +3845,42 @@ function drawHeart(x, y, s, color) {
   ctx.globalAlpha = prevA;
 }
 
+const HEART_CELLS = [
+  [1,0],[2,0],[4,0],[5,0],
+  [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],
+  [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],
+  [1,3],[2,3],[3,3],[4,3],[5,3],
+  [2,4],[3,4],[4,4],
+  [3,5],
+];
+// Each heart colour is rendered once into a tiny 7x6 canvas and then blitted (much cheaper than 28 fillRects).
+const heartCache = new Map();
+function heartSprite(color) {
+  let h = heartCache.get(color);
+  if (h !== undefined) return h;
+  h = null;
+  try {
+    const off = document.createElement("canvas");
+    off.width = 7; off.height = 6;
+    const g = off.getContext("2d");
+    if (g) {
+      g.fillStyle = color;
+      for (const c of HEART_CELLS) g.fillRect(c[0], c[1], 1, 1);
+      g.fillStyle = "rgba(255,255,255,0.6)";
+      g.fillRect(2, 1, 1, 1);
+      h = off;
+    }
+  } catch (e) { h = null; }
+  if (heartCache.size < 64) heartCache.set(color, h);
+  return h;
+}
 function drawPixelHeart(x, y, s, color) {
   // chunky cute pixel heart for particles
   const u = Math.max(1, s / 5);
+  const spr = heartSprite(color);
+  if (spr) { ctx.drawImage(spr, x - 3 * u, y - 2 * u, 7 * u, 6 * u); return; }
   ctx.fillStyle = color;
-  const cells = [
-    [1,0],[2,0],[4,0],[5,0],
-    [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],
-    [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],
-    [1,3],[2,3],[3,3],[4,3],[5,3],
-    [2,4],[3,4],[4,4],
-    [3,5],
-  ];
-  for (const [cx, cy] of cells) {
-    ctx.fillRect(x + (cx - 3) * u, y + (cy - 2) * u, u + 0.2, u + 0.2);
-  }
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.fillRect(x - u, y - u * 0.5, u, u);
+  for (const c of HEART_CELLS) ctx.fillRect(x + (c[0] - 3) * u, y + (c[1] - 2) * u, u + 0.2, u + 0.2);
 }
 
 function drawSparkle(x, y, s, color) {
@@ -3946,13 +4127,18 @@ function drawSun(cx, cy, r, t) {
   ctx.restore();
 }
 
+let skyGrad = null, skyKey = "";
 function drawBackground() {
   const bg = getBg();
   const wc = worldColors(bg);
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, wc.skyTop);
-  g.addColorStop(1, wc.skyBot);
-  ctx.fillStyle = g;
+  const key = wc.skyTop + wc.skyBot + H;
+  if (key !== skyKey || !skyGrad) {
+    skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, wc.skyTop);
+    skyGrad.addColorStop(1, wc.skyBot);
+    skyKey = key;
+  }
+  ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, W, H);
 
   const sunBright = 0.3 + wc.t * 0.7;
@@ -3987,7 +4173,7 @@ function drawBackground() {
   }
 
   for (const cl of decorClouds) {
-    cl.x += cl.sp * 0.016;
+    cl.x += cl.sp * frameDt;
     if (cl.x > W + 70) cl.x = -70;
     const a = bg.night ? 0.22 : (0.4 + wc.t * 0.45);
     const base = bg.night
@@ -4123,18 +4309,24 @@ function btn(x, y, w, h, label, opts) {
   return { x, y, w, h, id: opts.id };
 }
 
+const meterGrads = new Map();
 function drawMoodMeter(x, y, w, h) {
   ctx.fillStyle = "rgba(60,50,70,0.35)";
   roundRect(x, y, w, h, h / 2);
   ctx.fill();
   const t = moodT();
   const fw = Math.max(4, w * t);
-  const grad = ctx.createLinearGradient(x, y, x + w, y);
-  grad.addColorStop(0, "#8890a0");
-  grad.addColorStop(0.25, "#c0b0d0");
-  grad.addColorStop(0.5, "#ffb0d0");
-  grad.addColorStop(0.75, "#ffd070");
-  grad.addColorStop(1, "#a0ffd0");
+  const gk = x + "," + y + "," + w;
+  let grad = meterGrads.get(gk);
+  if (!grad) {
+    grad = ctx.createLinearGradient(x, y, x + w, y);
+    grad.addColorStop(0, "#8890a0");
+    grad.addColorStop(0.25, "#c0b0d0");
+    grad.addColorStop(0.5, "#ffb0d0");
+    grad.addColorStop(0.75, "#ffd070");
+    grad.addColorStop(1, "#a0ffd0");
+    if (meterGrads.size < 8) meterGrads.set(gk, grad);
+  }
   ctx.fillStyle = grad;
   roundRect(x, y, fw, h, h / 2);
   ctx.fill();
@@ -4150,29 +4342,65 @@ function drawMoodMeter(x, y, w, h) {
   ctx.fillText("Joy " + Math.floor(mood) + "%", x + w / 2, y + h / 2 + 0.5);
 }
 
+function easeOutBack(t) { const c = 1.7; t = clamp(t, 0, 1) - 1; return 1 + (c + 1) * t * t * t + c * t * t; }
+function easeOutCubic(t) { t = 1 - clamp(t, 0, 1); return 1 - t * t * t; }
 function drawStoryBanner() {
-  if (!storyBanner) return;
-  const a = Math.min(1, storyBanner.life * 2, (storyBanner.max - storyBanner.life) * 2);
-  ctx.globalAlpha = Math.max(0, a);
-  panelBox(24, 150, W - 48, 88);
+  const b = storyBanner;
+  if (!b || levelUpFx) return;
+  const age = b.max - b.life;
+  const IN = 0.38, OUT = 0.4;
+  let alpha = 1, scale = 1, dy = 0;
+  if (age < IN) {
+    const e = easeOutBack(age / IN);
+    scale = 0.82 + 0.18 * e; dy = (1 - e) * -14; alpha = Math.min(1, age / (IN * 0.6));
+  } else if (b.life < OUT) {
+    const e = easeOutCubic(1 - b.life / OUT);
+    alpha = 1 - e; dy = -12 * e; scale = 1 - 0.04 * e;
+  }
+  if (alpha <= 0.01) return;
+  if (!b.fit) {
+    // fit long titles/subtitles once, not every frame
+    b.fit = [fitFont(b.title, W - 76, 16, true, 11), fitFont(b.sub, W - 70, 12, false, 9)];
+  }
+  const cy = 194;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(W / 2, cy + dy);
+  ctx.scale(scale, scale);
+  ctx.translate(-W / 2, -cy);
+  solidPanel(24, 150, W - 48, 88);
+  drawPixelHeart(40, 166, 5, "#ffb0cc");
+  drawPixelHeart(W - 40, 166, 5, "#ffb0cc");
   ctx.fillStyle = C.text;
-  ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
+  font(b.fit[0], true);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(storyBanner.title, W / 2, 180);
-  ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(b.title, W / 2, 180);
+  font(b.fit[1], false);
   ctx.fillStyle = C.textSoft;
-  ctx.fillText(storyBanner.sub, W / 2, 208);
-  ctx.globalAlpha = 1;
+  ctx.fillText(b.sub, W / 2, 208);
+  ctx.restore();
 }
 
 function drawParticles() {
   for (const p of particles) {
-    ctx.globalAlpha = Math.max(0, p.life / (p.max || 1));
-    if (p.kind === "heart") drawPixelHeart(p.x, p.y, p.size, p.color);
-    else if (p.kind === "ring") {
+    const lf = Math.max(0, p.life / (p.max || 1));
+    ctx.globalAlpha = lf;
+    if (p.kind === "heart") {
+      // pop in with a tiny overshoot, wobble while drifting, fade in the last third
+      const t = p.t || 0;
+      const grow = t < 0.16 ? easeOutBack(t / 0.16) : 1;
+      ctx.globalAlpha = Math.min(1, lf * 3);
+      drawPixelHeart(p.x + Math.sin(t * 7 + (p.wob || 0)) * 2.2, p.y, p.size * Math.max(0.2, grow), p.color);
+    } else if (p.kind === "glow") {
+      ctx.globalAlpha = lf * 0.45;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (1.4 - lf * 0.4), 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.kind === "ring") {
       ctx.strokeStyle = p.color;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = (p.lw || 2) * (0.4 + lf * 0.6);
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.stroke();
@@ -4211,13 +4439,34 @@ function drawParticles() {
     ctx.restore();
   }
   ctx.globalAlpha = 1;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
   for (const f of floatTexts) {
-    ctx.globalAlpha = Math.min(1, f.life * 2);
+    // sticker-style numbers: pop in (bigger pop for milestones), soft white outline, gentle fade-out
+    const t = f.t || 0;
+    const popT = f.big ? 0.26 : 0.18;
+    const sc = t < popT ? (f.big ? 0.4 : 0.6) + (f.big ? 0.6 : 0.4) * easeOutBack(t / popT) : 1;
+    const a = Math.min(1, f.life / 0.35, t / 0.06 + 0.3);
+    if (a <= 0.01) continue;
+    ctx.globalAlpha = a;
+    font(Math.max(6, Math.round(f.size * sc * 2) / 2), true);
+    // keep text fully on screen (measured once at full size)
+    if (f.hw == null) { font(f.size, true); f.hw = ctx.measureText(f.text).width / 2 + 4; font(Math.max(6, Math.round(f.size * sc * 2) / 2), true); }
+    const fx = clamp(f.x, f.hw, W - f.hw);
+    if (f.toast) {
+      // toasts sit on a soft pill so they read over any sky
+      const pw = f.hw * 2 + 8;
+      ctx.fillStyle = "rgba(255,250,245,0.9)";
+      roundRect(fx - pw / 2, f.y - 10, pw, 20, 10); ctx.fill();
+      ctx.strokeStyle = "rgba(255,184,208,0.9)"; ctx.lineWidth = 1.5; ctx.stroke();
+    } else {
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 3;
+      ctx.strokeText(f.text, fx, f.y);
+    }
     ctx.fillStyle = f.color;
-    ctx.font = "bold " + f.size + 'px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(f.text, f.x, f.y);
+    ctx.fillText(f.text, fx, f.y);
   }
   ctx.globalAlpha = 1;
 }
@@ -4240,6 +4489,7 @@ function checkAchievements() {
       addMood(1.5);
       toast("✨ " + g.label + "! +" + g.reward);
       sfxUnlock();
+      buzz("unlock");
       save();
     }
   }
@@ -4306,6 +4556,7 @@ function heartRow(x, y, lvl, size) {
 }
 
 // ===================== DRAW: WORLD OBJECTS =====================
+const critterFx = { acc: null, heartEyes: false, rot: 0, nap: false, sq: 0 }; // reused every frame
 function drawCritter(c) {
   const bounce = c.state === "happy" ? Math.sin(c.stateT * 18) * 8
     : c.dancing ? Math.sin(c.phase * 2) * 6
@@ -4313,7 +4564,12 @@ function drawCritter(c) {
   let rot = 0;
   if (c.spinT > 0) rot = (1 - c.spinT / 0.6) * Math.PI * 2;
   else if (c.idle === "wave" && c.state === "float") rot = Math.sin(time * 9) * 0.2;
-  const fx = { acc: equippedFor(c.animal.id), heartEyes: c.heartEyesT > 0, rot, nap: c.idle === "nap" && c.state === "float" };
+  // squash & stretch: a damped wobble after each hug/pet, plus a tiny idle "breath"
+  let sq = c.sqT < 1.3 ? c.sqAmp * Math.sin(c.sqT * 21) * Math.exp(-c.sqT * 5.5) : 0;
+  if (c.state === "float" && !c.sad) sq += Math.sin(c.phase * 0.9) * (c.idle === "nap" ? 0.035 : 0.02);
+  const fx = critterFx;
+  fx.acc = equippedFor(c.animal.id); fx.heartEyes = c.heartEyesT > 0; fx.rot = rot;
+  fx.nap = c.idle === "nap" && c.state === "float"; fx.sq = sq;
   drawSprite(c.animal, c.x, c.y, c.scale * c.hugScale, c.shiny, bounce, c.sad, c.phase, fx);
   const s = c.scale * SPRITE_SIZE;
   if (c.idle === "wave" && c.state === "float") {
@@ -4533,13 +4789,25 @@ function drawHUD() {
   drawMoodMeter(18, 40, W - 36, 14);
 
   if (combo > 1 && comboTimer > 0) {
-    const pulse = 1 + Math.sin(time * 10) * 0.1;
+    // bump on every hug, springy "pop" on combo milestones — no screen shake
+    const e = 1 - comboPop;
+    const spring = comboPop > 0 ? 0.6 * Math.exp(-e * 5) * Math.cos(e * 13) : 0;
+    const pulse = 1 + Math.sin(time * 10) * 0.05 + comboBump * 0.2 + spring;
+    if (comboPop > 0) {
+      ctx.globalAlpha = comboPop * 0.5;
+      ctx.fillStyle = combo >= 10 ? "#ffe680" : "#ffc0dc";
+      ctx.beginPath(); ctx.arc(W / 2, 80, 14 + e * 26, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     ctx.save();
     ctx.translate(W / 2, 80);
     ctx.scale(pulse, pulse);
-    ctx.fillStyle = combo >= 10 ? C.gold : "#ff60a0";
     font(16, true);
     ctx.textAlign = "center";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 3;
+    ctx.strokeText("×" + combo, 0, 0);
+    ctx.fillStyle = combo >= 10 ? "#e8a800" : "#ff60a0";
     ctx.fillText("×" + combo, 0, 0);
     ctx.restore();
     const bw = 70, bh = 3;
@@ -4592,7 +4860,6 @@ function drawHUD() {
 
 function renderPlay() {
   ctx.save();
-  ctx.translate(shakeX, shakeY);
   drawBackground();
   for (const gc of gloomClouds) drawGloomCloud(gc);
   for (const c of critters) if (!c.dead) drawCritter(c);
@@ -4604,6 +4871,7 @@ function renderPlay() {
   for (const p of powerups) drawPowerup(p);
   ctx.restore();
   drawHUD();
+  if (tut && scene === "play") drawTutorial();
   drawStoryBanner();
   drawLevelUp();
 }
@@ -4815,23 +5083,46 @@ function toggleButtons(x, y, w) {
   }));
 }
 
+const SETTINGS_H = 452;
 function drawSettings() {
   drawBackground();
   applyWorldFilter();
-  const top = Math.round(H / 2 - 170);
-  panelBox(28, top, W - 56, 340);
+  const top = Math.round(H / 2 - SETTINGS_H / 2);
+  panelBox(28, top, W - 56, SETTINGS_H);
   uiButtons = [];
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = C.text; font(20, true);
   ctx.fillText("Settings", W / 2, top + 30);
-  toggleButtons(W / 2 - 115, top + 58, 230);
+  // little version tag in the corner
+  font(10, true);
+  const vw = ctx.measureText(APP_LABEL).width + 12;
+  ctx.fillStyle = "#ffe0ee";
+  roundRect(W - 40 - vw, top + 20, vw, 18, 9); ctx.fill();
+  ctx.fillStyle = "#c04080";
+  ctx.fillText(APP_LABEL, W - 40 - vw / 2, top + 29.5);
+  toggleButtons(W / 2 - 115, top + 54, 230);
+  uiButtons.push(btn(W / 2 - 115, top + 166, 230, 46, "♡ Haptics: " + (hapticsOn ? "On" : "Off"), {
+    id: "tog_haptics", size: 15, bg: hapticsOn ? "#ffe0ee" : "#eee4ea", border: hapticsOn ? "#ff90b8" : "#c8b8c8",
+  }));
+  font(10, false); ctx.fillStyle = C.textSoft;
+  ctx.fillText(canVibrate ? "A gentle buzz on hugs, combos & surprises" : "This device doesn't support haptics — that's okay!", W / 2, top + 222);
+  uiButtons.push(btn(W / 2 - 115, top + 236, 111, 44, "Tutorial ↺", { id: "tut_replay", size: 13, bg: "#e8d0ff", border: "#c090e0" }));
+  uiButtons.push(btn(W / 2 + 4, top + 236, 111, 44, "What's new", { id: "whatsnew", size: 13, bg: "#fff0b0", border: "#e0c060" }));
   font(11, false); ctx.fillStyle = C.textSoft;
   const song = SONGS[music.songIdx];
-  ctx.fillText(audioCtx ? "Now playing: “" + song.name + "”" : "Music starts after your first tap", W / 2, top + 186);
-  ctx.fillText("The tune grows fuller as Joy rises ♥", W / 2, top + 204);
-  ctx.fillText("Gift streak: " + giftStreak + " day" + (giftStreak === 1 ? "" : "s") + " (best " + bestGiftStreak + ")", W / 2, top + 228);
-  ctx.fillText("Keys: M music · N sounds · U shop · B album · A goals", W / 2, top + 250);
-  uiButtons.push(btn(W / 2 - 70, top + 276, 140, 46, "Close", { id: "close", size: 15 }));
+  ctx.fillText(audioCtx ? "Now playing: “" + song.name + "”" : "Music starts after your first tap", W / 2, top + 298);
+  ctx.fillText("The tune grows fuller as Joy rises ♥", W / 2, top + 315);
+  ctx.fillText("Gift streak: " + giftStreak + " day" + (giftStreak === 1 ? "" : "s") + " (best " + bestGiftStreak + ")", W / 2, top + 332);
+  font(10, false);
+  ctx.fillText("Keys: M music · N sounds · U shop · B album · A goals", W / 2, top + 350);
+  if (updateReady) {
+    uiButtons.push(btn(W / 2 - 115, top + 368, 126, 46, "Update ✨", { id: "sw_refresh", size: 15, bg: "#d0ffd8", border: "#70c080" }));
+    uiButtons.push(btn(W / 2 + 19, top + 368, 96, 46, "Close", { id: "close", size: 15 }));
+  } else {
+    uiButtons.push(btn(W / 2 - 70, top + 368, 140, 46, "Close", { id: "close", size: 15 }));
+  }
+  font(10, false); ctx.fillStyle = "rgba(122,90,112,0.8)";
+  ctx.fillText("Happy Critters " + APP_LABEL + " · " + (isStandalone() ? "Home Screen app" : "made with ♥"), W / 2, top + 434);
 }
 
 function drawPause() {
@@ -4867,8 +5158,15 @@ function doUI(id) {
   if (!id) return;
   sfxClick();
   if (id === "play") { startPlay(); return; }
+  if (id === "tut_next") { tutNext(); return; }
+  if (id === "tut_skip") { finishTutorial(true); return; }
+  if (id === "tut_replay") { tutorialDone = false; save(); startPlay(); return; }
+  if (id === "tog_haptics") { hapticsOn = !hapticsOn; save(); if (hapticsOn) buzz("unlock", true); return; }
+  if (id === "whatsnew") { openWhatsNew(scene); return; }
+  if (id === "wn_ok") { closeWhatsNew(); return; }
+  if (id === "sw_refresh") { save(); try { location.reload(); } catch (e) {} return; }
   if (id === "dawn") { newDawn(); return; }
-  if (id === "shop") { shopTab = "critters"; openPanel("shop"); return; }
+  if (id === "shop") { if (tut && tut.step === 3) finishTutorial(false, true); shopTab = "critters"; openPanel("shop"); return; }
   if (id === "ach") { checkAchievements(); openPanel("achievements"); return; }
   if (id === "album") { albumNew = false; openPanel("album"); save(); return; }
   if (id === "settings") { openPanel("settings"); return; }
@@ -4876,15 +5174,15 @@ function doUI(id) {
   if (id === "scr_dn") { listScroll = clamp(listScroll + 180, 0, listMax); return; }
   if (id === "tog_music") { setMusicOn(!musicOn); if (musicOn) ensureAudio(); return; }
   if (id === "tog_sfx") { setSfxOn(!sfxOn); sfxClick(); return; }
-  if (id === "pause") { scene = "pause"; return; }
+  if (id === "pause") { scene = "pause"; save(); return; }
   if (id === "resume") { scene = "play"; return; }
-  if (id === "title") { scene = "title"; prevScene = "title"; activeEvent = null; drops = []; powerups = []; magnetT = slowT = 0; save(); return; }
+  if (id === "title") { scene = "title"; prevScene = "title"; activeEvent = null; drops = []; powerups = []; magnetT = slowT = 0; tut = null; save(); return; }
   if (id === "close") { scene = prevScene || "title"; return; }
   if (id.startsWith("tab_")) { shopTab = id.slice(4); listScroll = 0; return; }
   if (id.startsWith("buy_")) {
     const a = ANIMALS.find(x => x.id === id.slice(4));
     if (a && !a.special && !unlocked[a.id] && joy >= a.cost) {
-      joy -= a.cost; unlocked[a.id] = true; sfxUnlock();
+      joy -= a.cost; unlocked[a.id] = true; sfxUnlock(); buzz("unlock");
       toast(a.name + " joined! ♥", C.heart);
       checkAchievements(); save();
     }
@@ -4893,7 +5191,7 @@ function doUI(id) {
   if (id.startsWith("buybg_")) {
     const b = BACKGROUNDS.find(x => x.id === id.slice(6));
     if (b && !unlockedBgs[b.id] && joy >= b.cost) {
-      joy -= b.cost; unlockedBgs[b.id] = true; bgId = b.id; sfxUnlock();
+      joy -= b.cost; unlockedBgs[b.id] = true; bgId = b.id; sfxUnlock(); buzz("unlock");
       checkAchievements(); save();
     }
     return;
@@ -4906,7 +5204,7 @@ function doUI(id) {
   if (id.startsWith("buyacc_")) {
     const acc = SHOP_ACCS.find(x => x.id === id.slice(7));
     if (acc && !ownedAcc[acc.id] && joy >= acc.cost) {
-      joy -= acc.cost; ownedAcc[acc.id] = true; sfxUnlock();
+      joy -= acc.cost; ownedAcc[acc.id] = true; sfxUnlock(); buzz("unlock");
       toast(acc.name + " added to your wardrobe!", C.heart);
       checkAchievements(); save();
     }
@@ -4945,11 +5243,11 @@ function tapGloom(p) {
 function playTap(p) {
   if (gift && dist2(p.x, p.y, gift.x, gift.y) < 36 * 36) { openGift(); return; }
   for (const pu of powerups) {
-    if (!pu.dead && dist2(p.x, p.y, pu.x, pu.y) < 27 * 27) { activatePowerup(pu); powerups = powerups.filter(x => !x.dead); return; }
+    if (!pu.dead && dist2(p.x, p.y, pu.x, pu.y) < 27 * 27) { activatePowerup(pu); prune(powerups, notDead); return; }
   }
   let bestDrop = null, bdd = 26 * 26;
   for (const d of drops) { const dd = dist2(p.x, p.y, d.x, d.y); if (dd < bdd) { bestDrop = d; bdd = dd; } }
-  if (bestDrop) { catchDrop(bestDrop); drops = drops.filter(d => !d.dead); return; }
+  if (bestDrop) { catchDrop(bestDrop); prune(drops, notDead); return; }
   if (tapGloom(p)) return;
   let best = null, bestD = 1e9;
   for (let i = critters.length - 1; i >= 0; i--) {
@@ -4988,6 +5286,7 @@ canvas.addEventListener("pointerdown", (e) => {
   for (const b of uiButtons) {
     if (pointIn(p.x, p.y, b.x, b.y, b.w, b.h)) { doUI(b.id); return; }
   }
+  if (scene === "play" && tut && tutBubbleHit(p)) return; // the tutorial card swallows stray taps
   if (scene === "play") playTap(p);
   else if (scene === "title") tapGloom(p);
 }, { passive: false });
@@ -5042,8 +5341,10 @@ window.addEventListener("keydown", (e) => {
   if (k === "p" || k === "P" || k === "Escape") {
     if (scene === "play") scene = "pause";
     else if (scene === "pause") scene = "play";
+    else if (scene === "whatsnew") closeWhatsNew();
     else if (inPanel) scene = prevScene;
   }
+  if ((k === "Enter" || k === " ") && scene === "whatsnew") closeWhatsNew();
   if (k === "m" || k === "M") { setMusicOn(!musicOn); if (musicOn) ensureAudio(); }
   if (k === "n" || k === "N") setSfxOn(!sfxOn);
   if (LIST_SCENES[scene] && (k === "ArrowDown" || k === "ArrowUp")) {
@@ -5061,12 +5362,12 @@ function updateTitle(dt) {
     gloomSpawnTimer = 5;
   }
   for (const c of critters) updateCritter(c, dt);
-  critters = critters.filter(c => !c.dead);
+  prune(critters, notDead);
   for (const gc of gloomClouds) {
     gc.x += gc.vx * dt * 0.5;
     if (gc.x < -80 || gc.x > W + 80) gc.dead = true;
   }
-  gloomClouds = gloomClouds.filter(g => !g.dead);
+  prune(gloomClouds, notDead);
   updateParticles(dt);
 }
 
@@ -5089,43 +5390,395 @@ function stepScene(dt) {
   } else if (scene === "pause") {
     renderPlay();
     drawPause();
+  } else if (scene === "whatsnew") {
+    updateTitle(dt);
+    if (wnReturn === "settings") drawSettings(); else { drawTitle(); drawStoryBanner(); }
+    drawWhatsNew(dt);
+  } else {
+    scene = "title"; // unknown scene: never get stuck on a blank screen
   }
+  flushSave(dt);
 }
 
+const perfLog = window.__HC_DEBUG ? [] : null; // per-frame JS cost, only when debugging
 function frame(ts) {
-  const dt = Math.min(0.05, (ts - lastTs) / 1000 || 0.016);
+  let dt = (ts - lastTs) / 1000;
+  if (!(dt > 0)) dt = 1 / 60; // first frame / clock hiccups: never NaN or negative
+  dt = Math.min(0.05, dt);
   lastTs = ts;
+  frameDt = dt;
   time += dt;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, W, H);
   if (window.__HC_TEST) stepScene(dt);
   else {
+    const t0 = perfLog ? performance.now() : 0;
     try { stepScene(dt); } catch (err) { console.error(err); }
+    if (perfLog) { perfLog.push(performance.now() - t0); if (perfLog.length > 600) perfLog.shift(); }
   }
   requestAnimationFrame(frame);
 }
 
+
+// ===================== COZY LAYER (v4) =====================
+// Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
+// Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
+const APP_VERSION = 4;
+const APP_LABEL = "v4";
+const WHATS_NEW = {
+  title: "What's new ✦",
+  sub: "The Cozy Update",
+  items: [
+    "Add to Home Screen & play offline",
+    "A friendly how-to-play for new pals",
+    "Squishier hugs & bouncier hearts",
+    "Comic combo pops (no screen shake)",
+    "Gentle haptics where supported",
+    "Smoother banners + lots of tiny fixes",
+  ],
+};
+
+const hasNav = typeof navigator !== "undefined";
+function isStandalone() {
+  try {
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || (hasNav && navigator.standalone === true);
+  } catch (e) { return false; }
+}
+const isIOS = hasNav && (/iPad|iPhone|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+// ---------- Haptics ----------
+const canVibrate = hasNav && typeof navigator.vibrate === "function";
+const HAPTIC = {
+  hug: 8, pet: 5, shoo: 10, ui: 6,
+  combo: [10, 40, 16], unlock: [16, 50, 24], friend: [14, 40, 14, 40, 30], gift: [12, 40, 12, 40, 24],
+};
+let lastBuzzAt = -1;
+function buzz(kind, force) {
+  if (!canVibrate || (!hapticsOn && !force)) return;
+  // browsers ignore (and warn about) vibrate() before the first tap
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+  const pat = HAPTIC[kind] || 8;
+  if (typeof pat === "number" && time - lastBuzzAt < 0.06) return; // never a continuous rattle
+  lastBuzzAt = time;
+  try { navigator.vibrate(pat); } catch (e) {}
+}
+
+function sfxTut() {
+  const t = sfxT(); if (t < 0) return;
+  tone(A.sfxBus, "triangle", mtof(84), t, 0.04, 0.08, { a: 0.004, d: 0.08, s: 0.3, r: 0.14 });
+  tone(A.sfxBus, "triangle", mtof(91), t + 0.09, 0.05, 0.08, { a: 0.004, d: 0.1, s: 0.3, r: 0.18 });
+}
+
+// opaque card (panelBox is slightly see-through, which looks muddy over busy scenes)
+function solidPanel(x, y, w, h) {
+  ctx.fillStyle = "#fffaf5";
+  roundRect(x, y, w, h, 16); ctx.fill();
+  panelBox(x, y, w, h);
+}
+
+// ---------- Text wrapping (cached by caller) ----------
+function wrapText(text, maxW) {
+  const words = String(text).split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const t = cur ? cur + " " + w : w;
+    if (cur && ctx.measureText(t).width > maxW) { lines.push(cur); cur = w; } else cur = t;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// ---------- First-play tutorial ----------
+let tut = null;
+const TUT_STEPS = [
+  { title: "Hug a critter!", sub: "Tap a floating friend to give it a warm hug ♥" },
+  { title: "Shoo the gloom!", sub: "Gloom clouds drain the color. Tap one to poof it away!" },
+  { title: "The Joy meter", sub: "Hugs fill it up, gloom drains it. Fill it all the way to bring the color back!", next: "Next ▸" },
+  { title: "Spend your hearts ♥", sub: "The Shop has new friends, cozy scenes and cute outfits.", next: "Let's play!" },
+];
+const TUT_BUBBLE_H = 132;
+function tutBubbleTop() { return H - 76 - TUT_BUBBLE_H; }
+function tutBubbleHit(p) { return pointIn(p.x, p.y, 14, tutBubbleTop(), W - 28, TUT_BUBBLE_H); }
+
+function startTutorial() {
+  tut = { step: 0, t: 0, stepT: 0, pending: 0, cheer: false, target: null, lines: null, hugs0: totalHugs };
+}
+function tutGoto(n) {
+  if (!tut) return;
+  if (n >= TUT_STEPS.length) { finishTutorial(false); return; }
+  tut.step = n; tut.stepT = 0; tut.pending = 0; tut.cheer = false; tut.lines = null; tut.target = null; tut.hugs0 = totalHugs;
+  if (n === 1) spawnTutCloud();
+  sfxTut();
+  buzz("ui");
+}
+function tutNext() { if (tut && TUT_STEPS[tut.step].next) tutGoto(tut.step + 1); }
+function tutEvent(kind) {
+  if (!tut || tut.pending > 0) return;
+  if ((tut.step === 0 && kind === "hug") || (tut.step === 1 && kind === "shoo")) {
+    tut.pending = 0.8; tut.cheer = true;
+  }
+}
+function spawnTutCloud() {
+  for (const g of gloomClouds) if (!g.dead && g.x > -20 && g.x < W - 20) { g.tut = true; return; }
+  const fromLeft = Math.random() < 0.5;
+  gloomClouds.push({
+    x: fromLeft ? -30 : W, y: 112 + Math.random() * 16, s: 1.15, vx: (fromLeft ? 1 : -1) * 24,
+    phase: Math.random() * 6, life: 60, drainAcc: 0, storm: false, tut: true,
+  });
+}
+function finishTutorial(skipped, quiet) {
+  if (!tut && tutorialDone) return;
+  tut = null;
+  tutorialDone = true;
+  for (const g of gloomClouds) if (g.tut) { g.tut = false; g.life = Math.min(g.life, 12); }
+  gloomSpawnTimer = 3;
+  eventTimer = Math.max(eventTimer, 30);
+  powerTimer = Math.max(powerTimer, 12);
+  if (skipped) toast("Tutorial skipped · replay it in Settings", C.textSoft);
+  else if (!quiet) {
+    showBanner("You're all set!", "Hug the gloom away ♥", 2.6);
+    spawnConfetti(30);
+    sfxUnlock();
+    buzz("friend");
+  }
+  save();
+}
+function updateTutorial(dt) {
+  tut.t += dt; tut.stepT += dt;
+  if (tut.pending > 0) {
+    tut.pending -= dt;
+    if (tut.pending <= 0) tutGoto(tut.step + 1);
+    return;
+  }
+  if (tut.step === 1 && !gloomClouds.some(g => !g.dead)) spawnTutCloud();
+  // info cards never hold the game hostage: if the player just keeps happily hugging, move along
+  if (TUT_STEPS[tut.step].next && (tut.stepT > 16 || totalHugs - tut.hugs0 >= 8)) tutNext();
+}
+function tutTarget() {
+  const lim = tutBubbleTop() - 26;
+  if (tut.step === 0) {
+    let t = tut.target;
+    if (t && (t.dead || t.state !== "float" || t.x < 30 || t.x > W - 30 || t.y > lim)) t = null;
+    if (!t) {
+      let best = 1e9;
+      for (const c of critters) {
+        if (c.state !== "float" || c.x < 40 || c.x > W - 40 || c.y > lim) continue;
+        const d = Math.abs(c.x - W / 2) + Math.abs(c.y - H * 0.4) * 0.5;
+        if (d < best) { best = d; t = c; }
+      }
+    }
+    tut.target = t;
+    return t ? { x: t.x, y: t.y, r: t.scale * SPRITE_SIZE * 0.62 } : null;
+  }
+  if (tut.step === 1) {
+    let g = null;
+    for (const c of gloomClouds) if (!c.dead && (!g || c.tut)) g = c;
+    return g ? { x: g.x + 16 * g.s, y: g.y, r: 34 * g.s, below: true } : null;
+  }
+  return null;
+}
+const TUT_ARROW = ["..ppp..", "..pwp..", "..pwp..", "ppppppp", ".ppppp.", "..ppp..", "...p..."];
+const TUT_ARROW_CMAP = { p: "#ff6fa8", w: "#ffd0e4" };
+function drawTutArrow(x, y, up) {
+  const u = 3;
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  if (up) ctx.rotate(Math.PI);
+  drawPattern(TUT_ARROW, TUT_ARROW_CMAP, 0, 0, -3.5 * u, -3.5 * u, u, true);
+  ctx.restore();
+}
+function drawTutorial() {
+  const st = TUT_STEPS[tut.step];
+  const bob = Math.sin(tut.t * 6) * 4;
+  const pulse = 0.5 + 0.5 * Math.sin(tut.t * 5);
+  // --- spotlight on what to tap / look at
+  if (!tut.cheer) {
+    const tg = tutTarget();
+    if (tg) {
+      ctx.save();
+      ctx.globalAlpha = 0.55 + pulse * 0.35;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.5;
+      if (ctx.setLineDash) ctx.setLineDash([6, 5]);
+      ctx.lineDashOffset = -tut.t * 18;
+      ctx.beginPath(); ctx.arc(tg.x, tg.y, tg.r + pulse * 3, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      if (tg.below) drawTutArrow(tg.x, tg.y + tg.r + 16 + bob, true);
+      else drawTutArrow(tg.x, tg.y - tg.r - 14 + bob, false);
+    }
+    if (tut.step === 2) {
+      ctx.save();
+      ctx.globalAlpha = 0.6 + pulse * 0.4;
+      ctx.strokeStyle = "#ff6fa8"; ctx.lineWidth = 3;
+      roundRect(13, 34, W - 26, 26, 13); ctx.stroke();
+      ctx.restore();
+      drawTutArrow(W / 2, 80 + bob * 0.8, true);
+    } else if (tut.step === 3) {
+      const n = 5, gap = 6, bw = (W - 16 - gap * (n - 1)) / n;
+      const sx = 8 + 2 * (bw + gap), sy = H - 52;
+      ctx.save();
+      ctx.globalAlpha = 0.6 + pulse * 0.4;
+      ctx.strokeStyle = "#ff6fa8"; ctx.lineWidth = 3;
+      roundRect(sx - 3, sy - 3, bw + 6, 50, 14); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  // --- the speech card
+  const y0 = tutBubbleTop(), x0 = 14, bw = W - 28;
+  const enter = easeOutBack(Math.min(1, tut.stepT / 0.35));
+  ctx.save();
+  ctx.translate(0, (1 - enter) * 24);
+  ctx.globalAlpha = Math.min(1, tut.stepT / 0.2 + 0.2);
+  solidPanel(x0, y0, bw, TUT_BUBBLE_H);
+  // Kitty guide
+  const guide = ANIMALS[0];
+  drawSprite(guide, x0 + 36, y0 + 52, 1.7, false, Math.sin(tut.t * 4) * 2, false, 7, { heartEyes: tut.cheer, acc: equippedFor(guide.id) });
+  // step dots
+  for (let i = 0; i < TUT_STEPS.length; i++) {
+    ctx.fillStyle = i === tut.step ? C.heart : i < tut.step ? "#ffb8d0" : "rgba(160,140,160,0.35)";
+    ctx.beginPath(); ctx.arc(W - 30 - (TUT_STEPS.length - 1 - i) * 11, y0 + 18, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  const tx = x0 + 72, maxW = bw - 72 - 14;
+  ctx.fillStyle = tut.cheer ? "#40a050" : C.text;
+  const title = tut.cheer ? (tut.step === 0 ? "Aww, a hug! ♥" : "Poof! Nice one ✦") : st.title;
+  fitFont(title, maxW - 50, 15, true, 11);
+  ctx.fillText(title, tx, y0 + 20);
+  font(11.5, false);
+  if (!tut.lines) tut.lines = wrapText(st.sub, maxW);
+  ctx.fillStyle = C.textSoft;
+  for (let i = 0; i < Math.min(3, tut.lines.length); i++) ctx.fillText(tut.lines[i], tx, y0 + 42 + i * 15);
+  ctx.restore();
+  // buttons (registered un-translated, once the card has settled)
+  uiButtons.push(btn(tx, y0 + 82, 78, 42, "Skip", { id: "tut_skip", size: 13, bg: "#f5e6ee", border: "#d0b0c0", color: "#8a6080" }));
+  if (st.next) uiButtons.push(btn(x0 + bw - 12 - 124, y0 + 82, 124, 42, st.next, { id: "tut_next", size: 14 }));
+  else if (!tut.cheer) {
+    ctx.textAlign = "right"; ctx.fillStyle = "#c06090"; font(11, true);
+    ctx.globalAlpha = 0.6 + pulse * 0.4;
+    ctx.fillText(tut.step === 0 ? "tap a critter ↑" : "tap the cloud ↑", x0 + bw - 16, y0 + 103);
+    ctx.globalAlpha = 1;
+  }
+  if (tut.step === 3 && !tut.cheer) drawTutArrow(8 + 2 * ((W - 40) / 5 + 6) + (W - 40) / 10, H - 64 + bob * 0.5, false);
+}
+
+// ---------- What's new ----------
+let wnReturn = "title", wnT = 0;
+function openWhatsNew(from) { wnReturn = from === "settings" ? "settings" : "title"; scene = "whatsnew"; wnT = 0; }
+function closeWhatsNew() {
+  lastVersionSeen = APP_VERSION;
+  save();
+  scene = wnReturn;
+}
+function drawWhatsNew(dt) {
+  wnT += dt;
+  ctx.fillStyle = "rgba(40,20,50," + (0.5 * Math.min(1, wnT / 0.25)) + ")";
+  ctx.fillRect(0, 0, W, H);
+  const ph = 404, top = Math.round(H / 2 - ph / 2);
+  const e = easeOutBack(Math.min(1, wnT / 0.42));
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, wnT / 0.2);
+  ctx.translate(W / 2, top + ph / 2);
+  ctx.scale(0.85 + 0.15 * e, 0.85 + 0.15 * e);
+  ctx.translate(-W / 2, -(top + ph / 2));
+  solidPanel(24, top, W - 48, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(21, true);
+  ctx.fillText(WHATS_NEW.title, W / 2, top + 34);
+  font(12, true); ctx.fillStyle = C.heart;
+  ctx.fillText(WHATS_NEW.sub + " · " + APP_LABEL, W / 2, top + 58);
+  const pals = ["cat", "bunny", "dog", "chick"];
+  pals.forEach((id, i) => {
+    const a = ANIMALS.find(x => x.id === id);
+    const hop = Math.max(0, Math.sin(wnT * 5 - i * 0.8)) * 6;
+    drawSprite(a, W / 2 - 75 + i * 50, top + 100 - hop, 1.45, false, 0, false, i * 30, { heartEyes: true, acc: unlocked[id] ? equippedFor(id) : null });
+  });
+  ctx.textAlign = "left";
+  WHATS_NEW.items.forEach((t, i) => {
+    const y = top + 148 + i * 28;
+    const pop = easeOutBack(clamp((wnT - 0.25 - i * 0.07) / 0.3, 0, 1));
+    if (pop <= 0) return;
+    drawPixelHeart(52, y, 4.5 * pop, i % 2 ? "#ff8ab8" : C.heart);
+    ctx.fillStyle = C.text;
+    fitFont(t, W - 48 - 60 - 16, 13, false, 10);
+    ctx.fillText(t, 68, y + 1);
+  });
+  ctx.textAlign = "center";
+  if (isIOS && !isStandalone()) {
+    font(10, false); ctx.fillStyle = C.textSoft;
+    ctx.fillText("Tip: in Safari tap Share, then “Add to Home Screen”", W / 2, top + 324);
+  }
+  ctx.restore();
+  uiButtons = [];
+  uiButtons.push(btn(W / 2 - 80, top + ph - 66, 160, 48, "Yay! ♥", { id: "wn_ok", size: 17 }));
+}
+
+// ---------- PWA: service worker + update notice ----------
+let updateReady = false, swReg = null;
+function setupPWA() {
+  if (window.__HC_TEST || !hasNav || !("serviceWorker" in navigator)) return;
+  if (typeof location === "undefined" || !/^https?:$/.test(location.protocol)) return;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    // a newer version took over while we were open (first installs don't count)
+    if (!hadController || updateReady) return;
+    updateReady = true;
+    showBanner("A fresh update arrived ✨", "Tap “Update” in Settings to load it", 3.2);
+  });
+  const reg = () => {
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+      .then(r => { swReg = r; window.__hcSW = "registered"; })
+      .catch(err => { window.__hcSW = "error: " + (err && err.message); });
+  };
+  if (document.readyState === "complete") reg(); else window.addEventListener("load", reg);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && swReg) { try { swReg.update(); } catch (e) {} }
+  });
+}
+
+// ---------- lifecycle: pause & save when the app goes to the background ----------
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (scene === "play") scene = "pause";
+    save();
+  }
+});
+window.addEventListener("pagehide", () => save());
+
+// ===================== BOOT =====================
 load();
+if (freshSave) {
+  // brand-new friend: guided first play, no "what's new" card
+  tutorialDone = false;
+  lastVersionSeen = APP_VERSION;
+} else if (lastVersionSeen < APP_VERSION) {
+  openWhatsNew("title");
+}
 initDecor();
 resize();
 for (let i = 0; i < 3; i++) spawnCritter();
 requestAnimationFrame(frame);
+setupPWA();
 
-if (window.__HC_TEST) {
+if (window.__HC_TEST || window.__HC_DEBUG) {
   window.__HC = {
     get s() {
       return { mood, joy, scene, critters, gloomClouds, powerups, drops, gift, activeEvent, stats, totalHugs,
         critterHugs, friendLvl, ownedAcc, equipped, musicOn, sfxOn, uiButtons, H, combo, magnetT, slowT, levelUpFx,
-        listMax, listScroll, unlocked, achievements, giftStreak, lastGiftDay };
+        listMax, listScroll, unlocked, achievements, giftStreak, lastGiftDay,
+        tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
       else if (k === "eventTimer") eventTimer = v; else if (k === "powerTimer") powerTimer = v;
       else if (k === "lastGiftDay") lastGiftDay = v; else if (k === "giftStreak") giftStreak = v;
+      else if (k === "tutorialDone") tutorialDone = v;
     },
     music, SONGS, SONG_ERRORS, frame, ensureAudio, musicTick, startEvent, spawnPowerup, activatePowerup,
     hugCritter, doUI, save, load, openGift, checkDailyGift, setMusicOn, setSfxOn, playTap, targetTier,
+    APP_VERSION, tutBubbleTop, TUT_STEPS, shooGloom, showBanner, perfLog,
+    get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
 
