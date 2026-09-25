@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="6.0-arcade">
+<meta name="hc-version" content="7.0-seasons">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -57,7 +57,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v6 — the Arcade: Memory Match, Bubble Bath, Catch the Treats
+// Happy Critters v7 — Seasons & Starry Nights: day/night, seasons, festivals, seasonal friends
 
 const W = 360;
 let H = 540;
@@ -66,7 +66,7 @@ const COMBO_WINDOW = 1.4;
 const SPAWN_BASE = 0.95;
 const SAVE_KEY = "happyCritters_v2";
 const SAVE_KEY_V1 = "happyCritters_v1";
-const SAVE_VER = 6;
+const SAVE_VER = 7;
 
 const C = {
   white: "#fffaf5", text: "#4a3050", textSoft: "#7a5a70",
@@ -113,6 +113,7 @@ const PAL = [
   "#5a2a24",
   "#ff9a3c",
   "#e07020",
+  "#d8ff70",
 ];
 function parseGrid(rows) {
   return rows.map(r => [...r].map(ch => parseInt(ch, 36)));
@@ -1702,6 +1703,534 @@ const SPRITE_FRAMES = {
       "000000011110001111000000"
     ]),
   },
+  "lamb": {
+    idle: parseGrid([
+      "000000000001100000000000",
+      "000000000112211000000000",
+      "000000001222222100000000",
+      "000000012222222210000000",
+      "000000122222222221000000",
+      "000000122255552221000000",
+      "000111015555555510111000",
+      "001555155555555551555100",
+      "015gg555ii5555ii555gg510",
+      "00155555hh5555hh55555100",
+      "00011155ii5555ii55111000",
+      "00000155iih555iih5100000",
+      "00001225555jj55552210000",
+      "000122gg555j5555egg21000",
+      "001222222551155222222100",
+      "001222222222222222222100",
+      "001222222e2222e222222100",
+      "00012e222222222222e21000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "00001222sse22ess22210000",
+      "00000122ss2222ss22100000",
+      "00000011ss1111ss11000000"
+    ]),
+    blink: parseGrid([
+      "000000000001100000000000",
+      "000000000112211000000000",
+      "000000001222222100000000",
+      "000000012222222210000000",
+      "000000122222222221000000",
+      "000000122255552221000000",
+      "000111015555555510111000",
+      "001555155555555551555100",
+      "015gg55555555555555gg510",
+      "001555555555555555555100",
+      "000111555555555555111000",
+      "000001551115551115100000",
+      "00001225555jj55552210000",
+      "0001222e555j5555e2221000",
+      "001222222555555222222100",
+      "001222222222222222222100",
+      "001222222e2222e222222100",
+      "00012e222222222222e21000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "00001222sse22ess22210000",
+      "00000122ss2222ss22100000",
+      "00000011ss1111ss11000000"
+    ]),
+    ear: parseGrid([
+      "000000000001100000000000",
+      "000000000112211000000000",
+      "000000001222222100000000",
+      "000000012222222210000000",
+      "000000122222222221000000",
+      "000000122255552221000000",
+      "000000015555555510000000",
+      "000111155555555551111000",
+      "00155555ii5555ii55555100",
+      "015gg555hh5555hh555gg510",
+      "00155555ii5555ii55555100",
+      "00011155iih555iih5111000",
+      "00001225555jj55552210000",
+      "000122gg555j5555egg21000",
+      "001222222551155222222100",
+      "001222222222222222222100",
+      "001222222e2222e222222100",
+      "00012e222222222222e21000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "00001222sse22ess22210000",
+      "00000122ss2222ss22100000",
+      "00000011ss1111ss11000000"
+    ]),
+    sad: parseGrid([
+      "000000000001100000000000",
+      "000000000112211000000000",
+      "000000001222222100000000",
+      "000000012222222210000000",
+      "000000122222222221000000",
+      "000000122255552221000000",
+      "000111015555555510111000",
+      "001555155555555551555100",
+      "015gg55555555555555gg510",
+      "001555551115551115555100",
+      "00011155ii5555ii55111000",
+      "00000155ii5555ii55100000",
+      "00001225555jj55552210000",
+      "0001222k555j5555e2221000",
+      "0012222k2551555222222100",
+      "001222222222222222222100",
+      "001222222e2222e222222100",
+      "00012e222222222222e21000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "00001222sse22ess22210000",
+      "00000122ss2222ss22100000",
+      "00000011ss1111ss11000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000001100000000000",
+      "000000000112211000000000",
+      "000000001222222100000000",
+      "000000012222222210000000",
+      "000000122222222221000000",
+      "000000122255552221000000",
+      "000111015555555510111000",
+      "001555155555555551555100",
+      "015gg55555555555555gg510",
+      "001555555555555555555100",
+      "000111555555555555111000",
+      "000001551115551115100000",
+      "00001225555jj55552210000",
+      "0001222k555j5555e2221000",
+      "0012222k2551555222222100",
+      "001222222222222222222100",
+      "001222222e2222e222222100",
+      "00012e222222222222e21000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "00001222sse22ess22210000",
+      "00000122ss2222ss22100000",
+      "00000011ss1111ss11000000"
+    ]),
+  },
+  "firefly": {
+    idle: parseGrid([
+      "000000000000000000000000",
+      "000000z0000000000z000000",
+      "00000zz1000000001zz00000",
+      "000000010000000010000000",
+      "000000001111111100000000",
+      "000000011aaaaaa110000000",
+      "0000001aaaaaaaaaa1000000",
+      "000001aaaaaaaaaaaa100000",
+      "000001ahhhhaahhhha100000",
+      "00001aahhh2aahhh2aa10000",
+      "00011ahhhiihhhhiiha11000",
+      "001qqaahhihaahhihaaqq100",
+      "01qqhqahhhhaahhhhhqqqq10",
+      "01qqqqggaaa11aaaaggqqq10",
+      "01qqqqqqaaaaaaaaqqqqqq10",
+      "001qqqqbbbaaaabbbqqqq100",
+      "0001111bbbbbbbbbb1111000",
+      "0000001bbbbzzbbbb1000000",
+      "0000001bbzzzzzzbb1000000",
+      "0000001bzzzmmzzzb1000000",
+      "00000001zzzzzzzz10000000",
+      "000000001zzzzzz100000000",
+      "00000001bbzzzzbb10000000",
+      "00000001bb1111bb10000000"
+    ]),
+    blink: parseGrid([
+      "000000000000000000000000",
+      "000000z0000000000z000000",
+      "00000zz1000000001zz00000",
+      "000000010000000010000000",
+      "000000001111111100000000",
+      "000000011aaaaaa110000000",
+      "0000001aaaaaaaaaa1000000",
+      "000001aaaaaaaaaaaa100000",
+      "000001aaaaaaaaaaaa100000",
+      "00001aaaaaaaaaaaaaa10000",
+      "00011aa11111a11111a11000",
+      "001qqaaaaaaaaaaaaaaqq100",
+      "01qqhqaaaaaaaaaaahqqqq10",
+      "01qqqqqaaaaaaaaaaqqqqq10",
+      "01qqqqqqaaaaaaaaqqqqqq10",
+      "001qqqqbbbaaaabbbqqqq100",
+      "0001111bbbbbbbbbb1111000",
+      "0000001bbbbzzbbbb1000000",
+      "0000001bbzzzzzzbb1000000",
+      "0000001bzzzmmzzzb1000000",
+      "00000001zzzzzzzz10000000",
+      "000000001zzzzzz100000000",
+      "00000001bbzzzzbb10000000",
+      "00000001bb1111bb10000000"
+    ]),
+    ear: parseGrid([
+      "000000z0000000000z000000",
+      "00000zz1000000001zz00000",
+      "000000000000000000000000",
+      "000000010000000010000000",
+      "000000001111111100000000",
+      "000000011aaaaaa110000000",
+      "0000001aaaaaaaaaa1000000",
+      "000001aaaaaaaaaaaa100000",
+      "000001ahhhhaahhhha100000",
+      "00001aahhh2aahhh2aa10000",
+      "00011ahhhiihhhhiiha11000",
+      "001qqaahhihaahhihaaqq100",
+      "01qqhqahhhhaahhhhhqqqq10",
+      "01qqqqggaaa11aaaaggqqq10",
+      "01qqqqqqaaaaaaaaqqqqqq10",
+      "001qqqqbbbaaaabbbqqqq100",
+      "0001111bbbbbbbbbb1111000",
+      "0000001bbbbzzbbbb1000000",
+      "0000001bbzzzzzzbb1000000",
+      "0000001bzzzmmzzzb1000000",
+      "00000001zzzzzzzz10000000",
+      "000000001zzzzzz100000000",
+      "00000001bbzzzzbb10000000",
+      "00000001bb1111bb10000000"
+    ]),
+    sad: parseGrid([
+      "000000000000000000000000",
+      "000000z0000000000z000000",
+      "00000zz1000000001zz00000",
+      "000000010000000010000000",
+      "000000001111111100000000",
+      "000000011aaaaaa110000000",
+      "0000001aaaaaaaaaa1000000",
+      "000001aaaaaaaaaaaa100000",
+      "000001aaaaaaaaaaaa100000",
+      "00001aa11111a11111a10000",
+      "00011aahhhhaahhhhaa11000",
+      "001qqaahhiiaahhiiaaqq100",
+      "01qqhqaahhaaaahhahqqqq10",
+      "01qqqqqkaaa1aaaaaqqqqq10",
+      "01qqqqqkaaaaaaaaqqqqqq10",
+      "001qqqqbkbaaaabbbqqqq100",
+      "0001111bbbbbbbbbb1111000",
+      "0000001bbbbzzbbbb1000000",
+      "0000001bbzzzzzzbb1000000",
+      "0000001bzzzmmzzzb1000000",
+      "00000001zzzzzzzz10000000",
+      "000000001zzzzzz100000000",
+      "00000001bbzzzzbb10000000",
+      "00000001bb1111bb10000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000000000000000000",
+      "000000z0000000000z000000",
+      "00000zz1000000001zz00000",
+      "000000010000000010000000",
+      "000000001111111100000000",
+      "000000011aaaaaa110000000",
+      "0000001aaaaaaaaaa1000000",
+      "000001aaaaaaaaaaaa100000",
+      "000001aaaaaaaaaaaa100000",
+      "00001aaaaaaaaaaaaaa10000",
+      "00011aa11111a11111a11000",
+      "001qqaaaaaaaaaaaaaaqq100",
+      "01qqhqaaaaaaaaaaahqqqq10",
+      "01qqqqqaaaa1aaaaaqqqqq10",
+      "01qqqqqqaaaaaaaaqqqqqq10",
+      "001qqqqbbbaaaabbbqqqq100",
+      "0001111bbbbbbbbbb1111000",
+      "0000001bbbbzzbbbb1000000",
+      "0000001bbzzzzzzbb1000000",
+      "0000001bzzzmmzzzb1000000",
+      "00000001zzzzzzzz10000000",
+      "000000001zzzzzz100000000",
+      "00000001bbzzzzbb10000000",
+      "00000001bb1111bb10000000"
+    ]),
+  },
+  "fawn": {
+    idle: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000111001111111100111000",
+      "001666116666666611666100",
+      "016ggg666666666666ggg610",
+      "016ggg6hhhh66hhhh6ggg610",
+      "0016666hhh266hhh26666100",
+      "000111hhhiihhhhiih111000",
+      "0000016hhih66hhih6100000",
+      "0000016hhhh66hhhh6100000",
+      "000001gg622112266gg10000",
+      "000000166221222661221000",
+      "000000016221122611222100",
+      "000000166666666661221000",
+      "000001626665566626110000",
+      "000001666555555666100000",
+      "000001662555555266100000",
+      "000001666555555666100000",
+      "000000126655556621000000",
+      "000000017765567710000000",
+      "000000017766667710000000",
+      "000000017711117710000000"
+    ]),
+    blink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000111001111111100111000",
+      "001666116666666611666100",
+      "016ggg666666666666ggg610",
+      "016ggg666666666666ggg610",
+      "001666666666666666666100",
+      "000111611111611111111000",
+      "000001666666666666100000",
+      "000001666666666666100000",
+      "000001666221122666110000",
+      "000000166221222661221000",
+      "000000016222222611222100",
+      "000000166666666661221000",
+      "000001626665566626110000",
+      "000001666555555666100000",
+      "000001662555555266100000",
+      "000001666555555666100000",
+      "000000126655556621000000",
+      "000000017765567710000000",
+      "000000017766667710000000",
+      "000000017711117710000000"
+    ]),
+    ear: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000111000000000000111000",
+      "001666111111111111666100",
+      "016ggg666666666666ggg610",
+      "016ggg666666666666ggg610",
+      "0016666hhhh66hhhh6666100",
+      "0001116hhh266hhh26111000",
+      "000001hhhiihhhhiih100000",
+      "0000016hhih66hhih6100000",
+      "0000016hhhh66hhhh6100000",
+      "000001gg622112266gg10000",
+      "000000166221222661221000",
+      "000000016221122611222100",
+      "000000166666666661221000",
+      "000001626665566626110000",
+      "000001666555555666100000",
+      "000001662555555266100000",
+      "000001666555555666100000",
+      "000000126655556621000000",
+      "000000017765567710000000",
+      "000000017766667710000000",
+      "000000017711117710000000"
+    ]),
+    sad: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000111001111111100111000",
+      "001666116666666611666100",
+      "016ggg666666666666ggg610",
+      "016ggg666666666666ggg610",
+      "001666611111611111666100",
+      "0001116hhhh66hhhh6111000",
+      "0000016hhii66hhii6100000",
+      "00000166hh6666hh66100000",
+      "0000016k6221122666110000",
+      "0000001k6221222661221000",
+      "00000001k221222611222100",
+      "000000166666666661221000",
+      "000001626665566626110000",
+      "000001666555555666100000",
+      "000001662555555266100000",
+      "000001666555555666100000",
+      "000000126655556621000000",
+      "000000017765567710000000",
+      "000000017766667710000000",
+      "000000017711117710000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000111001111111100111000",
+      "001666116666666611666100",
+      "016ggg666666666666ggg610",
+      "016ggg666666666666ggg610",
+      "001666666666666666666100",
+      "000111611111611111111000",
+      "000001666666666666100000",
+      "000001666666666666100000",
+      "000001666221122666110000",
+      "000000166221222661221000",
+      "000000016221222611222100",
+      "000000166666666661221000",
+      "000001626665566626110000",
+      "000001666555555666100000",
+      "000001662555555266100000",
+      "000001666555555666100000",
+      "000000126655556621000000",
+      "000000017765567710000000",
+      "000000017766667710000000",
+      "000000017711117710000000"
+    ]),
+  },
+  "seal": {
+    idle: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000111111000000000",
+      "000000011222222110000000",
+      "000000122222222221000000",
+      "000001222222222222100000",
+      "000001222222222222100000",
+      "00001222ii2222ii22210000",
+      "00001222hh2222hh22210000",
+      "00001222ii2222ii22210000",
+      "00001222iih222iih2210000",
+      "000012222221122222210000",
+      "000001gf22212222fgg10000",
+      "000012f2221jj1222f221000",
+      "0011e2222222222222222100",
+      "01eeeee22222222222eeee10",
+      "01eeeee22222222222eeeee1",
+      "00111222eeeeeeeeee2ee110",
+      "000001eeeeeeeeeeeee1ee10",
+      "00000011eeeeeeeeee1eeee1",
+      "00000000111222111101ee10",
+      "000000000001110000001100"
+    ]),
+    blink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000111111000000000",
+      "000000011222222110000000",
+      "000000122222222221000000",
+      "000001222222222222100000",
+      "000001222222222222100000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012221112221112210000",
+      "000012222221122222210000",
+      "0000012f22212222f2210000",
+      "000012f2222222222f221000",
+      "0011e2222222222222222100",
+      "01eeeee22222222222eeee10",
+      "01eeeee22222222222eeeee1",
+      "00111222eeeeeeeeee2ee110",
+      "000001eeeeeeeeeeeee1ee10",
+      "00000011eeeeeeeeee1eeee1",
+      "00000000111222111101ee10",
+      "000000000001110000001100"
+    ]),
+    ear: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000111111000000000",
+      "000000011222222110000000",
+      "000000122222222221000000",
+      "000001222222222222100000",
+      "000001222222222222100000",
+      "00001222ii2222ii22210000",
+      "00001222hh2222hh22210000",
+      "00001222ii2222ii22210000",
+      "00001222iih222iih2210000",
+      "000012222221122222210000",
+      "000001gf22212222fgg10000",
+      "000012f2221jj1222f221000",
+      "0011e2222222222222222100",
+      "01eeeee22222222222eeee10",
+      "01eeeee22222222222eeeee1",
+      "00111222eeeeeeeeee2ee110",
+      "000001eeeeeeeeeeeee1ee10",
+      "00000011eeeeeeeeee1eeee1",
+      "00000000111222111101ee10",
+      "000000000001110000001100"
+    ]),
+    sad: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000111111000000000",
+      "000000011222222110000000",
+      "000000122222222221000000",
+      "000001222222222222100000",
+      "000001222222222222100000",
+      "000012222222222222210000",
+      "000012221112221112210000",
+      "00001222ii2222ii22210000",
+      "00001222ii2222ii22210000",
+      "000012222221122222210000",
+      "0000012f22212222f2210000",
+      "000012fk222222222f221000",
+      "0011e2222222222222222100",
+      "01eeeee22222222222eeee10",
+      "01eeeee22222222222eeeee1",
+      "00111222eeeeeeeeee2ee110",
+      "000001eeeeeeeeeeeee1ee10",
+      "00000011eeeeeeeeee1eeee1",
+      "00000000111222111101ee10",
+      "000000000001110000001100"
+    ]),
+    sadBlink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000111111000000000",
+      "000000011222222110000000",
+      "000000122222222221000000",
+      "000001222222222222100000",
+      "000001222222222222100000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012222222222222210000",
+      "000012221112221112210000",
+      "000012222221122222210000",
+      "0000012f22212222f2210000",
+      "000012fk222222222f221000",
+      "0011e2222222222222222100",
+      "01eeeee22222222222eeee10",
+      "01eeeee22222222222eeeee1",
+      "00111222eeeeeeeeee2ee110",
+      "000001eeeeeeeeeeeee1ee10",
+      "00000011eeeeeeeeee1eeee1",
+      "00000000111222111101ee10",
+      "000000000001110000001100"
+    ]),
+  },
   "rainbow": {
     idle: parseGrid([
       "000000000000000000000000",
@@ -1849,6 +2378,11 @@ const ANIMALS = [
   { id: "frog", name: "Froggy", cost: 1100, bio: "Ribbits a little tune after the rain." },
   { id: "redpanda", name: "Red Panda", cost: 1400, bio: "Stripy tail, sleepy smile, big heart." },
   { id: "duckling", name: "Duckling", cost: 1700, bio: "Follows anyone who says hello kindly." },
+  // v7 seasonal friends: can join while it's their season, and stay forever after
+  { id: "lamb", name: "Lamb", cost: 800, season: "spring", bio: "Soft as a cloud. Hums little spring rhymes." },
+  { id: "firefly", name: "Glowbug", cost: 800, season: "summer", nightOnly: true, bio: "Carries a tiny lantern for pals who wander." },
+  { id: "fawn", name: "Fawn", cost: 800, season: "autumn", bio: "Wobbly legs, brave heart, loves crunchy leaves." },
+  { id: "seal", name: "Seal Pup", cost: 800, season: "winter", bio: "Snow-white and snuggly. Slides on its tummy." },
   { id: "rainbow", name: "Rainbow", cost: 0, special: true, bio: "Born the day the gloom lifted." },
 ];
 
@@ -1859,6 +2393,7 @@ const ANCHOR = {
   chick: [11.5, 5.5, 10, 3, 15.5], otter: [8.75, 4.5, 8, 2.25, 13], hedgehog: [11.5, 5, 13, 3, 17.5],
   frog: [11.5, 3.5, 6.5, 4, 17], redpanda: [11.5, 4.5, 9.5, 3, 15.5], duckling: [11.5, 4, 8.5, 3, 14],
   rainbow: [11.5, 5, 10, 3, 15.5],
+  lamb: [11.5, 3, 9.5, 3, 15], firefly: [11.5, 4.5, 10, 3, 15], fawn: [11.5, 4.5, 9, 3, 14.5], seal: [11.5, 5, 10.5, 3, 16],
 };
 
 const ACCESSORIES = [
@@ -1873,6 +2408,10 @@ const ACCESSORIES = [
   { id: "halo", name: "Star Halo", short: "Halo", friend: 4 },
   { id: "duckhat", name: "Rubber Duck Hat", short: "Duck", arcade: true },
   { id: "clover", name: "Lucky Clover", short: "Clover", arcade: true },
+  { id: "blossom", name: "Blossom Clip", short: "Blossom", season: "spring" },
+  { id: "sunhat", name: "Straw Sun Hat", short: "Sun hat", season: "summer" },
+  { id: "acorn", name: "Acorn Cap", short: "Acorn", season: "autumn" },
+  { id: "earmuffs", name: "Fluffy Earmuffs", short: "Muffs", season: "winter" },
 ];
 const SHOP_ACCS = ACCESSORIES.filter(a => a.cost);
 const FRIEND_MILESTONES = [10, 50, 150, 500];
@@ -1925,7 +2464,7 @@ const GOALS = [
   { id: "rainbow", label: "Meet the Rainbow Critter", check: s => !!s.unlocked.rainbow, reward: 250 },
   { id: "shiny", label: "Hug a shiny critter", check: s => !!s.achievements._shinyHugged, reward: 75 },
   { id: "dawn3", label: "See 3 New Dawns", check: s => s.dawnCount >= 3, reward: 200 },
-  { id: "all_animals", label: "Unlock every friend", check: s => ANIMALS.filter(a => !a.special).every(a => s.unlocked[a.id]), reward: 400 },
+  { id: "all_animals", label: "Unlock every friend", check: s => ANIMALS.filter(a => !a.special && !a.season).every(a => s.unlocked[a.id]), reward: 400 },
   { id: "all_bgs", label: "Unlock every scene", check: s => BACKGROUNDS.every(b => s.unlockedBgs[b.id]), reward: 350 },
   { id: "friend1", label: "Make a friend (Friendship Lv 1)", check: s => maxFriend(s) >= 1, reward: 60 },
   { id: "friend2", label: "Good pals (Friendship Lv 2)", check: s => maxFriend(s) >= 2, reward: 150 },
@@ -1959,6 +2498,15 @@ const GOALS = [
   { id: "bubble3", label: "3★ in Bubble Bath", check: s => s.arcade.stars.bubble >= 3, reward: 200, gift: { decor: "tub" } },
   { id: "treats3", label: "3★ in Catch the Treats", check: s => s.arcade.stars.treats >= 3, reward: 200, gift: { decor: "cupcake" } },
   { id: "arcdaily", label: "Collect all 3 arcade daily bonuses", check: s => s.arcade.allDailyDays >= 1, reward: 150 },
+  // v7: seasons & day/night (each festival's first celebration brings a seasonal decoration + accessory)
+  { id: "ev_spring", label: "Celebrate the Blossom Festival", check: s => s.seasons.evWins.spring >= 1, reward: 150, gift: { decor: "sakura", acc: "blossom" } },
+  { id: "ev_summer", label: "Celebrate Firefly Night", check: s => s.seasons.evWins.summer >= 1, reward: 150, gift: { decor: "umbrella", acc: "sunhat" } },
+  { id: "ev_autumn", label: "Celebrate the Leaf Pile Party", check: s => s.seasons.evWins.autumn >= 1, reward: 150, gift: { decor: "pumpkin", acc: "acorn" } },
+  { id: "ev_winter", label: "Build Snow Critters", check: s => s.seasons.evWins.winter >= 1, reward: 150, gift: { decor: "snowman", acc: "earmuffs" } },
+  { id: "night1", label: "Visit the meadow at night", check: s => s.seasons.nightVisits >= 1, reward: 60 },
+  { id: "flies10", label: "Catch 10 fireflies", check: s => s.seasons.fireflies >= 10, reward: 100 },
+  { id: "seasonpal", label: "Befriend a seasonal friend", check: s => ANIMALS.some(a => a.season && s.unlocked[a.id]), reward: 150 },
+  { id: "lanterns", label: "See the garden lanterns glow", check: s => s.seasons.lanternNight, reward: 60 },
 ];
 
 const POWERUPS = {
@@ -2102,6 +2650,8 @@ function load() {
     lastActiveLoaded = typeof d.lastActive === "number" && isFinite(d.lastActive) ? d.lastActive : 0;
     // v6: arcade bests & daily bonuses (older saves start fresh here)
     arcade = normalizeArcade(d.arcade);
+    // v7: season settings & festival progress (older saves: auto season, northern hemisphere)
+    seasons = normalizeSeasons(d.seasons);
     if (!isFinite(joy)) joy = 0;
     if (!isFinite(mood)) mood = 8;
     if (!isFinite(moodPeak)) moodPeak = mood;
@@ -2118,7 +2668,7 @@ function save() {
       critterHugs, friendLvl, ownedAcc, equipped,
       lastGiftDay, giftStreak, bestGiftStreak, giftsOpened, stats, albumNew,
       hapticsOn, tutorialDone, lastVersionSeen,
-      garden: serializeGarden(), lastActive: Date.now(), arcade,
+      garden: serializeGarden(), lastActive: Date.now(), arcade, seasons,
     }));
     saveDirty = false;
   } catch (e) {}
@@ -2539,7 +3089,8 @@ const TIER_AT = [0, 25, 50, 75, 100];
 const LOOKAHEAD = 0.1, TICK_MS = 25;
 const music = {
   timer: null, nextTime: 0, step: 0, formIdx: 0, songIdx: 0, tier: 0, bpm: 100, mode: null, modeKey: null,
-  stats: { melody: 0, bass: 0, drums: 0, arp: 0, harmony: 0, sparkle: 0, tierChanges: 0, bars: 0 },
+  stats: { melody: 0, bass: 0, drums: 0, arp: 0, harmony: 0, sparkle: 0, tierChanges: 0, bars: 0, bells: 0, jingles: 0, chirps: 0 },
+  flavor: null,
 };
 
 function rawTier(m) { return m >= 100 ? 4 : m >= 75 ? 3 : m >= 50 ? 2 : m >= 25 ? 1 : 0; }
@@ -2607,7 +3158,9 @@ function scheduleStep(t) {
     // layer / tempo changes only happen on bar boundaries
     const nt = music.mode ? 3 : targetTier();
     if (nt !== music.tier) { music.tier = nt; music.stats.tierChanges++; }
-    music.bpm = music.mode ? song.bpm : tierBpm(song, music.tier);
+    // v7: the meadow song gets softer at night (bells instead of drums) and sparklier in winter
+    music.flavor = musicFlavor();
+    music.bpm = music.mode ? song.bpm : tierBpm(song, music.tier) * (music.flavor && music.flavor.night ? 0.92 : 1);
     music.stats.bars++;
   }
   if (!musicOn) return;
@@ -2616,6 +3169,7 @@ function scheduleStep(t) {
   const ch = sec.chords[s];
   const secondPass = music.formIdx >= 2;
   const M = A.melodyBus, B = A.musicBus;
+  const fl = music.flavor, night = !!(fl && fl.night);
 
   // --- melody ---
   const n = sec.mel[s];
@@ -2625,8 +3179,8 @@ function scheduleStep(t) {
       let midi = tier === 0 ? minorize(n.midi, song.key) : n.midi;
       const dur = n.len * sd * (tier === 0 ? 0.95 : 0.8);
       const f = mtof(midi);
-      if (tier === 0) {
-        tone(M, "triangle", f, t, dur, 0.15, { a: 0.03, d: 0.25, s: 0.45, r: 0.3 });
+      if (tier === 0 || night) {
+        tone(M, "triangle", f, t, dur, night && tier > 0 ? 0.12 : 0.15, { a: 0.03, d: 0.25, s: 0.45, r: 0.3 });
       } else {
         tone(M, A.pulse25, f, t, dur, 0.1, { a: 0.006, d: 0.1, s: 0.5, r: 0.08 });
         tone(M, "triangle", f, t, dur, 0.06, { a: 0.006, d: 0.12, s: 0.5, r: 0.1 });
@@ -2665,8 +3219,26 @@ function scheduleStep(t) {
     }
   }
 
+  // --- night bells: a soft chime on each beat instead of drums & arpeggio ---
+  if (night && tier >= 1 && ch && inBar % 4 === 0) {
+    const tones = chordTones(ch, 5);
+    tone(B, "sine", mtof(tones[(inBar / 4 + music.formIdx) % 4]), t, sd * 3, 0.03, { a: 0.004, d: 0.3, s: 0.25, r: 0.5 });
+    music.stats.bells++;
+  }
+  // --- winter: sleigh-bell sparkle on the off-beats ---
+  if (fl && fl.season === "winter" && tier >= 1 && inBar % 2 === 1) {
+    noiseHit(B, t, 0.03, night ? 0.012 : 0.02, "highpass", 8500, 1.5);
+    music.stats.jingles++;
+  }
+  // --- spring: a little bird chirp every few bars ---
+  if (fl && fl.season === "spring" && !night && tier >= 2 && inBar === 6 && music.stats.bars % 4 === 1) {
+    tone(B, "sine", 2200, t, 0.05, 0.02, { a: 0.003, d: 0.04, s: 0.3, r: 0.05, slideTo: 2900, slideT: 0.05 });
+    tone(B, "sine", 2300, t + 0.1, 0.05, 0.02, { a: 0.003, d: 0.04, s: 0.3, r: 0.05, slideTo: 3000, slideT: 0.05 });
+    music.stats.chirps++;
+  }
+
   // --- percussion (50%+) ---
-  if (tier >= 2) {
+  if (tier >= 2 && !night) {
     const kickOn = inBar === 0 || inBar === 8 || (tier >= 3 && inBar === 10 && secondPass);
     if (kickOn) {
       tone(B, "sine", 130, t, 0.02, 0.28, { a: 0.003, d: 0.08, s: 0.3, r: 0.1, slideTo: 45, slideT: 0.12 });
@@ -2685,7 +3257,7 @@ function scheduleStep(t) {
   }
 
   // --- arpeggio (75%+) ---
-  if (tier >= 3 && ch && inBar % 2 === 0) {
+  if (tier >= 3 && !night && ch && inBar % 2 === 0) {
     const tones = chordTones(ch, 5);
     const order = [0, 1, 2, 3, 2, 1, 0, 2];
     const m = tones[order[(inBar / 2) % 8]];
@@ -2892,6 +3464,8 @@ function colorForPixel(idx, animal, shiny, sad) {
     else if (idx === 31) col = "#a89ca0";
     else if (idx === 32) col = "#605860";
     else if (idx === 33 || idx === 34) col = "#c8c0b0";
+    else if (idx === 10 || idx === 11) col = "#a8b8d0";
+    else if (idx === 35) col = "#d0d8b0";
   }
   return col;
 }
@@ -2972,6 +3546,10 @@ const ACC_ART = {
   crown: { rows: ["a.a.a", "aaaaa", "abara"], cmap: { a: "#ffd700", r: "#ff4f6f", b: "#60c0ff" }, at: (hx, top) => [hx - 2.5, top - 3] },
   duckhat: { rows: ["....yy..", "...yyeyo", "y..yyyy.", "yyyyyyy.", ".yyyyy.."], cmap: { y: "#ffd84a", e: "#2c2030", o: "#ff9a3a" }, at: (hx, top) => [hx - 4, top - 5] },
   clover: { rows: ["gg.gg", "gglgg", ".lll.", "gglgg", "gg.gg"], cmap: { g: "#50b848", l: "#8ee070" }, at: (hx, top) => [hx + 2.5, top - 2] },
+  blossom: { rows: ["..a..", "aabaa", ".aaa.", ".a.a."], cmap: { a: "#ffb0cc", b: "#ffd23a" }, at: (hx, top) => [hx + 2.5, top - 2] },
+  sunhat: { rows: ["...yyyyy...", "...rrrrr...", "yyyyyyyyyyy"], cmap: { y: "#f0cf70", r: "#ff6b8a" }, at: (hx, top) => [hx - 5.5, top - 3] },
+  acorn: { rows: ["...s...", ".bcbcb.", "bcbcbcb", "bbbbbbb"], cmap: { b: "#9a6030", c: "#c88a52", s: "#6a4020" }, at: (hx, top) => [hx - 3.5, top - 3] },
+  earmuffs: { rows: ["...bbbbbbbbb...", "..b.........b..", "pp...........pp", "pp...........pp"], cmap: { b: "#c9a0ff", p: "#ffb0cc" }, at: (hx, top) => [hx - 7.5, top - 1] },
 };
 
 const ACC_PAD = 8;
@@ -3055,7 +3633,7 @@ function drawZzz(animalId, ox, oy, u) {
 function accAvailable(id, animalId) {
   const a = ACCESSORIES.find(x => x.id === id);
   if (!a) return false;
-  if (a.cost || a.arcade) return !!ownedAcc[a.id];
+  if (a.cost || a.arcade || a.season) return !!ownedAcc[a.id];
   return (friendLvl[animalId] || 0) >= a.friend;
 }
 function accOptions(animalId) { return ACCESSORIES.filter(a => accAvailable(a.id, animalId)); }
@@ -3174,9 +3752,19 @@ function pumpToasts() {
     let slot = -1;
     for (let i = 0; i < 3; i++) if (!(used & (1 << i))) { slot = i; break; }
     if (slot < 0) return;
+    // v7: goal toasts wait quietly during a mini-game round (they're listed on the results card instead)
+    if (scene === "mg") return;
     const [text, color] = toastQueue.shift();
-    addFloat({ x: W / 2, y: 106 + slot * 24, text, life: 2.2, vy: 0, color: color || "#7a40a0", size: 12, toast: true, slot });
+    addFloat({ x: W / 2, y: toastBaseY() + slot * 24, text, life: 2.2, vy: 0, color: color || "#7a40a0", size: 12, toast: true, slot });
   }
+}
+
+// toasts sit just below each scene's HUD, clear of the combo counter and status pills
+function toastBaseY() {
+  if (scene === "play" || scene === "pause") return 120;
+  if (scene === "garden") return 74;
+  if (scene === "arcade") return 96;
+  return 106;
 }
 
 function triggerVictory() {
@@ -3398,7 +3986,11 @@ function spawnSpecialCheer(x, y) {
 }
 
 function startIdle(c) {
-  if (Math.random() < 0.45) { c.idle = "nap"; c.idleDur = 5 + Math.random() * 4; }
+  // v7: sleepier at night, and some critters stop to gaze at the stars
+  const r = Math.random();
+  const nap = nightNapChance();
+  if (r < nap) { c.idle = "nap"; c.idleDur = (5 + Math.random() * 4) * (nap > 0.6 ? 1.3 : 1); }
+  else if (nap > 0.6 && r < nap + 0.15) { c.idle = "gaze"; c.idleDur = 3 + Math.random() * 2; }
   else { c.idle = "wave"; c.idleDur = 1.8; }
 }
 function endIdle(c) { c.idle = null; c.idleT = 7 + Math.random() * 9; }
@@ -3677,7 +4269,7 @@ function startEvent(type) {
   if (!type) {
     // shuffled bag so every event shows up regularly, never twice in a row
     if (!eventBag.length) {
-      eventBag = ["parade", "golden", "storm", "rain"].sort(() => Math.random() - 0.5);
+      eventBag = ["parade", "golden", "storm", "rain", "season"].sort(() => Math.random() - 0.5);
       if (eventBag[0] === lastEventType) eventBag.push(eventBag.shift());
     }
     type = eventBag.shift();
@@ -3685,6 +4277,7 @@ function startEvent(type) {
   }
   lastEventType = type;
   stats.events++;
+  if (type === "season") { startSeasonEvent(); return; }
   const info = EVENT_INFO[type];
   showBanner(info[0], info[1], 2.6);
   sfxEvent();
@@ -3767,6 +4360,8 @@ function updateEvents(dt, wdt) {
       gloomClouds.forEach(g => { if (g.storm) g.life = Math.min(g.life, 3); });
       endEvent("The storm drifts away", ev.shooed + "/" + ev.total + " clouds shooed");
     }
+  } else if (ev.type === "season") {
+    updateSeasonEvent(ev, dt, wdt);
   } else if (ev.type === "rain") {
     if (ev.t < ev.dur) {
       ev.spawnT -= wdt;
@@ -3924,6 +4519,7 @@ function startPlay() {
     showStory(STORY[0].title, STORY[0].sub);
   }
   for (let i = 0; i < 3; i++) spawnCritter();
+  if (isNight()) { seasons.nightVisits++; checkAchievements(); }
   save();
 }
 
@@ -4092,7 +4688,7 @@ function worldColors(bg) {
     skyTop = lerpColor(skyTop, "#ff70c0", v * 0.35);
     skyBot = lerpColor(skyBot, "#ffe080", v * 0.3);
   }
-  return { skyTop, skyBot, grass, t };
+  return tintWorld({ skyTop, skyBot, grass, t });
 }
 
 
@@ -4277,44 +4873,29 @@ function drawBackground() {
   ctx.fillRect(0, 0, W, H);
 
   const sunBright = 0.3 + wc.t * 0.7;
-  if (bg.night && wc.t > 0.4) {
-    ctx.fillStyle = "#f0e8c0";
-    ctx.globalAlpha = 0.5 + wc.t * 0.5;
-    ctx.beginPath(); ctx.arc(W - 50, 50, 22, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = wc.skyTop;
-    ctx.beginPath(); ctx.arc(W - 42, 44, 18, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#fff8d0";
-    for (let i = 0; i < 30; i++) {
-      const sx = (i * 97 + 13) % W;
-      const sy = (i * 53 + 7) % 180;
-      const tw = 0.5 + 0.5 * Math.sin(time * 2 + i);
-      ctx.globalAlpha = (0.3 + tw * 0.6) * wc.t;
-      // tiny sparkle stars
-      const ss = 1 + (i % 3);
-      ctx.fillRect(sx, sy, ss, ss);
-      if (i % 4 === 0) {
-        ctx.fillRect(sx - 1, sy + 1, 1, 1);
-        ctx.fillRect(sx + ss, sy + 1, 1, 1);
-      }
-    }
+  // v7: the real clock sets the sky; the "Starry Joy Night" scene keeps its moon all day
+  const nightA = Math.max(bg.night && wc.t > 0.4 ? 0.5 + wc.t * 0.5 : 0, wc.night);
+  if (nightA < 0.98) {
+    const sy = 58 + wc.golden * 26 + wc.dawn * 18;
+    ctx.globalAlpha = sunBright * (1 - nightA);
+    drawSun(W - 58, sy, 18 + wc.t * 8, wc.t);
+    // soft glow (warmer in the golden evening and at dawn)
+    const warm = Math.max(wc.golden, wc.dawn);
+    ctx.fillStyle = warm > 0.05 ? "rgba(255,180,110," + (0.14 + wc.t * 0.2 + warm * 0.15) + ")" : "rgba(255,240,150," + (0.12 + wc.t * 0.28) + ")";
+    ctx.beginPath(); ctx.arc(W - 58, sy, 40 + wc.t * 16 + warm * 10, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-  } else {
-    ctx.globalAlpha = sunBright;
-    drawSun(W - 58, 58, 18 + wc.t * 8, wc.t);
-    ctx.globalAlpha = 1;
-    // soft glow
-    ctx.fillStyle = "rgba(255,240,150," + (0.12 + wc.t * 0.28) + ")";
-    ctx.beginPath(); ctx.arc(W - 58, 58, 40 + wc.t * 16, 0, Math.PI * 2); ctx.fill();
   }
+  drawMoonStars(nightA * (0.45 + 0.55 * wc.t), wc.skyTop);
+  const nightSky = bg.night || wc.night > 0.5;
 
   for (const cl of decorClouds) {
     cl.x += cl.sp * frameDt;
     if (cl.x > W + 70) cl.x = -70;
-    const a = bg.night ? 0.22 : (0.4 + wc.t * 0.45);
-    const base = bg.night
+    const a = nightSky ? 0.22 : (0.4 + wc.t * 0.45);
+    const base = nightSky
       ? "rgba(200,190,230," + a + ")"
       : "rgba(255,252,248," + a + ")";
-    const shadeC = bg.night
+    const shadeC = nightSky
       ? "rgba(160,150,190," + (a * 0.7) + ")"
       : "rgba(230,236,245," + (a * 0.75) + ")";
     drawCloud(cl.x, cl.y, cl.s, base, { shade: shadeC, hi: "rgba(255,255,255," + (a * 0.5) + ")" });
@@ -4339,6 +4920,7 @@ function drawBackground() {
   ctx.quadraticCurveTo(W * 0.75, H - 65, W, H - 115);
   ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
   ctx.fill();
+  drawSeasonTree(36, H - 108, wc.season);
 
   // near ground with dithered grass feel
   ctx.fillStyle = wc.grass;
@@ -4360,7 +4942,7 @@ function drawBackground() {
   // swaying grass blades
   ctx.strokeStyle = shade(wc.grass, 28);
   ctx.lineWidth = 1.4;
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < (wc.season === "winter" ? 0 : 48); i++) {
     const gx = (i * 31 + 5) % W;
     const gy = H - 58;
     const sway = Math.sin(time * 2.2 + i) * 3;
@@ -4370,12 +4952,13 @@ function drawBackground() {
     ctx.stroke();
   }
 
-  for (const f of flowers) {
+  for (let i = 0; i < flowers.length; i++) {
+    const f = flowers[i];
     const bloom = Math.min(1, Math.max(0, (wc.t - 0.15) / 0.55 + f.bloom * 0.2));
     if (bloom < 0.05) continue;
     const sway = Math.sin(time * 1.5 + f.phase) * 2.2;
     ctx.globalAlpha = bloom;
-    drawFlower(f, bloom, sway, wc.grass);
+    drawSeasonFlower(f, bloom, sway, wc.grass, wc.season, i);
     ctx.globalAlpha = 1;
   }
 
@@ -4392,6 +4975,7 @@ function drawBackground() {
     });
     ctx.globalAlpha = 1;
   }
+  drawMeadowSeason(wc);
 }
 
 function applyWorldFilter() {
@@ -4620,7 +5204,7 @@ function checkAchievements() {
     cloudsShooed, sadCheered, moodPeak, dawnCount,
     friendLvl, ownedAcc, equipped, stats, giftsOpened, bestGiftStreak,
     gardenPlaced: garden.placedEver, cozy: gardenCozy(), gardenVisits: garden.visits,
-    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(), arcade,
+    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(), arcade, seasons,
   };
   for (const g of GOALS) {
     if (achievements[g.id]) continue;
@@ -4722,8 +5306,11 @@ function drawCritter(c) {
   const fx = critterFx;
   fx.acc = equippedFor(c.animal.id); fx.heartEyes = c.heartEyesT > 0; fx.rot = rot;
   fx.nap = c.idle === "nap" && c.state === "float"; fx.sq = sq;
+  if (c.idle === "gaze" && c.state === "float") fx.rot = -0.14;
+  drawCritterGlow(c);
   drawSprite(c.animal, c.x, c.y, c.scale * c.hugScale, c.shiny, bounce, c.sad, c.phase, fx);
   const s = c.scale * SPRITE_SIZE;
+  if (c.idle === "gaze" && c.state === "float") drawGazeTwinkle(c);
   if (c.idle === "wave" && c.state === "float") {
     font(10, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillStyle = "#ff70a8";
@@ -4808,8 +5395,12 @@ function drawGift() {
   ctx.fillStyle = "#fff8c8"; ctx.fillRect(-10, -18, 2, 2);
   ctx.restore();
   font(11, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = "#c04080";
   ctx.globalAlpha = 0.7 + Math.sin(gift.t * 5) * 0.3;
+  if (dayLight().night > 0.3) { // a soft light pill keeps the label readable at night
+    const tw = ctx.measureText("Daily gift! Tap ♥").width + 14;
+    ctx.fillStyle = "rgba(255,245,250,0.85)"; roundRect(gift.x - tw / 2, gift.y + 27, tw, 18, 9); ctx.fill();
+  }
+  ctx.fillStyle = "#c04080";
   ctx.fillText("Daily gift! Tap ♥", gift.x, gift.y + 36);
   ctx.globalAlpha = 1;
 }
@@ -4988,6 +5579,7 @@ function drawHUD() {
     else if (e.type === "golden") pills.push(["☀ Golden " + Math.max(0, Math.ceil(e.dur - e.t)) + "s", "#ffe8a0"]);
     else if (e.type === "storm") pills.push(["☁ Storm " + e.shooed + "/" + e.total, "#e0d8f0"]);
     else if (e.type === "rain") pills.push(["✦ Drops " + e.caught, "#d8f0ff"]);
+    else if (e.type === "season") pills.push([seasonPill(e), SEASON_INFO[e.s].pill]);
   }
   if (magnetT > 0) pills.push(["Magnet " + Math.ceil(magnetT) + "s", "#ffe0d0"]);
   if (slowT > 0) pills.push(["Slow " + Math.ceil(slowT) + "s", "#d8ecff"]);
@@ -5032,6 +5624,7 @@ function renderPlay() {
   drawEventOverlay();
   drawGift();
   for (const d of drops) drawDrop(d);
+  drawSeasonEvent();
   for (const p of powerups) drawPowerup(p);
   ctx.restore();
   drawHUD();
@@ -5070,7 +5663,11 @@ function drawShop() {
       ctx.fillStyle = C.text;
       font(13, true);
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(a.name + (a.special ? " ✦" : ""), 82, y + 23);
+      if (a.season) {
+        ctx.fillText(a.name, 82, y + 16);
+        font(10, true); ctx.fillStyle = "#c06090";
+        ctx.fillText(SEASON_INFO[a.season].icon + " " + SEASON_INFO[a.season].name + " friend", 82, y + 32);
+      } else ctx.fillText(a.name + (a.special ? " ✦" : ""), 82, y + 23);
       ctx.textAlign = "right";
       if (owned) {
         ctx.fillStyle = "#50a050"; font(12, false);
@@ -5078,6 +5675,9 @@ function drawShop() {
       } else if (a.special) {
         ctx.fillStyle = "#c09000"; font(11, false);
         ctx.fillText("Cure the day!", W - 38, y + 23);
+      } else if (!seasonOpen(a)) {
+        ctx.fillStyle = "#a07890"; fitFont(seasonLockText(a), 130, 10.5, true, 8);
+        ctx.fillText(seasonLockText(a), W - 38, y + 23);
       } else {
         const can = joy >= a.cost;
         listBtn(W - 116, y + 2, 86, 42, a.cost + " ♥", {
@@ -5201,7 +5801,7 @@ function drawAlbum() {
       font(14, true);
       ctx.fillText(a.special ? "???" : a.name, 98, y + 22);
       font(11, false);
-      ctx.fillText(a.special ? "Cure the day to meet this friend" : "Unlock in the Shop · " + a.cost + " ♥", 98, y + 44);
+      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + a.cost + " ♥", 98, y + 44);
     }
   });
   ctx.restore();
@@ -5247,7 +5847,7 @@ function toggleButtons(x, y, w) {
   }));
 }
 
-const SETTINGS_H = 452;
+const SETTINGS_H = 480;
 function drawSettings() {
   drawBackground();
   applyWorldFilter();
@@ -5272,21 +5872,22 @@ function drawSettings() {
   ctx.fillText(canVibrate ? "A gentle buzz on hugs, combos & surprises" : "This device doesn't support haptics — that's okay!", W / 2, top + 222);
   uiButtons.push(btn(W / 2 - 115, top + 236, 111, 44, "Tutorial ↺", { id: "tut_replay", size: 13, bg: "#e8d0ff", border: "#c090e0" }));
   uiButtons.push(btn(W / 2 + 4, top + 236, 111, 44, "What's new", { id: "whatsnew", size: 13, bg: "#fff0b0", border: "#e0c060" }));
+  const si = SEASON_INFO[currentSeason()];
+  uiButtons.push(btn(W / 2 - 115, top + 290, 230, 46, si.icon + " Time & Seasons " + (isNight() ? "☾" : "☀"), { id: "seasons", size: 14, bg: si.pill, border: "#e0a0c0" }));
   font(11, false); ctx.fillStyle = C.textSoft;
   const song = SONGS[music.songIdx];
-  ctx.fillText(audioCtx ? "Now playing: “" + song.name + "”" : "Music starts after your first tap", W / 2, top + 298);
-  ctx.fillText("The tune grows fuller as Joy rises ♥", W / 2, top + 315);
-  ctx.fillText("Gift streak: " + giftStreak + " day" + (giftStreak === 1 ? "" : "s") + " (best " + bestGiftStreak + ")", W / 2, top + 332);
+  ctx.fillText(audioCtx ? "Now playing: “" + song.name + "”" : "Music starts after your first tap", W / 2, top + 352);
+  ctx.fillText("Gift streak: " + giftStreak + " day" + (giftStreak === 1 ? "" : "s") + " (best " + bestGiftStreak + ")", W / 2, top + 369);
   font(10, false);
-  ctx.fillText("Keys: M music · N sounds · U shop · B album · A goals", W / 2, top + 350);
+  ctx.fillText("Keys: M music · N sounds · U shop · B album · A goals", W / 2, top + 386);
   if (updateReady) {
-    uiButtons.push(btn(W / 2 - 115, top + 368, 126, 46, "Update ✨", { id: "sw_refresh", size: 15, bg: "#d0ffd8", border: "#70c080" }));
-    uiButtons.push(btn(W / 2 + 19, top + 368, 96, 46, "Close", { id: "close", size: 15 }));
+    uiButtons.push(btn(W / 2 - 115, top + 400, 126, 46, "Update ✨", { id: "sw_refresh", size: 15, bg: "#d0ffd8", border: "#70c080" }));
+    uiButtons.push(btn(W / 2 + 19, top + 400, 96, 46, "Close", { id: "close", size: 15 }));
   } else {
-    uiButtons.push(btn(W / 2 - 70, top + 368, 140, 46, "Close", { id: "close", size: 15 }));
+    uiButtons.push(btn(W / 2 - 70, top + 400, 140, 46, "Close", { id: "close", size: 15 }));
   }
   font(10, false); ctx.fillStyle = "rgba(122,90,112,0.8)";
-  ctx.fillText("Happy Critters " + APP_LABEL + " · " + (isStandalone() ? "Home Screen app" : "made with ♥"), W / 2, top + 434);
+  ctx.fillText("Happy Critters " + APP_LABEL + " · " + (isStandalone() ? "Home Screen app" : "made with ♥"), W / 2, top + 464);
 }
 
 function drawPause() {
@@ -5337,6 +5938,8 @@ function doUI(id) {
   if (id === "ach") { checkAchievements(); openPanel("achievements"); return; }
   if (id === "album") { albumNew = false; openPanel("album"); save(); return; }
   if (id === "settings") { openPanel("settings"); return; }
+  if (id === "seasons") { scene = "seasons"; return; }
+  if (id.startsWith("sea_")) { seasonsAction(id); return; }
   if (id === "scr_up") { listScroll = clamp(listScroll - 180, 0, listMax); return; }
   if (id === "scr_dn") { listScroll = clamp(listScroll + 180, 0, listMax); return; }
   if (id === "tog_music") { setMusicOn(!musicOn); if (musicOn) ensureAudio(); return; }
@@ -5345,6 +5948,7 @@ function doUI(id) {
   if (id === "resume") { scene = "play"; return; }
   if (id === "title") { scene = "title"; prevScene = "title"; activeEvent = null; drops = []; powerups = []; magnetT = slowT = 0; tut = null; save(); return; }
   if (id === "close") {
+    if (scene === "seasons") { scene = "settings"; return; }
     if (scene === "garden") { leaveGarden(); return; }
     if (scene === "decor") { scene = "garden"; return; }
     scene = prevScene || "title"; return;
@@ -5366,7 +5970,7 @@ function doUI(id) {
   if (id.startsWith("tab_")) { shopTab = id.slice(4); listScroll = 0; return; }
   if (id.startsWith("buy_")) {
     const a = ANIMALS.find(x => x.id === id.slice(4));
-    if (a && !a.special && !unlocked[a.id] && joy >= a.cost) {
+    if (a && !a.special && !unlocked[a.id] && joy >= a.cost && seasonOpen(a)) {
       joy -= a.cost; unlocked[a.id] = true; sfxUnlock(); buzz("unlock");
       toast(a.name + " joined! ♥", C.heart);
       checkAchievements(); save();
@@ -5433,6 +6037,7 @@ function playTap(p) {
   let bestDrop = null, bdd = 26 * 26;
   for (const d of drops) { const dd = dist2(p.x, p.y, d.x, d.y); if (dd < bdd) { bestDrop = d; bdd = dd; } }
   if (bestDrop) { catchDrop(bestDrop); prune(drops, notDead); return; }
+  if (tapSeason(p)) return;
   if (tapGloom(p)) return;
   let best = null, bestD = 1e9;
   for (let i = critters.length - 1; i >= 0; i--) {
@@ -5442,6 +6047,7 @@ function playTap(p) {
     const d = dist2(p.x, p.y, c.x, c.y);
     if (d < rad * rad && d < bestD) { best = c; bestD = d; }
   }
+  if (!best && tapFirefly(p)) return;
   if (best) {
     for (const gc of gloomClouds) {
       if (dist2(best.x, best.y, gc.x + 16 * gc.s, gc.y) < 55 * 55) shooGloom(gc);
@@ -5541,6 +6147,7 @@ window.addEventListener("keydown", (e) => {
     else if (scene === "arcade") scene = prevScene || "title";
     else if (scene === "garden") { if (gSel) gSel = null; else leaveGarden(); }
     else if (scene === "decor") scene = "garden";
+    else if (scene === "seasons") scene = "settings";
     else if (inPanel) scene = prevScene;
   }
   if ((k === "Enter" || k === " ") && scene === "whatsnew") closeWhatsNew();
@@ -5587,6 +6194,8 @@ function stepScene(dt) {
     drawAlbum();
   } else if (scene === "settings") {
     drawSettings();
+  } else if (scene === "seasons") {
+    drawSeasonsPanel();
   } else if (scene === "pause") {
     renderPlay();
     drawPause();
@@ -5639,18 +6248,19 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 6;
-const APP_LABEL = "v6";
+const APP_VERSION = 7;
+const APP_LABEL = "v7";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "The Arcade",
+  sub: "Seasons & Starry Nights",
+  pals: ["lamb", "firefly", "fawn", "seal"],
   items: [
-    "New Arcade with 3 mini-games ★",
-    "Memory Match in three sizes",
-    "Bubble Bath: pop, pop, sparkle!",
-    "Catch the Treats with your pals",
-    "Daily bonuses, bests & new rewards",
-    "Settings now live in the pause menu",
+    "Day & night follow your clock ☾",
+    "Seasons follow the calendar ✿ ☀ ❄",
+    "4 seasonal friends to meet",
+    "Seasonal festivals, decor & outfits",
+    "Fireflies & glowing garden lanterns",
+    "Settings › Time & Seasons to adjust",
   ],
 };
 
@@ -5904,7 +6514,7 @@ function drawWhatsNew(dt) {
   ctx.fillText(WHATS_NEW.title, W / 2, top + 34);
   font(12, true); ctx.fillStyle = C.heart;
   ctx.fillText(WHATS_NEW.sub + " · " + APP_LABEL, W / 2, top + 58);
-  const pals = ["cat", "bunny", "dog", "chick"];
+  const pals = WHATS_NEW.pals || ["cat", "bunny", "dog", "chick"];
   pals.forEach((id, i) => {
     const a = ANIMALS.find(x => x.id === id);
     const hop = Math.max(0, Math.sin(wnT * 5 - i * 0.8)) * 6;
@@ -5976,7 +6586,7 @@ const GC = {
   white: "#fffaf5", post: "#6a4a3a", sand: "#ffe2a8", sandD: "#f0c070",
 };
 
-const DECOR_CATS = [["furniture", "Furniture"], ["plants", "Plants"], ["toys", "Toys"], ["homes", "Homes"]];
+const DECOR_CATS = [["furniture", "Furniture"], ["plants", "Plants"], ["toys", "Toys"], ["homes", "Homes"], ["season", "Season"]];
 // fw/fh: footprint in cells; aw/ah: art size in art pixels (bottom-aligned to the footprint);
 // act: what visiting critters do there; spots: where they stand (art pixels, may sit outside the art).
 const DECOR = [
@@ -6014,10 +6624,15 @@ const DECOR = [
     paint(P) {
       for (const [x, y] of [[4, 6], [12, 5], [20, 7]]) { P.e(x, y + 0.5, 3.5, 2.8, GC.stoneD); P.e(x, y, 3.2, 2.3, GC.stone); P.p(x - 1, y - 1, "#f0ecf4"); }
     } },
-  { id: "flowerbed", name: "Flower Bed", cat: "plants", cost: 60, cozy: 3, fw: 2, fh: 1, aw: 24, ah: 14, act: "sniff", spots: [[12, 17]],
-    paint(P) {
+  { id: "flowerbed", name: "Flower Bed", cat: "plants", cost: 60, cozy: 3, fw: 2, fh: 1, aw: 24, ah: 14, act: "sniff", spots: [[12, 17]], seasonal: true,
+    paint(P, S) {
       P.r(0, 7, 24, 7, GC.woodD); P.r(0, 6, 24, 2, GC.wood); P.r(1, 8, 22, 4, "#7a4a2a");
-      const cols = [GC.pink, GC.yel, GC.purp, "#ffffff", GC.pink, GC.yel];
+      if (S === "winter") {
+        P.r(0, 5, 24, 3, "#ffffff"); P.r(1, 8, 22, 3, "#eef3fb");
+        for (const x of [4, 11, 18]) { P.r(x, 2, 1, 4, GC.leafD); P.r(x + 1, 2, 2, 2, "#ffffff"); }
+        return;
+      }
+      const cols = S === "autumn" ? ["#e8743a", "#f0b030", "#c8452e", "#f8d070", "#e8743a", "#b85a28"] : [GC.pink, GC.yel, GC.purp, "#ffffff", GC.pink, GC.yel];
       for (let i = 0; i < 6; i++) {
         const x = 1 + i * 4;
         P.r(x + 1, 3, 1, 5, GC.leafD); P.p(x + 2, 5, GC.leaf);
@@ -6044,12 +6659,24 @@ const DECOR = [
       }
       P.p(12, 12, "#fff8c0"); P.p(10, 10, "#fff8c0");
     } },
-  { id: "tree", name: "Little Blossom Tree", cat: "plants", cost: 900, cozy: 14, fw: 2, fh: 2, aw: 24, ah: 36, act: "nap", spots: [[5, 36]],
-    paint(P) {
+  { id: "tree", name: "Little Blossom Tree", cat: "plants", cost: 900, cozy: 14, fw: 2, fh: 2, aw: 24, ah: 36, act: "nap", spots: [[5, 36]], seasonal: true,
+    paint(P, S) {
       P.r(10, 20, 4, 14, GC.woodD); P.r(10, 20, 1, 14, GC.wood); P.r(8, 33, 8, 3, GC.woodD);
-      P.e(12, 16, 11, 5, GC.leafD); P.e(12, 11, 10, 9, GC.leaf); P.e(6.5, 14, 5.5, 5, GC.leaf); P.e(17.5, 14, 5.5, 5, GC.leaf);
-      P.e(9, 7, 4, 3, GC.leafL);
-      for (const [x, y] of [[6, 10], [15, 6], [18, 13], [10, 15], [13, 10], [4, 15]]) { P.p(x, y, "#ffc0d8"); P.p(x + 1, y, GC.pink); }
+      if (S === "winter") {
+        // bare branches with snow on top
+        P.r(5, 12, 6, 2, GC.woodD); P.r(13, 10, 6, 2, GC.woodD); P.r(11, 4, 2, 16, GC.woodD); P.r(4, 8, 2, 5, GC.woodD); P.r(18, 6, 2, 5, GC.woodD);
+        for (const [x, y, w] of [[4, 11, 7], [13, 9, 7], [10, 3, 4], [3, 7, 3], [17, 5, 4]]) P.r(x, y, w, 2, "#ffffff");
+        P.e(12, 35, 11, 1.5, "#ffffff");
+        return;
+      }
+      const lp = S === "autumn" ? ["#c85a28", "#f09a3a", "#ffc860"] : [GC.leafD, GC.leaf, GC.leafL];
+      P.e(12, 16, 11, 5, lp[0]); P.e(12, 11, 10, 9, lp[1]); P.e(6.5, 14, 5.5, 5, lp[1]); P.e(17.5, 14, 5.5, 5, lp[1]);
+      P.e(9, 7, 4, 3, lp[2]);
+      if (S === "autumn") { for (const [x, y] of [[3, 34], [19, 35], [21, 33], [15, 34]]) P.r(x, y, 2, 1, "#e0703a"); return; }
+      for (const [x, y] of [[6, 10], [15, 6], [18, 13], [10, 15], [13, 10], [4, 15]]) {
+        if (S === "summer") { P.r(x, y, 2, 2, "#ff4f6f"); P.p(x, y, "#ffb0c0"); }
+        else { P.p(x, y, "#ffc0d8"); P.p(x + 1, y, GC.pink); }
+      }
     } },
   { id: "pond", name: "Lily Pond", cat: "plants", cost: 2200, cozy: 22, fw: 3, fh: 2, aw: 36, ah: 24, rot: true, act: "splash", spots: [[11, 12], [25, 13]],
     paint(P) {
@@ -6104,6 +6731,41 @@ const DECOR = [
       P.r(11, 3, 2, 11, "#e6e0f0"); P.r(3, 12, 18, 2, "#f6f2ff"); P.r(6, 6, 12, 2, "#f6f2ff");
       for (const x of [4, 10, 16]) { P.r(x, 10, 4, 2, "#7ec8ff"); P.e(x + 2, 9, 2.5, 1.8, x === 10 ? "#c9a0ff" : "#ff8ab8"); P.p(x + 2, 7, "#ff4f6f"); }
       P.r(10, 4, 4, 2, "#7ec8ff"); P.e(12, 3, 2.5, 1.8, "#fff2dc"); P.p(12, 1, "#ff4f6f");
+    } },
+  // v7 seasonal decorations: each season's festival gifts one (then they're in the shop for good)
+  { id: "sakura", name: "Cherry Blossom Tree", cat: "season", cost: 1200, cozy: 16, fw: 2, fh: 2, aw: 24, ah: 36, act: "nap", spots: [[5, 36]], unlock: { goal: "ev_spring", text: "Spring: Blossom Festival" },
+    paint(P) {
+      P.r(10, 20, 4, 14, GC.woodD); P.r(10, 20, 1, 14, GC.wood); P.r(8, 33, 8, 3, GC.woodD);
+      P.r(6, 18, 5, 2, GC.woodD); P.r(14, 16, 5, 2, GC.woodD);
+      P.e(12, 16, 11, 5, "#f08ab0"); P.e(12, 11, 10, 9, "#ffb0cc"); P.e(6.5, 14, 5.5, 5, "#ffb0cc"); P.e(17.5, 14, 5.5, 5, "#ffb0cc");
+      P.e(9, 7, 4, 3, "#ffd8e6");
+      for (const [x, y] of [[6, 10], [15, 6], [18, 13], [10, 15], [13, 10], [4, 15], [20, 10]]) { P.p(x, y, "#ffffff"); P.p(x + 1, y, "#ff8ab8"); }
+      for (const [x, y] of [[3, 34], [19, 35], [21, 33], [16, 34]]) P.p(x, y, "#ffb0cc");
+    } },
+  { id: "umbrella", name: "Beach Umbrella", cat: "season", cost: 1000, cozy: 14, fw: 2, fh: 1, aw: 24, ah: 30, act: "sit", spots: [[7, 29], [17, 29]], unlock: { goal: "ev_summer", text: "Summer: Firefly Night" },
+    paint(P) {
+      P.r(2, 24, 20, 6, "#7ec8ff"); P.r(2, 26, 20, 1, "#ffffff"); P.r(2, 28, 20, 1, "#ffffff");
+      P.r(11, 6, 2, 20, "#f6f2ff");
+      P.ef(0, 0, 24, 9, (x, y) => { const dx = (x + 0.5 - 12) / 12, dy = (y + 0.5 - 9) / 9; return dx * dx + dy * dy > 1 ? null : (Math.floor(x / 4) % 2 ? "#ff6b8a" : "#fff4f0"); });
+      for (let x = 0; x < 24; x += 4) P.e(x + 2, 9, 2, 1.2, Math.floor(x / 4) % 2 ? "#ff6b8a" : "#fff4f0");
+      P.r(11, 0, 2, 1, "#ffd66b");
+      P.r(19, 20, 4, 4, "#ffd66b"); P.r(19, 19, 4, 1, "#e0a040");
+    } },
+  { id: "pumpkin", name: "Pumpkin Patch", cat: "season", cost: 900, cozy: 12, fw: 2, fh: 1, aw: 24, ah: 16, act: "sniff", spots: [[12, 19]], unlock: { goal: "ev_autumn", text: "Autumn: Leaf Pile Party" },
+    paint(P) {
+      P.r(0, 14, 24, 2, GC.leafD); P.e(3, 13, 3, 2, GC.leaf); P.e(22, 13, 2.5, 2, GC.leaf);
+      P.e(9, 9, 7, 6, "#f08030"); P.e(9, 9, 4.5, 6, "#ff9a40"); P.e(9, 9, 1.6, 6, "#f08030"); P.r(8, 1, 2, 3, "#6a8a30");
+      P.e(19, 11, 4.5, 4, "#f08030"); P.e(19, 11, 2.5, 4, "#ffb050"); P.r(18, 6, 2, 2, "#6a8a30");
+      P.p(6, 8, "#5a2a14"); P.p(11, 8, "#5a2a14"); P.r(8, 11, 3, 1, "#5a2a14"); P.p(5, 10, "#ff7070"); P.p(12, 10, "#ff7070");
+    } },
+  { id: "snowman", name: "Snow Pal", cat: "season", cost: 900, cozy: 12, fw: 1, fh: 1, aw: 12, ah: 26, act: "play", spots: [[-6, 26]], unlock: { goal: "ev_winter", text: "Winter: Snow Critters" },
+    paint(P) {
+      P.e(6, 20, 6, 5.5, "#dfe8f6"); P.e(5.6, 19.6, 5.4, 5, "#ffffff");
+      P.e(6, 11, 4.6, 4.2, "#dfe8f6"); P.e(5.7, 10.7, 4, 3.8, "#ffffff");
+      P.r(2, 5, 2, 3, "#ffffff"); P.r(8, 5, 2, 3, "#ffffff");
+      P.r(2, 14, 8, 2, "#ff6f8f"); P.r(7, 16, 2, 3, "#ff6f8f");
+      P.p(4, 10, "#2c2030"); P.p(7, 10, "#2c2030"); P.r(5, 12, 2, 1, "#ff9a3c"); P.p(3, 12, "#ffb0c8"); P.p(8, 12, "#ffb0c8");
+      P.p(6, 19, "#2c2030"); P.p(6, 22, "#2c2030");
     } },
   { id: "arch", name: "Heart Arch", cat: "homes", cost: 1000, cozy: 18, fw: 2, fh: 1, aw: 24, ah: 34, act: "arch", spots: [[12, 32]], unlock: { friend: 2, text: "Friendship Lv 2" },
     paint(P) {
@@ -6307,8 +6969,10 @@ function makeArt(w, h, paint) {
   return c;
 }
 function getDecorArt(d) {
-  let a = decorArt.get(d.id);
-  if (a === undefined) { a = makeArt(d.aw, d.ah, d.paint); decorArt.set(d.id, a); }
+  const S = d.seasonal ? currentSeason() : "";
+  const key = d.seasonal ? d.id + "|" + S : d.id;
+  let a = decorArt.get(key);
+  if (a === undefined) { a = makeArt(d.aw, d.ah, P => d.paint(P, S)); decorArt.set(key, a); }
   return a;
 }
 
@@ -6333,7 +6997,7 @@ function pickTarget(v) {
     for (let s = 0; s < d.spots.length; s++) {
       if (occ[s]) continue;
       if (it === v.lastItem && garden.items.length > 1) continue;
-      const w = d.cozy + 4;
+      const w = (d.cozy + 4) * (d.act === "nap" && isNight() ? 3 : 1); // sleepy at night
       cands.push([it, s, w]); total += w;
     }
   }
@@ -6489,47 +7153,58 @@ function updateGarden(dt) {
 }
 
 // ---------- drawing ----------
-let gSkyGrad = null, gSkyH = 0;
+let gSkyGrad = null, gSkyH = 0, gSkyKey = "";
 function drawGardenBg() {
   const top = gy0();
-  if (!gSkyGrad || gSkyH !== H) {
+  const pal = gardenPalette();
+  if (!gSkyGrad || gSkyH !== H || gSkyKey !== pal.skyTop + pal.skyBot) {
     gSkyGrad = ctx.createLinearGradient(0, 0, 0, top);
-    gSkyGrad.addColorStop(0, "#9ed4ff"); gSkyGrad.addColorStop(1, "#ffeef4");
-    gSkyH = H;
+    gSkyGrad.addColorStop(0, pal.skyTop); gSkyGrad.addColorStop(1, pal.skyBot);
+    gSkyH = H; gSkyKey = pal.skyTop + pal.skyBot;
   }
   ctx.fillStyle = gSkyGrad;
   ctx.fillRect(0, 0, W, top);
-  drawSun(W - 52, Math.max(50, top * 0.35), 18, 1);
+  const sy = Math.max(50, top * 0.35);
+  if (pal.night < 0.98) { ctx.globalAlpha = 1 - pal.night; drawSun(W - 52, sy + pal.golden * 14, 18, 1); ctx.globalAlpha = 1; }
+  if (pal.night > 0.02) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, top); ctx.clip();
+    drawMoonStars(pal.night, pal.skyTop);
+    ctx.restore();
+  }
   for (const cl of decorClouds) {
     cl.x += cl.sp * frameDt * 0.6;
     if (cl.x > W + 70) cl.x = -70;
-    if (cl.y < top - 60) drawCloud(cl.x, cl.y, cl.s * 0.8, "rgba(255,255,255,0.85)", { shade: "rgba(236,240,250,0.8)" });
+    const na = 1 - pal.night * 0.7;
+    if (cl.y < top - 60) drawCloud(cl.x, cl.y, cl.s * 0.8, "rgba(255,255,255," + (0.85 * na) + ")", { shade: "rgba(236,240,250," + (0.8 * na) + ")" });
   }
   // soft far hills
-  ctx.fillStyle = "#a8dc88";
+  ctx.fillStyle = pal.hill;
   ctx.beginPath(); ctx.moveTo(0, top - 20);
   ctx.quadraticCurveTo(W * 0.3, top - 70, W * 0.6, top - 28); ctx.quadraticCurveTo(W * 0.85, top - 6, W, top - 40);
   ctx.lineTo(W, top); ctx.lineTo(0, top); ctx.closePath(); ctx.fill();
   // lawn with a gentle checker so the grid feels natural
-  ctx.fillStyle = "#88d064";
+  ctx.fillStyle = pal.grass;
   ctx.fillRect(0, top - 10, W, H - top + 10);
-  ctx.fillStyle = "#91d86c";
+  ctx.fillStyle = shade(pal.grass, 6);
   for (let r = 0; r < G_ROWS; r++) for (let c = (r & 1); c < G_COLS; c += 2) ctx.fillRect(c * G_CELL, top + r * G_CELL, G_CELL, G_CELL);
-  ctx.fillStyle = "#a6e47e";
+  ctx.fillStyle = shade(pal.grass, pal.season === "winter" ? -14 : 24);
   for (let i = 0; i < 40; i++) {
     const x = (i * 83 + 17) % W, y = top + ((i * 47) % (G_ROWS * G_CELL));
     ctx.fillRect(x, y, 2, 1); ctx.fillRect(x + 1, y - 1, 1, 1);
   }
   // hedge + picket fence along the back
-  ctx.fillStyle = "#5aa848";
+  ctx.fillStyle = pal.hedge[0];
   for (let x = -6; x < W + 12; x += 16) { ctx.beginPath(); ctx.arc(x, top - 14, 11, 0, Math.PI * 2); ctx.fill(); }
-  ctx.fillStyle = "#6cbc56";
+  ctx.fillStyle = pal.hedge[1];
   for (let x = 2; x < W + 12; x += 16) { ctx.beginPath(); ctx.arc(x, top - 20, 6, 0, Math.PI * 2); ctx.fill(); }
-  ctx.fillStyle = "#fffaf0";
+  if (pal.season === "spring") { ctx.fillStyle = "#ffb0cc"; for (let x = 6; x < W; x += 23) ctx.fillRect(x, top - 20 + (x % 3) * 3, 3, 3); }
+  ctx.fillStyle = pal.fence;
   ctx.fillRect(0, top - 18, W, 3); ctx.fillRect(0, top - 9, W, 3);
   for (let x = 4; x < W; x += 12) { ctx.fillRect(x, top - 24, 6, 22); ctx.fillRect(x + 1, top - 26, 4, 2); }
   ctx.fillStyle = "rgba(180,150,160,0.35)";
   ctx.fillRect(0, top - 3, W, 3);
+  if (pal.season === "winter") { ctx.fillStyle = "#ffffff"; for (let x = 4; x < W; x += 12) ctx.fillRect(x, top - 27, 6, 2); }
+  drawGardenLanterns(top, pal.night);
 }
 
 function drawDecorItem(it, x0, y0) {
@@ -6606,6 +7281,7 @@ function drawVisitor(v) {
   else if (act === "play" || act === "watch") bounce = -Math.abs(Math.sin(v.t * 7)) * 7;
   else if (act === "dig") rot = Math.sin(v.t * 14) * 0.08;
   else if (act === "sit" || act === "tea") bounce = Math.sin(v.t * 2) * 0.8;
+  if (gardenNightNap(act)) nap = true;
   else if (act === "house") hide = v.t > 0.45 && v.t < v.dur - 0.5;
   else if (act === "swing") { const sp = swingSeatPos(v.item); x = sp.sx; y = sp.sy + 2; rot = -sp.a; }
   if (hide) return;
@@ -6667,6 +7343,8 @@ function drawGarden() {
     roundRect(R.x - 2, R.y - 2, R.w + 4, R.h + 4, 6); ctx.stroke();
     ctx.restore();
   }
+  drawGardenNight(top);
+  updateDrawWeather(currentSeason(), frameDt, 0.9);
   drawParticles();
   for (const b of gBubbles) drawBubble(b);
   drawGardenHUD();
@@ -6715,6 +7393,7 @@ function openGarden() {
   visitors.length = 0; gBubbles.length = 0; particles.length = 0;
   for (const it of garden.items) { it.occ = null; it.wig = 0; it.swA = 0; }
   visitorT = 0.6;
+  if (isNight() && !seasons.lanternNight) { seasons.lanternNight = true; checkAchievements(); }
   if (!garden.welcomed) {
     // a little housewarming gift so the yard is never empty on day one
     garden.welcomed = true;
@@ -6883,10 +7562,10 @@ function decorPreview(d, cx, cy, box) {
 }
 function drawDecor() {
   panelHeader("Garden Decor", "Hearts " + joy + " ♥ · Coziness " + gardenCozy() + " ✿");
-  const tw = (W - 44 - 18) / 4;
+  const tw = (W - 44 - 5 * (DECOR_CATS.length - 1)) / DECOR_CATS.length;
   DECOR_CATS.forEach((t, i) => {
     const on = decorTab === t[0];
-    uiButtons.push(btn(22 + i * (tw + 6), 78, tw, 42, t[1], { id: "dtab_" + t[0], size: 12, r: 10, bg: on ? C.btn : "#f5e6ee", border: on ? "#ff80b0" : "#d0b0c0" }));
+    uiButtons.push(btn(22 + i * (tw + 5), 78, tw, 42, t[1], { id: "dtab_" + t[0], size: 11, r: 10, bg: on ? C.btn : "#f5e6ee", border: on ? "#ff80b0" : "#d0b0c0" }));
   });
   const top = 128, bottom = H - 74, rowH = 64;
   const list = DECOR.filter(d => d.cat === decorTab);
@@ -7223,7 +7902,7 @@ function startMg(game, tier) {
 function quitMg() {
   mg = null;
   scene = "arcade";
-  particles.length = 0;
+  particles.length = 0; confetti.length = 0;
   setMusicMode(null);
 }
 function mgPause() { if (mg && (mg.state === "intro" || mg.state === "play")) mg.paused = true; }
@@ -7804,9 +8483,15 @@ function drawResultCard() {
     ctx.fillStyle = "#fff"; font(11, true); ctx.fillText("New best!", 0, 1);
     ctx.restore();
   }
+  // goals reached during the round wait here instead of popping over the HUD
+  const held = toastQueue.filter(q => q[0].startsWith("✨")).length;
+  if (held) {
+    ctx.fillStyle = "#7a40a0"; font(11, true);
+    ctx.fillText("✨ " + held + (held === 1 ? " goal" : " goals") + " reached! Cheers after this ♥", W / 2, top + 246);
+  }
   // our pal cheering in the middle of the card
-  const hop = Math.abs(Math.sin(t * 6)) * 8;
-  drawSprite(mg.critter, W / 2, top + 268 - hop, 2.0, false, 0, false, 11, { acc: equippedFor(mg.critter.id), heartEyes: true });
+  const hop = Math.abs(Math.sin(t * 6)) * (held ? 5 : 8);
+  drawSprite(mg.critter, W / 2, top + (held ? 280 : 268) - hop, held ? 1.7 : 2.0, false, 0, false, 11, { acc: equippedFor(mg.critter.id), heartEyes: true });
   y += 56;
   ctx.fillStyle = C.heart; font(24, true);
   const tot = R.hearts + R.daily;
@@ -7919,6 +8604,9 @@ function drawArcade() {
     }
   });
   panelFooter();
+  // goal toasts held back during a round show here once you're out
+  updateParticles(frameDt);
+  drawParticles();
 }
 function arcadeAction(id) {
   if (id.startsWith("arc_memory_")) { startMg("memory", +id.slice(11)); return; }
@@ -7975,6 +8663,703 @@ function sfxStar(i) {
 
 document.addEventListener("visibilitychange", () => { if (document.hidden) mgOnHidden(); });
 
+// ===================== SEASONS & DAY/NIGHT (v7) =====================
+// Day and night follow the player's real clock; seasons follow the calendar month (Northern Hemisphere by
+// default, flippable, or picked by hand). Everything here is cosmetic plus small, friendly rewards.
+const SEASONS = ["spring", "summer", "autumn", "winter"];
+const SEASON_INFO = {
+  spring: { name: "Spring", icon: "✿", ev: "Blossom Festival", evSub: "Tap the falling blossoms!", critter: "lamb", acc: "blossom", decor: "sakura", pill: "#ffe0ee" },
+  summer: { name: "Summer", icon: "☀", ev: "Firefly Night", evSub: "Catch the glowing fireflies!", critter: "firefly", acc: "sunhat", decor: "umbrella", pill: "#eaffc8" },
+  autumn: { name: "Autumn", icon: "🍂", ev: "Leaf Pile Party", evSub: "Tap the leaf piles for surprises!", critter: "fawn", acc: "acorn", decor: "pumpkin", pill: "#ffe2c0" },
+  winter: { name: "Winter", icon: "❄", ev: "Snow Critters", evSub: "Tap the snow mounds to build snow pals!", critter: "seal", acc: "earmuffs", decor: "snowman", pill: "#e0f0ff" },
+};
+const EV_ICON = { spring: "✿", summer: "✦", autumn: "🍂", winter: "❄" };
+const SEASON_GRASS = { spring: ["#8ad868", 0.15], summer: ["#5cc040", 0.3], autumn: ["#c4a448", 0.55], winter: ["#eef3fb", 0.85] };
+const AUTUMN_COLS = ["#e8743a", "#c8452e", "#f0b030", "#b85a28", "#f8d070", "#d06040"];
+const SEASON_EV_REWARD = 60;
+
+function newSeasons() {
+  return { mode: "auto", hemi: "N", alwaysDay: false, evWins: { spring: 0, summer: 0, autumn: 0, winter: 0 }, evYear: { spring: "", summer: "", autumn: "", winter: "" },
+    fireflies: 0, nightVisits: 0, lanternNight: false, surprises: 0 };
+}
+let seasons = newSeasons();
+function normalizeSeasons(d) {
+  const o = newSeasons();
+  if (!isObj(d)) return o;
+  if (d.mode === "auto" || SEASONS.includes(d.mode)) o.mode = d.mode;
+  if (d.hemi === "S") o.hemi = "S";
+  o.alwaysDay = !!d.alwaysDay;
+  for (const s of SEASONS) {
+    if (isObj(d.evWins)) o.evWins[s] = Math.floor(numOr0(d.evWins[s]));
+    if (isObj(d.evYear) && typeof d.evYear[s] === "string") o.evYear[s] = d.evYear[s];
+  }
+  o.fireflies = Math.floor(numOr0(d.fireflies)); o.nightVisits = Math.floor(numOr0(d.nightVisits)); o.surprises = Math.floor(numOr0(d.surprises));
+  o.lanternNight = !!d.lanternNight;
+  return o;
+}
+
+// ---------- clock (with a debug override for tests / screenshots: ?hcHour=22&hcSeason=winter) ----------
+const dbgClock = { hour: null, season: null, month: null };
+try {
+  const q = new URLSearchParams(location.search);
+  if (q.has("hcHour")) dbgClock.hour = parseFloat(q.get("hcHour"));
+  if (SEASONS.includes(q.get("hcSeason"))) dbgClock.season = q.get("hcSeason");
+  if (q.has("hcMonth")) dbgClock.month = parseInt(q.get("hcMonth"), 10);
+} catch (e) {}
+const lightCache = { k: -1, v: null };
+if (window.__HC_CLOCK) setClock(window.__HC_CLOCK);
+function setClock(c) {
+  c = c || {};
+  dbgClock.hour = typeof c.hour === "number" && isFinite(c.hour) ? ((c.hour % 24) + 24) % 24 : null;
+  dbgClock.season = SEASONS.includes(c.season) ? c.season : null;
+  dbgClock.month = typeof c.month === "number" && c.month >= 0 && c.month < 12 ? c.month : null;
+  lightCache.k = -1;
+}
+function clockHour(d) {
+  if (dbgClock.hour != null && isFinite(dbgClock.hour)) return dbgClock.hour;
+  d = d || new Date();
+  return d.getHours() + d.getMinutes() / 60;
+}
+function seasonForMonth(m, hemi) {
+  let i = (m === 11 || m <= 1) ? 3 : m <= 4 ? 0 : m <= 7 ? 1 : 2;
+  if (hemi === "S") i = (i + 2) % 4;
+  return SEASONS[i];
+}
+function calendarSeason(d) {
+  d = d || new Date();
+  return seasonForMonth(dbgClock.month != null ? dbgClock.month : d.getMonth(), seasons.hemi);
+}
+function currentSeason(d) {
+  if (dbgClock.season) return dbgClock.season;
+  if (seasons.mode !== "auto") return seasons.mode;
+  return calendarSeason(d);
+}
+// a season "instance" key, so each year's festival counts once (Dec–Feb winter belongs to the December year)
+function seasonYearKey(d) {
+  d = d || new Date();
+  const s = currentSeason(d);
+  const m = dbgClock.month != null ? dbgClock.month : d.getMonth();
+  return s + "-" + (s === "winter" && m <= 1 && seasons.mode === "auto" ? d.getFullYear() - 1 : d.getFullYear());
+}
+const smooth01 = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+// raw light for an hour of the day: night 0..1, dawn/golden glow bumps, and a phase name
+function lightAt(h) {
+  const night = h < 5 ? 1 : h < 6.5 ? 1 - smooth01((h - 5) / 1.5) : h < 19.5 ? 0 : h < 21 ? smooth01((h - 19.5) / 1.5) : 1;
+  const dawn = h >= 5 && h < 8 ? Math.sin(Math.PI * (h - 5) / 3) : 0;
+  const golden = h >= 16.5 && h < 20.5 ? Math.sin(Math.PI * (h - 16.5) / 4) : 0;
+  const phase = night > 0.5 ? "night" : h >= 5 && h < 8 ? "dawn" : h >= 17 && h < 21 ? "evening" : "day";
+  return { night, dawn, golden, phase, hour: h };
+}
+function dayLight() {
+  const k = Math.floor(time);
+  if (lightCache.k === k && lightCache.v) return lightCache.v;
+  const L = lightAt(clockHour());
+  lightCache.v = seasons.alwaysDay ? { night: 0, dawn: 0, golden: 0, phase: "day", hour: L.hour, real: L } : Object.assign(L, { real: L });
+  lightCache.k = k;
+  return lightCache.v;
+}
+function isNight() { return dayLight().night > 0.5; }
+const PHASE_NAMES = { dawn: "Dawn", day: "Daytime", evening: "Golden evening", night: "Night" };
+
+// ---------- seasonal critters ----------
+function seasonOpen(a) {
+  if (!a.season) return true;
+  if (currentSeason() !== a.season) return false;
+  if (a.nightOnly) { const h = dayLight().real.hour; return h >= 17 || h < 6; }
+  return true;
+}
+function seasonLockText(a) {
+  const info = SEASON_INFO[a.season];
+  if (currentSeason() === a.season && a.nightOnly) return "Comes out on summer evenings ☾";
+  return info.icon + " Visits in " + info.name;
+}
+
+// ---------- world tint (called from worldColors) ----------
+function tintWorld(o) {
+  const L = dayLight(), S = currentSeason();
+  const sg = SEASON_GRASS[S];
+  o.grass = lerpColor(o.grass, sg[0], sg[1]);
+  if (L.dawn > 0) { o.skyTop = lerpColor(o.skyTop, "#ffb4c8", L.dawn * 0.5); o.skyBot = lerpColor(o.skyBot, "#ffe4c4", L.dawn * 0.45); }
+  if (L.golden > 0) {
+    o.skyTop = lerpColor(o.skyTop, "#ff9e7a", L.golden * 0.5); o.skyBot = lerpColor(o.skyBot, "#ffd890", L.golden * 0.55);
+    o.grass = lerpColor(o.grass, "#c8a040", L.golden * 0.15);
+  }
+  if (L.night > 0) {
+    o.skyTop = lerpColor(o.skyTop, "#262a5e", L.night * 0.85); o.skyBot = lerpColor(o.skyBot, "#6a5a9e", L.night * 0.75);
+    o.grass = lerpColor(o.grass, S === "winter" ? "#a8b4d8" : "#3e6a70", L.night * 0.5);
+  }
+  o.night = L.night; o.golden = L.golden; o.dawn = L.dawn; o.season = S;
+  return o;
+}
+
+// ---------- sky pieces ----------
+function drawMoonStars(alpha, skyTop) {
+  if (alpha <= 0.01) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // the moon hangs just below the HUD so it's never hidden
+  const mx = W - 56, my = 96;
+  ctx.fillStyle = "rgba(255,248,210,0.22)";
+  ctx.beginPath(); ctx.arc(mx, my, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff4c8";
+  ctx.beginPath(); ctx.arc(mx, my, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = skyTop;
+  ctx.beginPath(); ctx.arc(mx + 9, my - 6, 16, 0, Math.PI * 2); ctx.fill();
+  // sleepy moon face
+  ctx.fillStyle = "#c8a860";
+  ctx.fillRect(mx - 14, my, 4, 1.5); ctx.fillRect(mx - 6, my + 5, 3, 1.5);
+  ctx.fillStyle = "rgba(255,150,170,0.5)"; ctx.fillRect(mx - 15, my + 5, 3, 2);
+  ctx.fillStyle = "#fff8d0";
+  const sh = Math.max(160, H * 0.45);
+  for (let i = 0; i < 36; i++) {
+    const sx = (i * 97 + 13) % W, sy = 8 + (i * 53 + 7) % sh;
+    if (sx > W - 96 && sy > 56 && sy < 136) continue;
+    const tw = 0.5 + 0.5 * Math.sin(time * 2 + i * 1.7);
+    ctx.globalAlpha = alpha * (0.3 + tw * 0.65);
+    const ss = 1 + (i % 3);
+    ctx.fillRect(sx, sy, ss, ss);
+    if (i % 4 === 0) { ctx.fillRect(sx - 1, sy + ss / 2 - 0.5, 1, 1); ctx.fillRect(sx + ss, sy + ss / 2 - 0.5, 1, 1); ctx.fillRect(sx + ss / 2 - 0.5, sy - 1, 1, 1); ctx.fillRect(sx + ss / 2 - 0.5, sy + ss, 1, 1); }
+  }
+  ctx.restore();
+}
+
+// little seasonal tree on the meadow's left hill
+function drawSeasonTree(x, by, S) {
+  ctx.fillStyle = "#8a5a3a"; ctx.fillRect(x - 3, by - 30, 6, 30);
+  ctx.fillStyle = "#6a4028"; ctx.fillRect(x + 1, by - 30, 2, 30);
+  const blob = (dx, dy, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + dx, by + dy, r, 0, Math.PI * 2); ctx.fill(); };
+  if (S === "winter") {
+    ctx.strokeStyle = "#6a4028"; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, by - 28); ctx.lineTo(x - 14, by - 46); ctx.moveTo(x, by - 30); ctx.lineTo(x + 13, by - 48);
+    ctx.moveTo(x, by - 30); ctx.lineTo(x + 1, by - 54); ctx.moveTo(x - 8, by - 38); ctx.lineTo(x - 16, by - 36);
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    for (const [dx, dy, w] of [[-16, -48, 7], [10, -50, 7], [-2, -56, 6], [-19, -38, 5]]) ctx.fillRect(x + dx, by + dy, w, 3);
+    return;
+  }
+  const pal = S === "spring" ? ["#ff9ec8", "#ffc0d8", "#ffe0ec"] : S === "summer" ? ["#4aa040", "#5cb848", "#80d060"] : ["#d8602c", "#f0a040", "#ffd060"];
+  blob(0, -40, 18, pal[0]); blob(-13, -34, 12, pal[0]); blob(13, -34, 12, pal[0]);
+  blob(-4, -46, 12, pal[1]); blob(8, -40, 9, pal[1]); blob(-9, -38, 7, pal[2]);
+  if (S === "spring") { ctx.fillStyle = "#ffffff"; for (const [dx, dy] of [[-8, -46], [6, -50], [12, -36], [-14, -32], [2, -34]]) ctx.fillRect(x + dx, by + dy, 2, 2); }
+  if (S === "summer") { ctx.fillStyle = "#ff5a6a"; for (const [dx, dy] of [[-8, -40], [8, -46], [12, -32]]) ctx.fillRect(x + dx, by + dy, 3, 3); }
+}
+
+function drawSnowdrifts() {
+  const y = H - 58;
+  for (let i = 0; i < 7; i++) {
+    const x = (i * 61 + 14) % (W + 40) - 10, rx = 26 + (i % 3) * 8;
+    ctx.fillStyle = "#d8e4f4"; ctx.beginPath(); ctx.ellipse(x, y + 3, rx, 9, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.ellipse(x - 2, y + 2, rx - 3, 7, 0, Math.PI, 0); ctx.fill();
+  }
+}
+
+// flowers change with the season (the same flower objects, drawn differently)
+function drawSeasonFlower(f, bloom, sway, grassCol, S, i) {
+  if (S === "winter") {
+    if (i % 3) return;
+    const x = f.x + sway * 0.5, y = f.y;
+    ctx.strokeStyle = "#5a9a5a"; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(f.x, y + 8); ctx.quadraticCurveTo(x + 3, y - 6, x + 2, y - 4); ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.ellipse(x + 3, y - 1, 2.6 * f.s, 3.4 * f.s, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#b8e0a0"; ctx.fillRect(x + 2, y + 2, 2, 1);
+    return;
+  }
+  if (S === "summer" && f.type === "tulip") {
+    const x = f.x + sway, y = f.y - 8;
+    ctx.strokeStyle = shade(grassCol, 10); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(f.x, f.y + 10); ctx.lineTo(x, y); ctx.stroke();
+    const r = 4.2 * f.s * bloom;
+    ctx.fillStyle = "#ffd23a";
+    for (let p = 0; p < 8; p++) { const a = p / 8 * Math.PI * 2; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, 2.4 * f.s * bloom, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = "#8a5020"; ctx.beginPath(); ctx.arc(x, y, 2.8 * f.s * bloom, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  if (S === "autumn") {
+    if (f.type === "sprout") {
+      const x = f.x, y = f.y;
+      ctx.fillStyle = "#fff2dc"; ctx.fillRect(x - 1.5, y - 5, 3, 6);
+      ctx.fillStyle = "#e0503a"; ctx.beginPath(); ctx.ellipse(x, y - 5, 5 * f.s, 3.6 * f.s, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x - 3, y - 7, 1.5, 1.5); ctx.fillRect(x + 1, y - 8, 1.5, 1.5);
+      return;
+    }
+    const k = C.flower.indexOf(f.col), col = f.col;
+    f.col = AUTUMN_COLS[(k < 0 ? i : k) % AUTUMN_COLS.length];
+    drawFlower(f, bloom, sway, grassCol);
+    f.col = col;
+    return;
+  }
+  drawFlower(f, bloom, sway, grassCol);
+}
+
+// ---------- weather particles (drawn behind the critters, never tappable) ----------
+let wx = [], wxSeason = "", wxH = 0;
+function wxTarget(S) { return S === "winter" ? 44 : S === "autumn" ? 12 : S === "spring" ? 14 : 8; }
+function wxSpawn(S, anyY) {
+  const p = { x: Math.random() * W, y: anyY ? Math.random() * H : -10 - Math.random() * 30, ph: Math.random() * 6, rot: Math.random() * 6,
+    vr: (Math.random() - 0.5) * 3, s: 0.7 + Math.random() * 0.6, c: 0 };
+  if (S === "winter") { p.vy = 18 + Math.random() * 22; p.vx = -4 + Math.random() * 8; p.s = 0.8 + Math.random() * 1.6; }
+  else if (S === "autumn") { p.vy = 22 + Math.random() * 16; p.vx = 8 + Math.random() * 10; p.c = Math.floor(Math.random() * AUTUMN_COLS.length); }
+  else if (S === "spring") { p.vy = 16 + Math.random() * 12; p.vx = 10 + Math.random() * 10; }
+  else { p.vy = -(5 + Math.random() * 8); p.vx = -3 + Math.random() * 6; if (!anyY) p.y = H - 60 - Math.random() * 60; }
+  return p;
+}
+function updateDrawWeather(S, dt, alpha) {
+  if (wxSeason !== S || wxH !== H) { wxSeason = S; wxH = H; wx = []; for (let i = 0; i < wxTarget(S); i++) wx.push(wxSpawn(S, true)); }
+  ctx.save();
+  for (let i = 0; i < wx.length; i++) {
+    const p = wx[i];
+    p.x += (p.vx + Math.sin(time * 1.3 + p.ph) * (S === "winter" ? 8 : 14)) * dt;
+    p.y += p.vy * dt; p.rot += p.vr * dt;
+    if (p.x > W + 12) p.x = -10; else if (p.x < -12) p.x = W + 10;
+    if (p.y > H - 24 || p.y < -60) { wx[i] = wxSpawn(S, false); continue; }
+    if (S === "winter") {
+      ctx.globalAlpha = alpha * 0.9; ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+    } else if (S === "autumn") {
+      ctx.globalAlpha = alpha * 0.95;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(Math.cos(time * 2 + p.ph), 1);
+      ctx.fillStyle = AUTUMN_COLS[p.c]; ctx.fillRect(-3.5 * p.s, -2 * p.s, 7 * p.s, 4 * p.s);
+      ctx.fillStyle = "rgba(90,40,20,0.5)"; ctx.fillRect(-3.5 * p.s, -0.4, 7 * p.s, 0.9);
+      ctx.restore();
+    } else if (S === "spring") {
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = i % 3 ? "#ffc0d8" : "#ffe4ee"; ctx.beginPath(); ctx.ellipse(0, 0, 3.2 * p.s, 1.9 * p.s, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.globalAlpha = alpha * (0.35 + 0.35 * Math.sin(time * 3 + p.ph));
+      ctx.fillStyle = "#fff4a0"; ctx.fillRect(p.x, p.y, 2, 2);
+    }
+  }
+  ctx.restore();
+}
+
+// ---------- fireflies (night, not winter): pretty everywhere, tappable in the meadow ----------
+let flies = [];
+function flyWanted(L, S) { return L.night > 0.35 && S !== "winter" ? (S === "summer" ? 9 : 6) : 0; }
+function updateDrawFlies(dt, L, S, y0, y1) {
+  const want = flyWanted(L, S);
+  while (flies.length < want) flies.push({ x: 20 + Math.random() * (W - 40), y: y0 + Math.random() * (y1 - y0), a: Math.random() * 6, sp: 10 + Math.random() * 12, ph: Math.random() * 6, t: 0, cd: 0 });
+  if (flies.length > want) flies.length = want;
+  for (const f of flies) {
+    f.t += dt; if (f.cd > 0) f.cd -= dt;
+    f.a += (Math.sin(time * 0.7 + f.ph) * 1.4) * dt;
+    f.x += Math.cos(f.a) * f.sp * dt; f.y += Math.sin(f.a) * f.sp * 0.6 * dt;
+    if (f.x < 12 || f.x > W - 12) f.a = Math.PI - f.a;
+    if (f.y < y0 || f.y > y1) f.a = -f.a;
+    f.x = clamp(f.x, 10, W - 10); f.y = clamp(f.y, y0 - 2, y1 + 2);
+    drawFirefly(f.x, f.y, f.ph, L.night * (f.cd > 0 ? 0.25 : 1));
+  }
+}
+function drawFirefly(x, y, ph, a) {
+  const glow = 0.55 + 0.45 * Math.sin(time * 3.2 + ph);
+  // warm yellow-green glow (saturated, so it reads as a firefly rather than a grey dot)
+  ctx.globalAlpha = a * glow * 0.3;
+  ctx.fillStyle = "#d8ff4a";
+  ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = a * glow * 0.65;
+  ctx.fillStyle = "#e8ff70";
+  ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = a * (0.75 + glow * 0.25);
+  ctx.fillStyle = "#fbffc8"; ctx.fillRect(x - 2, y - 2, 4, 4);
+  ctx.globalAlpha = 1;
+}
+function tapFirefly(p) {
+  if (!flies.length) return false;
+  for (const f of flies) {
+    if (f.cd > 0) continue;
+    if (dist2(p.x, p.y, f.x, f.y) < 24 * 24) {
+      f.cd = 6;
+      seasons.fireflies++;
+      joy += 2;
+      spawnSparkles(f.x, f.y, 8);
+      addFloat({ x: f.x, y: f.y - 12, text: "✦ +2", life: 0.8, vy: -26, color: "#9ab020", size: 12 });
+      sfxChime(seasons.fireflies);
+      buzz("pet");
+      checkAchievements(); saveSoon();
+      return true;
+    }
+  }
+  return false;
+}
+
+// everything seasonal in the meadow backdrop (called at the end of drawBackground)
+function drawMeadowSeason(wc) {
+  const S = wc.season, L = dayLight();
+  if (S === "winter") drawSnowdrifts();
+  updateDrawWeather(S, frameDt, 0.35 + wc.t * 0.65);
+  if (scene === "title" || scene === "play" || scene === "whatsnew" || scene === "away" || scene === "pause") {
+    const [y0, y1] = critterYRange();
+    updateDrawFlies(scene === "pause" ? 0 : frameDt, L, S, y0 - 30, y1 + 20);
+  }
+  if (L.night > 0) { ctx.fillStyle = "rgba(24,26,72," + (0.16 * L.night) + ")"; ctx.fillRect(0, 0, W, H); }
+}
+
+// ---------- seasonal meadow events ----------
+function startSeasonEvent() {
+  const S = currentSeason(), info = SEASON_INFO[S];
+  const title = S === "summer" && !isNight() ? "Firefly Picnic!" : info.ev + "!";
+  showBanner(EV_ICON[S] + " " + title, info.evSub, 2.8);
+  sfxEvent();
+  const ev = { type: "season", s: S, t: 0, got: 0, items: [], spawnT: 0.3, spawned: 0 };
+  // piles & mounds sit on the grass just above the toolbar, clear of the daily gift and the little tree
+  const gy = H - 70;
+  if (S === "spring") Object.assign(ev, { dur: 20, goal: 8, max: 18 });
+  else if (S === "summer") Object.assign(ev, { dur: 22, goal: 10, max: 16 });
+  else if (S === "autumn") {
+    Object.assign(ev, { dur: 30, goal: 4 });
+    const kinds = shuffleArr(["hearts", "acorn", "critter", "sparkle"]);
+    [0.09, 0.3, 0.7, 0.91].forEach((k, i) => ev.items.push({ x: W * k, y: gy, found: false, kind: kinds[i], wob: 0 }));
+  } else {
+    Object.assign(ev, { dur: 30, goal: 2 });
+    [0.2, 0.8].forEach(k => ev.items.push({ x: W * k, y: gy - 6, stage: 0, wob: 0 }));
+  }
+  activeEvent = ev;
+}
+function updateSeasonEvent(ev, dt, wdt) {
+  for (const it of ev.items) if (it.wob > 0) it.wob = Math.max(0, it.wob - dt);
+  if (ev.s === "spring" || ev.s === "summer") {
+    if (ev.t < ev.dur && ev.spawned < ev.max && ev.got < ev.goal) {
+      ev.spawnT -= wdt;
+      if (ev.spawnT <= 0) {
+        ev.spawned++;
+        const [y0, y1] = critterYRange();
+        if (ev.s === "spring") ev.items.push({ x: 30 + Math.random() * (W - 60), y: 70, vy: 38 + Math.random() * 22, ph: Math.random() * 6, rot: 0 });
+        else ev.items.push({ x: 30 + Math.random() * (W - 60), y: y0 + Math.random() * (y1 - y0), a: Math.random() * 6, ph: Math.random() * 6, life: 7 });
+        ev.spawnT = ev.s === "spring" ? 0.95 : 0.8;
+      }
+    }
+    for (const it of ev.items) {
+      if (ev.s === "spring") {
+        it.y += it.vy * wdt; it.x += Math.sin(time * 1.6 + it.ph) * 18 * wdt; it.rot += wdt * 1.5;
+        if (it.y > H - 70) it.dead = true;
+      } else {
+        it.life -= wdt; it.a += Math.sin(time + it.ph) * 1.6 * wdt;
+        it.x = clamp(it.x + Math.cos(it.a) * 22 * wdt, 16, W - 16); it.y += Math.sin(it.a) * 14 * wdt;
+        if (it.x <= 16 || it.x >= W - 16) it.a = Math.PI - it.a;
+        if (it.life <= 0) it.dead = true;
+      }
+    }
+    prune(ev.items, notDead);
+  }
+  if (ev.got >= ev.goal) finishSeasonEvent(ev, true);
+  else if (ev.t >= ev.dur && (!ev.items.length || ev.s === "autumn" || ev.s === "winter")) finishSeasonEvent(ev, false);
+}
+// built snow pals / opened leaf piles linger and fade gently after the event ends
+let seasonLeft = null;
+function finishSeasonEvent(ev, ok) {
+  const info = SEASON_INFO[ev.s];
+  if (ok && (ev.s === "winter" || ev.s === "autumn") && ev.items.length) seasonLeft = { s: ev.s, items: ev.items, t: 7 };
+  ev.items = [];
+  if (ok) {
+    const first = !seasons.evWins[ev.s];
+    seasons.evWins[ev.s]++;
+    seasons.evYear[ev.s] = seasonYearKey();
+    joy += SEASON_EV_REWARD; addMood(2);
+    spawnConfetti(40); sfxUnlock(); buzz("gift");
+    endEvent(EV_ICON[ev.s] + " " + info.ev + " ✓", "+" + SEASON_EV_REWARD + " ♥" + (first ? " · a seasonal present awaits!" : " · what a lovely day"));
+  } else {
+    const bonus = ev.got * 5;
+    joy += bonus;
+    endEvent(info.ev + " winds down", ev.got + "/" + ev.goal + " · +" + bonus + " ♥");
+  }
+}
+function seasonPill(e) {
+  const lbl = e.s === "spring" ? "✿ Blossoms " : e.s === "summer" ? "✦ Fireflies " : e.s === "autumn" ? "Leaf piles " : "❄ Snow pals ";
+  return lbl + e.got + "/" + e.goal;
+}
+function tapSeason(p) {
+  const ev = activeEvent;
+  if (!ev || ev.type !== "season") return false;
+  if (ev.s === "spring" || ev.s === "summer") {
+    let best = null, bd = 30 * 30;
+    for (const it of ev.items) { const d = dist2(p.x, p.y, it.x, it.y); if (d < bd) { bd = d; best = it; } }
+    if (!best) return false;
+    best.dead = true; prune(ev.items, notDead);
+    ev.got++; seasons.surprises++;
+    joy += 4; addMood(0.15);
+    spawnSparkles(best.x, best.y, 10);
+    if (ev.s === "spring") for (let i = 0; i < 6; i++) particles.push({ kind: "spark", x: best.x, y: best.y, vx: (Math.random() - 0.5) * 90, vy: -40 - Math.random() * 40, life: 0.7, max: 0.7, size: 2, color: "#ffc0d8", t: 0 });
+    addFloat({ x: best.x, y: best.y - 14, text: "+4 ♥", life: 0.8, vy: -30, color: ev.s === "spring" ? "#ff70a8" : "#90a820", size: 12 });
+    sfxChime(ev.got + 2); buzz("pet");
+    saveSoon();
+    return true;
+  }
+  for (const it of ev.items) {
+    if (Math.abs(p.x - it.x) > 32 || Math.abs(p.y - (it.y - 10)) > 26) continue;
+    if (ev.s === "autumn") {
+      if (it.found) return true;
+      it.found = true; it.wob = 0.5; ev.got++; seasons.surprises++;
+      for (let i = 0; i < 16; i++) particles.push({ kind: "spark", x: it.x + (Math.random() - 0.5) * 30, y: it.y - 8, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 70, life: 0.9, max: 0.9, size: 2.5, color: AUTUMN_COLS[i % AUTUMN_COLS.length], t: 0 });
+      let text = "";
+      if (it.kind === "hearts") { joy += 10; spawnHearts(it.x, it.y - 20, 6, true); text = "Hearts! +10 ♥"; }
+      else if (it.kind === "acorn") { joy += 15; text = "An acorn! +15 ♥"; }
+      else if (it.kind === "critter") {
+        const list = unlockedList();
+        const a = list[Math.floor(Math.random() * list.length)];
+        const c = makeCritter(a, { x: it.x, y: it.y - 40, vx: (Math.random() < 0.5 ? -1 : 1) * 30, life: 8 });
+        c.heartEyesT = 2; c.sqT = 0; c.sqAmp = 0.2;
+        if (critters.filter(o => !o.parade).length < MAX_CRITTERS + 1) critters.push(c);
+        joy += 8; text = "Peekaboo! +8 ♥";
+      } else { addMood(0.8); joy += 8; spawnSparkles(it.x, it.y - 16, 14); text = "Sparkly leaves! +Joy"; }
+      addFloat({ x: it.x, y: it.y - 40, text, life: 1.2, vy: -24, color: "#c0602a", size: 12 });
+      sfxRustle(); buzz("pet");
+    } else {
+      if (it.stage >= 3) return true;
+      it.stage++; it.wob = 0.4;
+      for (let i = 0; i < 8; i++) particles.push({ kind: "spark", x: it.x + (Math.random() - 0.5) * 24, y: it.y - 12, vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 50, life: 0.6, max: 0.6, size: 2, color: "#ffffff", t: 0 });
+      if (it.stage === 3) {
+        ev.got++; seasons.surprises++; joy += 10; addMood(0.5);
+        spawnHearts(it.x, it.y - 50, 6, true);
+        addFloat({ x: it.x, y: it.y - 66, text: "Snow pal! +10 ♥", life: 1.2, vy: -24, color: "#4a80c0", size: 12 });
+        sfxChime(6);
+      } else sfxPat();
+      buzz("pet");
+    }
+    saveSoon();
+    return true;
+  }
+  return false;
+}
+function drawBlossom(x, y, r, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 5; i++) {
+    const a = i / 5 * Math.PI * 2;
+    ctx.fillStyle = "#ffb0cc"; ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62, r * 0.52, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = "#ffe0ec"; ctx.beginPath(); ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ffd23a"; ctx.fillRect(-1.5, -1.5, 3, 3);
+  ctx.restore();
+}
+function drawLeafPile(it) {
+  const w = it.wob > 0 ? Math.sin(it.wob * 40) * 3 * it.wob * 2 : 0;
+  const x = it.x + w, y = it.y;
+  if (it.found) {
+    for (let i = 0; i < 7; i++) { ctx.fillStyle = AUTUMN_COLS[i % 6]; ctx.fillRect(x - 24 + i * 7, y - 3 + (i % 2) * 2, 5, 3); }
+    font(12, true); ctx.fillStyle = "#3f9a48"; ctx.textAlign = "center"; ctx.fillText("✓", x, y - 12);
+    return;
+  }
+  ctx.fillStyle = "rgba(60,40,20,0.18)"; ctx.beginPath(); ctx.ellipse(x, y + 1, 28, 6, 0, 0, Math.PI * 2); ctx.fill();
+  const blobs = [[-16, -6, 11], [16, -6, 11], [0, -10, 15], [-7, -18, 9], [8, -17, 9]];
+  blobs.forEach(([dx, dy, r], i) => { ctx.fillStyle = AUTUMN_COLS[(i * 2 + 1) % 6]; ctx.beginPath(); ctx.arc(x + dx, y + dy, r, Math.PI, 0); ctx.lineTo(x + dx + r, y); ctx.lineTo(x + dx - r, y); ctx.fill(); });
+  for (let i = 0; i < 9; i++) { ctx.fillStyle = AUTUMN_COLS[i % 6]; ctx.fillRect(x - 22 + (i * 37) % 44, y - 20 + (i * 13) % 18, 4, 3); }
+  const hop = Math.abs(Math.sin(time * 4 + it.x)) * 3;
+  font(11, true); ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText("?", x, y - 32 - hop);
+}
+function drawSnowMound(it) {
+  const w = it.wob > 0 ? Math.sin(it.wob * 40) * 2.5 * it.wob * 2 : 0;
+  const x = it.x + w, y = it.y;
+  ctx.fillStyle = "rgba(80,100,140,0.18)"; ctx.beginPath(); ctx.ellipse(x, y + 1, 26, 6, 0, 0, Math.PI * 2); ctx.fill();
+  const ball = (cy, r) => {
+    ctx.fillStyle = "#c4d4ec"; ctx.beginPath(); ctx.arc(x, cy, r + 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#dfe8f6"; ctx.beginPath(); ctx.arc(x, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x - r * 0.15, cy - r * 0.12, r * 0.85, 0, Math.PI * 2); ctx.fill();
+  };
+  // a plump mound with a soft blue edge so it stands out against the snowy ground
+  ctx.fillStyle = "#b4c8e6"; ctx.beginPath(); ctx.ellipse(x, y + 1, 28, 15, 0, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#e4edf9"; ctx.beginPath(); ctx.ellipse(x, y, 26, 13.5, 0, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.ellipse(x - 4, y - 2, 18, 10, 0, Math.PI, 0); ctx.fill();
+  if (it.stage < 3) { ctx.fillStyle = "rgba(255,255,255," + (0.5 + 0.5 * Math.sin(time * 5 + it.x)) + ")"; ctx.fillRect(x + 10, y - 10, 2, 2); ctx.fillRect(x - 14, y - 6, 2, 2); }
+  if (it.stage >= 1) ball(y - 12, 14);
+  if (it.stage >= 2) ball(y - 34, 10);
+  if (it.stage >= 3) {
+    // a little snow critter: kitty ears, coal eyes, carrot nose, pink scarf
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.moveTo(x - 9, y - 38); ctx.lineTo(x - 6, y - 48); ctx.lineTo(x - 2, y - 42); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + 9, y - 38); ctx.lineTo(x + 6, y - 48); ctx.lineTo(x + 2, y - 42); ctx.fill();
+    ctx.fillStyle = "#2c2030"; ctx.fillRect(x - 5, y - 37, 3, 3); ctx.fillRect(x + 2, y - 37, 3, 3);
+    ctx.fillStyle = "#ff9a3c"; ctx.fillRect(x - 1, y - 33, 5, 2);
+    ctx.fillStyle = "rgba(255,140,170,0.6)"; ctx.fillRect(x - 8, y - 32, 3, 2); ctx.fillRect(x + 5, y - 32, 3, 2);
+    ctx.fillStyle = "#ff6f8f"; ctx.fillRect(x - 10, y - 26, 20, 4); ctx.fillRect(x + 4, y - 24, 4, 8);
+    ctx.strokeStyle = "#7a5030"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - 13, y - 14); ctx.lineTo(x - 22, y - 22); ctx.moveTo(x + 13, y - 14); ctx.lineTo(x + 22, y - 22); ctx.stroke();
+  } else {
+    const hop = Math.abs(Math.sin(time * 4 + it.x)) * 3;
+    const ly = y - 24 - (it.stage >= 1 ? 18 : 0) - (it.stage >= 2 ? 20 : 0) - hop;
+    ctx.fillStyle = "rgba(255,255,255,0.85)"; roundRect(x - 22, ly - 8, 44, 16, 8); ctx.fill();
+    font(10, true); ctx.fillStyle = "#3a70b0"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("tap " + (3 - it.stage) + "×", x, ly);
+  }
+}
+function drawSeasonEvent() {
+  if (seasonLeft) {
+    seasonLeft.t -= frameDt;
+    if (seasonLeft.t <= 0 || (activeEvent && activeEvent.type === "season")) seasonLeft = null;
+    else {
+      ctx.globalAlpha = Math.min(1, seasonLeft.t / 1.5);
+      for (const it of seasonLeft.items) seasonLeft.s === "winter" ? drawSnowMound(it) : drawLeafPile(it);
+      ctx.globalAlpha = 1;
+    }
+  }
+  const ev = activeEvent;
+  if (!ev || ev.type !== "season") return;
+  ctx.textBaseline = "middle";
+  for (const it of ev.items) {
+    if (ev.s === "spring") drawBlossom(it.x, it.y, 10, it.rot);
+    else if (ev.s === "summer") {
+      const a = Math.min(1, it.life);
+      ctx.globalAlpha = a * 0.3; ctx.fillStyle = "#d8ff4a"; ctx.beginPath(); ctx.arc(it.x, it.y, 16 + Math.sin(time * 5 + it.ph) * 3, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = a; ctx.fillStyle = "#3a5a9a"; ctx.fillRect(it.x - 3, it.y - 5, 6, 5);
+      ctx.fillStyle = "rgba(220,240,255,0.9)"; ctx.fillRect(it.x - 7, it.y - 7 + Math.sin(time * 30) * 1, 4, 3); ctx.fillRect(it.x + 3, it.y - 7 - Math.sin(time * 30) * 1, 4, 3);
+      ctx.fillStyle = "#e8ff70"; ctx.fillRect(it.x - 3, it.y, 6, 5);
+      ctx.globalAlpha = 1;
+    } else if (ev.s === "autumn") drawLeafPile(it);
+    else drawSnowMound(it);
+  }
+}
+
+// ---------- night-time critter behaviour ----------
+function nightNapChance() { const n = dayLight().night; return 0.45 + 0.3 * n; }
+function drawGazeTwinkle(c) {
+  const s = c.scale * SPRITE_SIZE;
+  const k = 0.5 + 0.5 * Math.sin(time * 5 + c.id);
+  drawSparkle(c.x + s * 0.3, c.y - s * 0.75 - k * 4, 3 + k * 2, "#fff4a0");
+}
+function drawCritterGlow(c) {
+  const L = dayLight();
+  if (c.animal.id !== "firefly" || L.night < 0.2) return;
+  const s = c.scale * SPRITE_SIZE;
+  ctx.globalAlpha = L.night * (0.25 + 0.12 * Math.sin(time * 3 + c.id));
+  ctx.fillStyle = "#e8ff90";
+  ctx.beginPath(); ctx.arc(c.x, c.y + s * 0.25, s * 0.55, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+// ---------- garden: seasons, night and lanterns ----------
+function gardenPalette() {
+  const L = dayLight(), S = currentSeason();
+  const o = tintWorld({ skyTop: "#9ed4ff", skyBot: "#ffeef4", grass: "#88d064" });
+  const hedge = S === "autumn" ? ["#c86a34", "#e09a40"] : S === "winter" ? ["#5a9a5a", "#ffffff"] : S === "spring" ? ["#5aa848", "#7cc860"] : ["#48a040", "#62b850"];
+  const nk = L.night * 0.45;
+  o.hedge = [lerpColor(hedge[0], "#2a4a5a", nk), lerpColor(hedge[1], S === "winter" ? "#c8d4f0" : "#3a5a6a", nk)];
+  o.fence = lerpColor("#fffaf0", "#c0c0e0", L.night * 0.5);
+  o.hill = lerpColor(S === "winter" ? "#e8eef8" : S === "autumn" ? "#d0b068" : "#a8dc88", "#4a5a80", L.night * 0.5);
+  return o;
+}
+const LANTERN_COLS = ["#ffb0c8", "#ffe38a", "#b8e0ff", "#c9f0a0", "#e0c0ff"];
+function lanternPts(top) {
+  const pts = [];
+  const y0 = Math.max(62, top - 36);
+  for (let i = 0; i < 7; i++) {
+    const x = 22 + i * (W - 44) / 6;
+    const seg = (i % 2) ? 0.5 : 0; // sag between posts
+    pts.push([x, y0 + 5 * Math.sin(Math.PI * ((i / 6 * 3) % 1)) + seg * 2]);
+  }
+  return pts;
+}
+function drawGardenLanterns(top, night) {
+  const pts = lanternPts(top);
+  ctx.strokeStyle = night > 0.3 ? "rgba(200,190,230,0.7)" : "rgba(110,80,70,0.6)"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+    ctx.moveTo(ax, ay - 3); ctx.quadraticCurveTo((ax + bx) / 2, Math.max(ay, by) + 5, bx, by - 3);
+  }
+  ctx.stroke();
+  pts.forEach(([x, y], i) => {
+    const col = LANTERN_COLS[i % LANTERN_COLS.length];
+    if (night > 0.05) {
+      ctx.globalAlpha = night * (0.28 + 0.08 * Math.sin(time * 2.4 + i));
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y + 3, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = "#2c2030"; ctx.fillRect(x - 5, y - 3, 10, 12);
+    ctx.fillStyle = night > 0.3 ? lerpColor(col, "#ffffff", 0.45) : col; ctx.fillRect(x - 4, y - 2, 8, 10);
+    ctx.fillStyle = "rgba(90,60,60,0.35)"; ctx.fillRect(x - 4, y + 2, 8, 1);
+    ctx.fillStyle = "#6a4a3a"; ctx.fillRect(x - 3, y - 4, 6, 1); ctx.fillRect(x - 3, y + 8, 6, 1);
+  });
+}
+// soft night veil + glowing lights (lanterns, lantern decor, glowbugs) — drawn over the yard, under the HUD
+function drawGardenNight(top) {
+  const L = dayLight();
+  if (L.night <= 0.02) return;
+  ctx.fillStyle = "rgba(28,30,82," + (0.22 * L.night) + ")";
+  ctx.fillRect(0, 0, W, H);
+  const lights = [];
+  for (const [x, y] of lanternPts(top)) lights.push([x, y + 3, 26, "255,230,170"]);
+  for (const it of garden.items) if (it.id === "lantern") { const [lx, ly] = artToScreen(it, 6, 7); lights.push([lx, ly, 44, "255,226,140"]); }
+  for (const v of visitors) if (v.animal.id === "firefly") lights.push([v.x, v.y - 14, 30, "220,255,140"]);
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (const [x, y, r, rgb] of lights) {
+    const g = ctx.createRadialGradient(x, y, 1, x, y, r);
+    g.addColorStop(0, "rgba(" + rgb + "," + (0.34 * L.night) + ")");
+    g.addColorStop(1, "rgba(" + rgb + ",0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  updateDrawFlies(frameDt, L, currentSeason(), top + 20, H - 80);
+}
+function gardenNightNap(act) { return isNight() && (act === "sit" || act === "watch"); }
+
+// ---------- Time & Seasons panel ----------
+function drawSeasonsPanel() {
+  drawBackground();
+  applyWorldFilter();
+  const ph = 452, top = Math.round(H / 2 - ph / 2);
+  panelBox(28, top, W - 56, ph);
+  uiButtons = [];
+  const S = currentSeason(), L = dayLight(), info = SEASON_INFO[S];
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(20, true); ctx.fillText("Time & Seasons", W / 2, top + 30);
+  font(13, true); ctx.fillStyle = C.heart;
+  ctx.fillText(info.icon + " " + info.name + " · " + (L.night > 0.5 ? "☾ " : "") + PHASE_NAMES[L.phase], W / 2, top + 56);
+  const sc = seasons.mode === "auto" ? "Auto (" + SEASON_INFO[calendarSeason()].name + ")" : SEASON_INFO[seasons.mode].name;
+  uiButtons.push(btn(W / 2 - 115, top + 76, 230, 46, "Season: " + sc, { id: "sea_mode", size: 14, bg: info.pill, border: "#e0a0c0" }));
+  uiButtons.push(btn(W / 2 - 115, top + 132, 230, 46, "Hemisphere: " + (seasons.hemi === "S" ? "South" : "North"), { id: "sea_hemi", size: 14, bg: "#d8f0ff", border: "#80b0e0" }));
+  uiButtons.push(btn(W / 2 - 115, top + 188, 230, 46, "☀ Always daytime: " + (seasons.alwaysDay ? "On" : "Off"), { id: "sea_day", size: 14, bg: seasons.alwaysDay ? "#fff0b0" : "#eee4ea", border: seasons.alwaysDay ? "#e0c060" : "#c8b8c8" }));
+  font(10.5, false); ctx.fillStyle = C.textSoft;
+  ctx.fillText("Seasons follow the calendar; day & night", W / 2, top + 252);
+  ctx.fillText("follow your clock. Pick a season any time!", W / 2, top + 268);
+  // this season's festival + friend
+  const ca = ANIMALS.find(a => a.id === info.critter);
+  ctx.fillStyle = "rgba(255,240,248,0.9)"; roundRect(44, top + 284, W - 88, 84, 12); ctx.fill();
+  ctx.strokeStyle = C.panelBorder; ctx.lineWidth = 1.5; ctx.stroke();
+  drawSprite(ca, 80, top + 326, 1.6, false, Math.sin(time * 3) * 2, false, 7, unlocked[ca.id] ? { acc: equippedFor(ca.id) } : null);
+  ctx.textAlign = "left"; ctx.fillStyle = C.text; font(12, true);
+  ctx.fillText(info.ev, 110, top + 304);
+  font(10, false); ctx.fillStyle = C.textSoft;
+  ctx.fillText(seasons.evWins[S] ? "Celebrated ×" + seasons.evWins[S] + " ✓" : "Appears in the meadow ✦", 110, top + 322);
+  ctx.fillText(unlocked[ca.id] ? ca.name + " is your friend ♥" : seasonOpen(ca) ? ca.name + " is visiting! (Shop)" : ca.name + ": " + seasonLockText(ca), 110, top + 340);
+  ctx.fillText("Fireflies caught: " + seasons.fireflies, 110, top + 356);
+  ctx.textAlign = "center";
+  uiButtons.push(btn(W / 2 - 70, top + 382, 140, 46, "Close", { id: "close", size: 15 }));
+}
+function seasonsAction(id) {
+  if (id === "sea_mode") {
+    const order = ["auto"].concat(SEASONS);
+    seasons.mode = order[(order.indexOf(seasons.mode) + 1) % order.length];
+  } else if (id === "sea_hemi") seasons.hemi = seasons.hemi === "S" ? "N" : "S";
+  else if (id === "sea_day") seasons.alwaysDay = !seasons.alwaysDay;
+  lightCache.k = -1; skyKey = "";
+  save();
+}
+
+// ---------- sounds ----------
+function sfxChime(n) {
+  const t = sfxT(); if (t < 0) return;
+  tone(A.sfxBus, "sine", penta(Math.min(n || 0, 12) + 8, 72), t, 0.05, 0.08, { a: 0.003, d: 0.2, s: 0.3, r: 0.4 });
+  tone(A.sfxBus, "sine", penta(Math.min(n || 0, 12) + 13, 72), t + 0.05, 0.04, 0.04, { a: 0.003, d: 0.2, s: 0.2, r: 0.4 });
+}
+function sfxRustle() {
+  const t = sfxT(); if (t < 0) return;
+  noiseHit(A.sfxBus, t, 0.22, 0.1, "bandpass", 2400, 0.9, 1200);
+  tone(A.sfxBus, "triangle", 520, t + 0.08, 0.04, 0.06, { a: 0.004, d: 0.08, s: 0.3, r: 0.1, slideTo: 780, slideT: 0.08 });
+}
+function sfxPat() {
+  const t = sfxT(); if (t < 0) return;
+  noiseHit(A.sfxBus, t, 0.08, 0.09, "lowpass", 1400, 0.7, 500);
+}
+// music flavour for the meadow song: softer nights with bells, sleigh-bell sparkle in winter
+function musicFlavor() {
+  if (music.mode) return null;
+  let L = null;
+  try { L = dayLight(); } catch (e) { return null; }
+  return { night: L.night > 0.5, season: currentSeason() };
+}
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -8001,7 +9386,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         listMax, listScroll, unlocked, achievements, giftStreak, lastGiftDay,
         tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time,
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
-        arcade, mg, ownedAcc, musicMode: music.modeKey };
+        arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight() };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -8012,6 +9397,9 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
       else if (k === "gSel") gSel = v;
       else if (k === "lastActiveLoaded") lastActiveLoaded = v;
       else if (k === "arcade") arcade = normalizeArcade(v);
+      else if (k === "seasons") { seasons = normalizeSeasons(v); lightCache.k = -1; }
+      else if (k === "unlocked") unlocked = v;
+      else if (k === "achievements") achievements = v;
     },
     music, SONGS, SONG_ERRORS, frame, ensureAudio, musicTick, startEvent, spawnPowerup, activatePowerup,
     hugCritter, doUI, save, load, openGift, checkDailyGift, setMusicOn, setSfxOn, playTap, targetTier,
@@ -8023,6 +9411,8 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     ARC_GAMES, ARC_DAILY, ARC_DAY_CAP, ARC_SCORE_CAP, MEM_TIERS, ROUND_SECS, BUB_STARS, TRT_STARS, ARCADE_SONGS, ACCESSORIES,
     openArcade, startMg, quitMg, memTap, memCardRect, memLayout, memStars, scoreStars, roundBase, arcadeReward, finishRound,
     bubTap, bubPop, trtCatch, mgDown, mgMove, mgAction, mgOnHidden, normalizeArcade, memTierOpen, todayKey, setMusicMode,
+    SEASONS, SEASON_INFO, ANIMALS, setClock, lightAt, dayLight, seasonForMonth, currentSeason, calendarSeason, seasonYearKey,
+    seasonOpen, normalizeSeasons, startSeasonEvent, tapSeason, tapFirefly, finishSeasonEvent, seasonsAction, getDecorArt, toastQueue,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
