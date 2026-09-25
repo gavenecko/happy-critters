@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="4.0-cozy">
+<meta name="hc-version" content="5.0-garden">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -57,7 +57,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v4 — the Cozy Update: PWA/offline, tutorial, haptics, juicier hugs
+// Happy Critters v5 — the Critter Garden: decorate a yard, visiting critters, away gifts
 
 const W = 360;
 let H = 540;
@@ -66,7 +66,7 @@ const COMBO_WINDOW = 1.4;
 const SPAWN_BASE = 0.95;
 const SAVE_KEY = "happyCritters_v2";
 const SAVE_KEY_V1 = "happyCritters_v1";
-const SAVE_VER = 4;
+const SAVE_VER = 5;
 
 const C = {
   white: "#fffaf5", text: "#4a3050", textSoft: "#7a5a70",
@@ -1939,6 +1939,15 @@ const GOALS = [
   { id: "nap", label: "Wake a napping critter", check: s => s.stats.naps >= 1, reward: 30 },
   { id: "gift1", label: "Open a daily gift", check: s => s.giftsOpened >= 1, reward: 40 },
   { id: "streak3", label: "3-day gift streak", check: s => s.bestGiftStreak >= 3, reward: 150 },
+  // v5: Critter Garden
+  { id: "garden1", label: "Decorate your garden", check: s => s.gardenPlaced >= 1, reward: 40 },
+  { id: "garden5", label: "Place 5 decorations", check: s => s.gardenPlaced >= 5, reward: 120 },
+  { id: "cozy25", label: "Reach 25 Coziness", check: s => s.cozy >= 25, reward: 100 },
+  { id: "cozy100", label: "Reach 100 Coziness", check: s => s.cozy >= 100, reward: 300 },
+  { id: "visit20", label: "Welcome 20 garden visitors", check: s => s.gardenVisits >= 20, reward: 150 },
+  { id: "bubble25", label: "Collect 25 heart bubbles", check: s => s.gardenBubbles >= 25, reward: 120 },
+  { id: "away1", label: "Collect gifts left while away", check: s => s.awayCollected >= 1, reward: 80 },
+  { id: "homes", label: "Build a Critter House & Tea Stand", check: s => !!(s.gardenHas.house && s.gardenHas.tea), reward: 250 },
 ];
 
 const POWERUPS = {
@@ -2076,6 +2085,10 @@ function load() {
     hapticsOn = d.hapticsOn != null ? !!d.hapticsOn : true;
     tutorialDone = d.tutorialDone != null ? !!d.tutorialDone : true;
     lastVersionSeen = typeof d.lastVersionSeen === "number" && isFinite(d.lastVersionSeen) ? d.lastVersionSeen : 3;
+    // v5: garden (older saves simply start with an empty yard)
+    garden = normalizeGarden(d.garden);
+    cozyCache = -1;
+    lastActiveLoaded = typeof d.lastActive === "number" && isFinite(d.lastActive) ? d.lastActive : 0;
     if (!isFinite(joy)) joy = 0;
     if (!isFinite(mood)) mood = 8;
     if (!isFinite(moodPeak)) moodPeak = mood;
@@ -2092,6 +2105,7 @@ function save() {
       critterHugs, friendLvl, ownedAcc, equipped,
       lastGiftDay, giftStreak, bestGiftStreak, giftsOpened, stats, albumNew,
       hapticsOn, tutorialDone, lastVersionSeen,
+      garden: serializeGarden(), lastActive: Date.now(),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -2948,6 +2962,7 @@ function drawSprite(animal, x, y, scale, shiny, bounce, sad, phaseSeed, fx) {
   ctx.save();
   ctx.translate(x, y + by);
   if (fx && fx.rot) ctx.rotate(fx.rot);
+  if (fx && fx.flip) ctx.scale(-1, 1);
   if (fx && fx.sq) {
     const foot = s * 0.42;
     ctx.translate(0, foot);
@@ -3415,7 +3430,8 @@ function updateParticles(dt) {
     if (p.drag) { const k = Math.max(0, 1 - p.drag * dt); p.vx *= k; if (p.vy < -30) p.vy *= k; }
     p.x += p.vx * dt;
     p.y += p.vy * dt;
-    p.vy += (p.kind === "heart" ? -10 : 40) * dt;
+    p.vy += (p.kind === "heart" ? -10 : p.float ? -4 : 40) * dt;
+    if (p.kind === "bubble") p.x += Math.sin(p.t * 3 + (p.wob || 0)) * 12 * dt;
   }
   prune(particles, alive);
   if (particles.length > 400) particles.splice(0, particles.length - 400);
@@ -4421,6 +4437,12 @@ function drawParticles() {
       ctx.fill();
     } else if (p.kind === "spark") {
       drawSparkle(p.x, p.y, p.size + 1, p.color);
+    } else if (p.kind === "bubble") {
+      ctx.globalAlpha = Math.min(1, lf * 2.5, (p.t || 0) * 5);
+      ctx.strokeStyle = "rgba(170,140,255,0.9)"; ctx.lineWidth = 1.2;
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, 1.5, 1.5);
     } else {
       ctx.fillStyle = p.color;
       ctx.beginPath();
@@ -4478,6 +4500,8 @@ function checkAchievements() {
     totalHugs, highCombo, highScore, unlocked, unlockedBgs, achievements,
     cloudsShooed, sadCheered, moodPeak, dawnCount,
     friendLvl, ownedAcc, equipped, stats, giftsOpened, bestGiftStreak,
+    gardenPlaced: garden.placedEver, cozy: gardenCozy(), gardenVisits: garden.visits,
+    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(),
   };
   for (const g of GOALS) {
     if (achievements[g.id]) continue;
@@ -4747,8 +4771,10 @@ function drawTitle() {
   uiButtons = [];
   const bw = 132, gap = 10, lx = W / 2 - bw - gap / 2, rx = W / 2 + gap / 2;
   uiButtons.push(btn(W / 2 - 100, 284 + oy, 200, 52, "Play ♥", { id: "play", size: 20 }));
-  uiButtons.push(btn(lx, 346 + oy, bw, 44, "Little Goals", { id: "ach", size: 14, bg: "#e8d0ff", border: "#c090e0" }));
-  uiButtons.push(btn(rx, 346 + oy, bw, 44, "Album" + (albumNew ? " •" : ""), { id: "album", size: 14, bg: "#ffd8e8", border: "#ff90b8" }));
+  const tw = (bw * 2 + gap - 2 * 8) / 3;
+  uiButtons.push(btn(lx, 346 + oy, tw, 44, "Garden ✿" + (garden.pending ? "•" : ""), { id: "garden", size: 13, bg: "#c8f0c0", border: "#60b060" }));
+  uiButtons.push(btn(lx + tw + 8, 346 + oy, tw, 44, "Album" + (albumNew ? " •" : ""), { id: "album", size: 13, bg: "#ffd8e8", border: "#ff90b8" }));
+  uiButtons.push(btn(lx + 2 * (tw + 8), 346 + oy, tw, 44, "Goals", { id: "ach", size: 13, bg: "#e8d0ff", border: "#c090e0" }));
   uiButtons.push(btn(lx, 400 + oy, bw, 44, "Shop", { id: "shop", size: 14, bg: "#ffe8b0", border: "#e0c060" }));
   uiButtons.push(btn(rx, 400 + oy, bw, 44, "Settings", { id: "settings", size: 14, bg: "#d0e8ff", border: "#80b0e0" }));
   let y = 454 + oy;
@@ -4769,6 +4795,13 @@ function drawTitle() {
   ctx.fillText("♥ " + joy + "  ·  Combo " + highCombo + "×  ·  Hugs " + totalHugs + "  ·  Dawn " + dawnCount, W / 2, H - 14);
 }
 
+// bottom toolbar geometry (6 buttons, each ≥ 44px tall and ~52px wide on a 390px phone)
+const TOOLBAR_N = 6, TOOLBAR_IDS = ["pause", "settings", "shop", "garden", "album", "ach"];
+function toolbarRect(i) {
+  if (typeof i === "string") i = TOOLBAR_IDS.indexOf(i);
+  const gap = 5, bw = (W - 16 - gap * (TOOLBAR_N - 1)) / TOOLBAR_N;
+  return { x: 8 + i * (bw + gap), y: H - 52, w: bw, h: 44 };
+}
 function drawHUD() {
   ctx.fillStyle = "rgba(255,250,245,0.9)";
   roundRect(8, 8, W - 16, 56, 12);
@@ -4842,16 +4875,17 @@ function drawHUD() {
 
   // bottom toolbar: big thumb-friendly buttons
   uiButtons = [];
-  const n = 5, gap = 6, bw = (W - 16 - gap * (n - 1)) / n, by = H - 52;
   const items = [
     ["II", "pause", "#d0e8ff", "#80b0e0"],
     ["♪", "settings", "#d0ffd8", "#70c080"],
     ["Shop", "shop", "#ffe8b0", "#e0c060"],
+    ["Yard✿", "garden", "#c8f0c0", "#60b060"],
     ["Album" + (albumNew ? "•" : ""), "album", "#ffd8e8", "#ff90b8"],
     ["Goals", "ach", "#e8d0ff", "#c090e0"],
   ];
   items.forEach((it, i) => {
-    uiButtons.push(btn(8 + i * (bw + gap), by, bw, 44, it[0], { id: it[1], size: 13, bg: it[2], border: it[3], r: 12 }));
+    const r = toolbarRect(i);
+    uiButtons.push(btn(r.x, r.y, r.w, 44, it[0], { id: it[1], size: W < 360 ? 11 : 12, bg: it[2], border: it[3], r: 12 }));
   });
   if (mood >= 100) {
     uiButtons.push(btn(W / 2 - 75, H - 106, 150, 44, "New Dawn ☀", { id: "dawn", size: 13, bg: "#ffe0a0", border: "#e0a040" }));
@@ -5149,6 +5183,7 @@ function drawPause() {
 // ===================== UI ACTIONS =====================
 function openPanel(name) {
   if (scene === "play" || scene === "title") prevScene = scene;
+  if (scene === "play" && name === "garden") prevScene = "pause"; // come back to a paused meadow, never an ambush
   scene = name;
   listScroll = 0; listMax = 0;
   drag = null;
@@ -5177,7 +5212,22 @@ function doUI(id) {
   if (id === "pause") { scene = "pause"; save(); return; }
   if (id === "resume") { scene = "play"; return; }
   if (id === "title") { scene = "title"; prevScene = "title"; activeEvent = null; drops = []; powerups = []; magnetT = slowT = 0; tut = null; save(); return; }
-  if (id === "close") { scene = prevScene || "title"; return; }
+  if (id === "close") {
+    if (scene === "garden") { leaveGarden(); return; }
+    if (scene === "decor") { scene = "garden"; return; }
+    scene = prevScene || "title"; return;
+  }
+  if (id === "garden") { if (tut) return; openGarden(); return; }
+  if (id === "decor") { gSel = null; const ps = prevScene; openPanel("decor"); prevScene = ps; return; }
+  if (id === "away_ok") { collectAway(); return; }
+  if (id.startsWith("g_")) { gardenAction(id); return; }
+  if (id.startsWith("dtab_")) { decorTab = id.slice(5); listScroll = 0; return; }
+  if (id.startsWith("dbuy_")) {
+    const did = id.slice(5);
+    if (buyDecor(did)) { scene = "garden"; placeFromInv(did); }
+    return;
+  }
+  if (id.startsWith("dplace_")) { const did = id.slice(7); scene = "garden"; placeFromInv(did); return; }
   if (id.startsWith("tab_")) { shopTab = id.slice(4); listScroll = 0; return; }
   if (id.startsWith("buy_")) {
     const a = ANIMALS.find(x => x.id === id.slice(4));
@@ -5228,7 +5278,7 @@ function canvasPos(e) {
   const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
   return { x: ((clientX - r.left) / r.width) * W, y: ((clientY - r.top) / r.height) * H };
 }
-const LIST_SCENES = { shop: true, album: true, achievements: true };
+const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true };
 const dist2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
 
 function tapGloom(p) {
@@ -5286,6 +5336,7 @@ canvas.addEventListener("pointerdown", (e) => {
   for (const b of uiButtons) {
     if (pointIn(p.x, p.y, b.x, b.y, b.w, b.h)) { doUI(b.id); return; }
   }
+  if (scene === "garden") { gardenDown(p, e.pointerType !== "mouse"); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (scene === "play" && tut && tutBubbleHit(p)) return; // the tutorial card swallows stray taps
   if (scene === "play") playTap(p);
   else if (scene === "title") tapGloom(p);
@@ -5294,6 +5345,7 @@ canvas.addEventListener("pointerdown", (e) => {
 canvas.addEventListener("pointermove", (e) => {
   const p = canvasPos(e);
   if (e.pointerType === "mouse" || pointer.down) { hitUI = p; pointer.x = p.x; pointer.y = p.y; }
+  if (gDrag && scene === "garden") gardenMove(p);
   if (drag) {
     const dy = p.y - drag.y0;
     if (Math.abs(dy) > 8) drag.moved = true;
@@ -5308,6 +5360,7 @@ function endPointer(e, cancelled) {
     }
   }
   drag = null;
+  if (gDrag) gardenUp(p, cancelled || scene !== "garden");
   pointer.down = false;
   if (e.pointerType !== "mouse") hitUI = null;
 }
@@ -5326,6 +5379,10 @@ document.addEventListener("touchmove", (e) => { if (e.touches && e.touches.lengt
 window.addEventListener("keydown", (e) => {
   const k = e.key;
   const inPanel = scene === "shop" || scene === "achievements" || scene === "album" || scene === "settings";
+  if (k === "g" || k === "G") {
+    if (scene === "play" || scene === "title") doUI("garden");
+    else if (scene === "garden") leaveGarden();
+  }
   if (k === "u" || k === "U") {
     if (scene === "play" || scene === "title") doUI("shop");
     else if (scene === "shop") scene = prevScene;
@@ -5342,9 +5399,13 @@ window.addEventListener("keydown", (e) => {
     if (scene === "play") scene = "pause";
     else if (scene === "pause") scene = "play";
     else if (scene === "whatsnew") closeWhatsNew();
+    else if (scene === "away") collectAway();
+    else if (scene === "garden") { if (gSel) gSel = null; else leaveGarden(); }
+    else if (scene === "decor") scene = "garden";
     else if (inPanel) scene = prevScene;
   }
   if ((k === "Enter" || k === " ") && scene === "whatsnew") closeWhatsNew();
+  else if ((k === "Enter" || k === " ") && scene === "away") collectAway();
   if (k === "m" || k === "M") { setMusicOn(!musicOn); if (musicOn) ensureAudio(); }
   if (k === "n" || k === "N") setSfxOn(!sfxOn);
   if (LIST_SCENES[scene] && (k === "ArrowDown" || k === "ArrowUp")) {
@@ -5394,6 +5455,16 @@ function stepScene(dt) {
     updateTitle(dt);
     if (wnReturn === "settings") drawSettings(); else { drawTitle(); drawStoryBanner(); }
     drawWhatsNew(dt);
+  } else if (scene === "garden") {
+    updateGarden(dt);
+    drawGarden();
+  } else if (scene === "decor") {
+    drawDecor();
+  } else if (scene === "away") {
+    if (awayReturn === "title") updateTitle(dt);
+    else if (awayReturn === "garden") updateGarden(dt);
+    drawSceneStatic(awayReturn);
+    drawAwayCard(dt);
   } else {
     scene = "title"; // unknown scene: never get stuck on a blank screen
   }
@@ -5421,21 +5492,21 @@ function frame(ts) {
 }
 
 
-// ===================== COZY LAYER (v4) =====================
+// ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 4;
-const APP_LABEL = "v4";
+const APP_VERSION = 5;
+const APP_LABEL = "v5";
 const WHATS_NEW = {
-  title: "What's new ✦",
-  sub: "The Cozy Update",
+  title: "What's new ✿",
+  sub: "The Critter Garden",
   items: [
-    "Add to Home Screen & play offline",
-    "A friendly how-to-play for new pals",
-    "Squishier hugs & bouncier hearts",
-    "Comic combo pops (no screen shake)",
-    "Gentle haptics where supported",
-    "Smoother banners + lots of tiny fixes",
+    "Your very own Critter Garden ✿",
+    "20 hand-made decorations to place",
+    "Pals visit, swing, splash & nap",
+    "Coziness brings more visitors & ♥",
+    "Little gifts left while you're away",
+    "8 new garden goals to complete",
   ],
 };
 
@@ -5616,8 +5687,8 @@ function drawTutorial() {
       ctx.restore();
       drawTutArrow(W / 2, 80 + bob * 0.8, true);
     } else if (tut.step === 3) {
-      const n = 5, gap = 6, bw = (W - 16 - gap * (n - 1)) / n;
-      const sx = 8 + 2 * (bw + gap), sy = H - 52;
+      const tr = toolbarRect("shop"), bw = tr.w;
+      const sx = tr.x, sy = tr.y;
       ctx.save();
       ctx.globalAlpha = 0.6 + pulse * 0.4;
       ctx.strokeStyle = "#ff6fa8"; ctx.lineWidth = 3;
@@ -5660,7 +5731,7 @@ function drawTutorial() {
     ctx.fillText(tut.step === 0 ? "tap a critter ↑" : "tap the cloud ↑", x0 + bw - 16, y0 + 103);
     ctx.globalAlpha = 1;
   }
-  if (tut.step === 3 && !tut.cheer) drawTutArrow(8 + 2 * ((W - 40) / 5 + 6) + (W - 40) / 10, H - 64 + bob * 0.5, false);
+  if (tut.step === 3 && !tut.cheer) drawTutArrow(toolbarRect("shop").x + toolbarRect("shop").w / 2, H - 64 + bob * 0.5, false);
 }
 
 // ---------- What's new ----------
@@ -5670,6 +5741,7 @@ function closeWhatsNew() {
   lastVersionSeen = APP_VERSION;
   save();
   scene = wnReturn;
+  if (garden.pending && scene === "title") openAway("title"); // queued "while you were away" card
 }
 function drawWhatsNew(dt) {
   wnT += dt;
@@ -5746,6 +5818,1110 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("pagehide", () => save());
 
+// ===================== CRITTER GARDEN (v5) =====================
+// A decoratable yard: grid placement, decor shop, visiting critters, live heart bubbles and
+// "while you were away" rewards. Positions are stored in grid cells so the yard looks the same on every screen.
+const G_CELL = 24, G_COLS = 15, G_ROWS = 16, G_U = 2; // G_U = logical px per art pixel
+function gy0() { return H - 60 - G_ROWS * G_CELL; }
+const AWAY_MIN = 600;          // seconds away before the garden has something to report
+const AWAY_CAP = 8 * 3600;     // offline rewards stop growing after 8 hours
+const GC = {
+  wood: "#c88a52", woodD: "#9a5f34", woodL: "#e8b078", leaf: "#6cc050", leafD: "#4a9a3a", leafL: "#9ae070",
+  stone: "#cbc3d3", stoneD: "#8a8098", water: "#7ec8ff", waterD: "#4aa0e0", waterL: "#d8f4ff",
+  pink: "#ff8ab8", pinkD: "#e0608f", yel: "#ffd66b", cream: "#fff2dc", red: "#ff6b7a", purp: "#c9a0ff",
+  white: "#fffaf5", post: "#6a4a3a", sand: "#ffe2a8", sandD: "#f0c070",
+};
+
+const DECOR_CATS = [["furniture", "Furniture"], ["plants", "Plants"], ["toys", "Toys"], ["homes", "Homes"]];
+// fw/fh: footprint in cells; aw/ah: art size in art pixels (bottom-aligned to the footprint);
+// act: what visiting critters do there; spots: where they stand (art pixels, may sit outside the art).
+const DECOR = [
+  { id: "lantern", name: "Cozy Lantern", cat: "furniture", cost: 90, cozy: 3, fw: 1, fh: 1, aw: 12, ah: 24, act: null, spots: [],
+    paint(P) {
+      P.r(5, 9, 2, 13, GC.post); P.r(3, 21, 6, 3, GC.post);
+      P.r(4, 0, 4, 2, GC.post); P.r(2, 2, 8, 2, GC.post);
+      P.r(3, 4, 6, 6, "#ffe38a"); P.r(4, 5, 4, 4, "#fff8d8"); P.r(3, 10, 6, 1, GC.post);
+    } },
+  { id: "bench", name: "Garden Bench", cat: "furniture", cost: 160, cozy: 6, fw: 2, fh: 1, aw: 24, ah: 18, act: "sit", spots: [[7, 12], [17, 12]],
+    paint(P) {
+      P.r(3, 0, 2, 12, GC.woodD); P.r(19, 0, 2, 12, GC.woodD);
+      P.r(1, 1, 22, 3, GC.wood); P.r(1, 1, 22, 1, GC.woodL); P.r(1, 5, 22, 2, GC.wood);
+      P.r(0, 9, 24, 3, GC.woodL); P.r(0, 12, 24, 1, GC.woodD); P.r(2, 9, 6, 1, "#fff0d0");
+      P.r(2, 13, 2, 5, GC.woodD); P.r(20, 13, 2, 5, GC.woodD);
+    } },
+  { id: "blanket", name: "Picnic Blanket", cat: "furniture", cost: 260, cozy: 8, fw: 2, fh: 2, aw: 24, ah: 22, rot: true, act: "sit", spots: [[7, 13], [14, 17]],
+    paint(P) {
+      P.ef(0, 4, 24, 18, (x, y) => { const a = (x >> 2) & 1, b = (y >> 2) & 1; return a && b ? "#ff6f8f" : (a || b) ? "#ffa3b8" : "#fff4f0"; });
+      P.r(15, 2, 7, 6, GC.wood); P.r(15, 2, 7, 1, GC.woodL); P.r(16, 0, 1, 2, GC.woodD); P.r(20, 0, 1, 2, GC.woodD); P.r(16, 0, 5, 1, GC.woodD);
+      P.r(16, 4, 5, 1, GC.woodD);
+    } },
+  { id: "hammock", name: "Sunny Hammock", cat: "furniture", cost: 1200, cozy: 16, fw: 3, fh: 1, aw: 36, ah: 24, act: "nap", spots: [[18, 13]],
+    paint(P) {
+      P.r(1, 4, 3, 20, GC.woodD); P.r(32, 4, 3, 20, GC.woodD);
+      P.e(2.5, 3, 3.5, 3, GC.leaf); P.e(33.5, 3, 3.5, 3, GC.leaf); P.p(1, 2, GC.leafL); P.p(32, 2, GC.leafL);
+      for (let i = 0; i < 4; i++) { P.p(4 + i, 7 + i, "#e8d8c0"); P.p(31 - i, 7 + i, "#e8d8c0"); }
+      const cols = ["#7ec8ff", "#fff4f0", "#ff9ec8"];
+      for (let x = 8; x <= 27; x++) {
+        const y = Math.round(10 + 5 * Math.sin(Math.PI * (x - 8) / 19));
+        P.r(x, y, 1, 3, cols[Math.floor((x - 8) / 3) % 3]);
+      }
+    } },
+  { id: "stones", name: "Stepping Stones", cat: "plants", cost: 50, cozy: 2, fw: 2, fh: 1, aw: 24, ah: 12, rot: true, act: null, spots: [],
+    paint(P) {
+      for (const [x, y] of [[4, 6], [12, 5], [20, 7]]) { P.e(x, y + 0.5, 3.5, 2.8, GC.stoneD); P.e(x, y, 3.2, 2.3, GC.stone); P.p(x - 1, y - 1, "#f0ecf4"); }
+    } },
+  { id: "flowerbed", name: "Flower Bed", cat: "plants", cost: 60, cozy: 3, fw: 2, fh: 1, aw: 24, ah: 14, act: "sniff", spots: [[12, 17]],
+    paint(P) {
+      P.r(0, 7, 24, 7, GC.woodD); P.r(0, 6, 24, 2, GC.wood); P.r(1, 8, 22, 4, "#7a4a2a");
+      const cols = [GC.pink, GC.yel, GC.purp, "#ffffff", GC.pink, GC.yel];
+      for (let i = 0; i < 6; i++) {
+        const x = 1 + i * 4;
+        P.r(x + 1, 3, 1, 5, GC.leafD); P.p(x + 2, 5, GC.leaf);
+        P.r(x, 1, 3, 3, cols[i]); P.p(x + 1, 2, "#ffb020");
+      }
+    } },
+  { id: "sunflower", name: "Smiley Sunflower", cat: "plants", cost: 80, cozy: 3, fw: 1, fh: 1, aw: 12, ah: 26, act: "sniff", spots: [[6, 29]],
+    paint(P) {
+      P.r(5, 11, 2, 15, GC.leafD); P.r(1, 16, 4, 2, GC.leaf); P.r(7, 19, 4, 2, GC.leaf);
+      P.e(6, 6, 6, 6, "#ffc41a"); P.e(6, 6, 5, 5, "#ffd84a"); P.e(6, 6, 3.4, 3.4, "#b06a2a");
+      P.p(4, 5, "#2c2030"); P.p(7, 5, "#2c2030"); P.r(5, 8, 2, 1, "#2c2030"); P.p(3, 7, "#ff9ab0"); P.p(8, 7, "#ff9ab0");
+    } },
+  { id: "berry", name: "Berry Bush", cat: "plants", cost: 120, cozy: 4, fw: 1, fh: 1, aw: 12, ah: 12, act: "sniff", spots: [[6, 15]],
+    paint(P) {
+      P.e(6, 7, 6, 5, GC.leafD); P.e(5.5, 6, 5, 4, GC.leaf); P.e(4, 4.5, 2.5, 1.5, GC.leafL);
+      for (const [x, y] of [[2, 7], [6, 4], [8, 8], [4, 9], [9, 5]]) { P.r(x, y, 2, 2, "#ff4f6f"); P.p(x, y, "#ffb0c0"); }
+    } },
+  { id: "mushrooms", name: "Mushroom Ring", cat: "plants", cost: 500, cozy: 10, fw: 2, fh: 2, aw: 24, ah: 22, rot: true, act: "dance", spots: [[8, 12], [16, 14]],
+    paint(P) {
+      P.e(12, 12, 10, 8, "#78c458");
+      for (let k = 0; k < 6; k++) {
+        const a = k / 6 * Math.PI * 2, x = Math.round(12 + Math.cos(a) * 8.5), y = Math.round(12 + Math.sin(a) * 6.5);
+        P.r(x - 1, y - 1, 2, 3, GC.cream); P.r(x - 2, y - 3, 4, 2, k % 2 ? "#ff5a6a" : "#c9a0ff"); P.p(x - 1, y - 3, "#ffffff");
+      }
+      P.p(12, 12, "#fff8c0"); P.p(10, 10, "#fff8c0");
+    } },
+  { id: "tree", name: "Little Blossom Tree", cat: "plants", cost: 900, cozy: 14, fw: 2, fh: 2, aw: 24, ah: 36, act: "nap", spots: [[5, 36]],
+    paint(P) {
+      P.r(10, 20, 4, 14, GC.woodD); P.r(10, 20, 1, 14, GC.wood); P.r(8, 33, 8, 3, GC.woodD);
+      P.e(12, 16, 11, 5, GC.leafD); P.e(12, 11, 10, 9, GC.leaf); P.e(6.5, 14, 5.5, 5, GC.leaf); P.e(17.5, 14, 5.5, 5, GC.leaf);
+      P.e(9, 7, 4, 3, GC.leafL);
+      for (const [x, y] of [[6, 10], [15, 6], [18, 13], [10, 15], [13, 10], [4, 15]]) { P.p(x, y, "#ffc0d8"); P.p(x + 1, y, GC.pink); }
+    } },
+  { id: "pond", name: "Lily Pond", cat: "plants", cost: 2200, cozy: 22, fw: 3, fh: 2, aw: 36, ah: 24, rot: true, act: "splash", spots: [[11, 12], [25, 13]],
+    paint(P) {
+      P.e(18, 12, 18, 12, GC.stoneD); P.e(18, 11.5, 17, 11, GC.stone);
+      P.e(18, 12, 15, 9, GC.water); P.e(19, 13, 11, 6, GC.waterD);
+      P.r(9, 7, 4, 1, GC.waterL); P.r(22, 17, 3, 1, GC.waterL);
+      P.e(10, 15, 3, 2, GC.leaf); P.p(10, 14, GC.pink); P.p(11, 14, "#ffc0d8"); P.e(27, 9, 2.5, 1.6, GC.leaf);
+    } },
+  { id: "ball", name: "Beach Ball", cat: "toys", cost: 70, cozy: 2, fw: 1, fh: 1, aw: 12, ah: 12, act: "play", spots: [[-6, 12]],
+    paint(P) {
+      P.ef(1, 2, 11, 10, (x, y) => { const dx = x + 0.5 - 6.5, dy = y + 0.5 - 7; if (dx * dx + dy * dy > 25) return null; return x < 5 ? GC.red : x < 8 ? "#ffffff" : GC.yel; });
+      P.p(4, 4, "#ffd0d8");
+    } },
+  { id: "yarn", name: "Yarn Ball", cat: "toys", cost: 70, cozy: 2, fw: 1, fh: 1, aw: 12, ah: 12, act: "play", spots: [[18, 12]],
+    paint(P) {
+      P.ef(1, 2, 10, 10, (x, y) => { const dx = x + 0.5 - 6, dy = y + 0.5 - 7; if (dx * dx + dy * dy > 20) return null; return (x + y) % 3 === 0 ? GC.pinkD : GC.pink; });
+      P.r(9, 10, 3, 1, GC.pinkD); P.p(11, 11, GC.pinkD); P.p(4, 4, "#ffd0e4");
+    } },
+  { id: "swing", name: "Tree Swing", cat: "toys", cost: 1000, cozy: 14, fw: 2, fh: 1, aw: 24, ah: 32, act: "swing", spots: [[12, 27]],
+    paint(P) {
+      P.r(1, 3, 2, 29, GC.woodD); P.r(21, 3, 2, 29, GC.woodD);
+      P.r(0, 1, 24, 3, GC.wood); P.r(0, 1, 24, 1, GC.woodL);
+      P.e(4, 1, 3, 2, GC.leaf); P.e(19, 1, 3, 2, GC.leaf); P.p(18, 0, GC.pink);
+    } },
+  { id: "sandbox", name: "Sandbox", cat: "toys", cost: 750, cozy: 12, fw: 2, fh: 2, aw: 24, ah: 22, rot: true, act: "dig", spots: [[13, 15]],
+    paint(P) {
+      P.r(0, 2, 24, 20, GC.wood); P.r(0, 2, 24, 1, GC.woodL); P.r(2, 4, 20, 16, GC.sand);
+      for (const [x, y] of [[4, 16], [9, 18], [18, 6], [20, 17], [13, 5]]) P.p(x, y, GC.sandD);
+      P.r(5, 8, 6, 5, GC.sandD); P.r(5, 6, 2, 2, GC.sandD); P.r(9, 6, 2, 2, GC.sandD); P.p(7, 10, "#c89850");
+      P.r(15, 9, 5, 5, GC.water); P.r(15, 9, 5, 1, "#b0e0ff"); P.r(17, 16, 4, 2, GC.pink); P.r(12, 16, 5, 1, GC.woodD);
+    } },
+  { id: "bubbles", name: "Bubble Machine", cat: "toys", cost: 1800, cozy: 16, fw: 1, fh: 1, aw: 12, ah: 16, act: "watch", spots: [[-8, 16]],
+    paint(P) {
+      P.r(1, 6, 10, 10, GC.purp); P.r(1, 6, 10, 1, "#e6d4ff"); P.r(1, 15, 10, 1, "#a07ad8");
+      P.p(3, 10, "#2c2030"); P.p(8, 10, "#2c2030"); P.r(5, 12, 2, 1, "#2c2030"); P.p(2, 12, "#ff9ab0"); P.p(9, 12, "#ff9ab0");
+      P.r(4, 0, 4, 1, GC.pink); P.r(3, 1, 1, 3, GC.pink); P.r(8, 1, 1, 3, GC.pink); P.r(4, 4, 4, 1, GC.pink); P.r(5, 5, 2, 1, GC.pinkD);
+    } },
+  { id: "arch", name: "Heart Arch", cat: "homes", cost: 1000, cozy: 18, fw: 2, fh: 1, aw: 24, ah: 34, act: "arch", spots: [[12, 32]], unlock: { friend: 2, text: "Friendship Lv 2" },
+    paint(P) {
+      P.r(1, 12, 4, 22, GC.leafD); P.r(19, 12, 4, 22, GC.leafD); P.r(2, 12, 2, 22, GC.leaf); P.r(20, 12, 2, 22, GC.leaf);
+      for (let k = 0; k <= 16; k++) {
+        const a = Math.PI * k / 16, x = Math.round(12 - Math.cos(a) * 9), y = Math.round(13 - Math.sin(a) * 9);
+        P.r(x - 1, y - 1, 3, 3, k % 2 ? GC.leaf : GC.leafD);
+      }
+      for (const [x, y] of [[4, 8], [8, 5], [16, 5], [20, 8], [2, 18], [21, 22], [3, 27]]) P.p(x, y, GC.pink);
+      const heart = [".x.x.", "xxxxx", ".xxx.", "..x.."];
+      heart.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "x") P.p(10 + x, 1 + y, "#ff4f8b"); }));
+    } },
+  { id: "fountain", name: "Rainbow Fountain", cat: "homes", cost: 4000, cozy: 30, fw: 2, fh: 2, aw: 24, ah: 32, act: "splash", spots: [[19, 30]], unlock: { peak: 100, text: "Cure the day (100% Joy)" },
+    paint(P) {
+      P.e(12, 26, 12, 6, GC.stoneD); P.e(12, 25.5, 11, 5, GC.stone); P.e(12, 26, 9, 3.5, GC.water); P.r(8, 25, 3, 1, GC.waterL);
+      P.r(10, 12, 4, 13, GC.stone); P.r(10, 12, 1, 13, "#ece6f2"); P.r(5, 10, 14, 3, GC.stone); P.r(6, 9, 12, 1, GC.water);
+      P.r(11, 6, 2, 3, GC.waterL);
+    } },
+  { id: "house", name: "Critter House", cat: "homes", cost: 6000, cozy: 35, fw: 3, fh: 2, aw: 36, ah: 38, act: "house", spots: [[18, 40]], unlock: { goal: "garden5", text: "Goal: place 5 decorations" },
+    paint(P) {
+      P.r(26, 2, 4, 9, "#b07040");
+      P.r(4, 18, 28, 20, GC.cream); P.r(4, 18, 28, 2, "#f0dcc0");
+      for (let y = 0; y < 17; y++) { const half = 2 + y; P.r(18 - half, 2 + y, half * 2, 1, y % 3 === 2 ? "#d85a70" : "#ff7a8a"); }
+      P.r(15, 26, 7, 12, GC.woodD); P.r(16, 25, 5, 1, GC.woodD); P.p(20, 32, GC.yel);
+      P.r(7, 23, 6, 6, GC.water); P.r(9, 23, 1, 6, GC.cream); P.r(7, 25, 6, 1, GC.cream);
+      const heart = [".x.x.", "xxxxx", ".xxx.", "..x.."];
+      heart.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "x") P.p(25 + x, 24 + y, GC.pink); }));
+      P.r(6, 30, 8, 2, GC.wood); P.p(7, 29, GC.pink); P.p(10, 29, GC.yel); P.p(12, 29, GC.pink);
+    } },
+  { id: "tea", name: "Tea Stand", cat: "homes", cost: 9000, cozy: 40, fw: 3, fh: 2, aw: 36, ah: 34, act: "tea", spots: [[11, 37], [25, 37]],
+    paint(P) {
+      P.r(3, 8, 2, 12, GC.woodD); P.r(31, 8, 2, 12, GC.woodD);
+      P.r(2, 20, 32, 14, GC.wood); P.r(2, 20, 32, 2, GC.woodL); P.r(2, 27, 32, 1, GC.woodD);
+      for (let x = 0; x < 36; x++) { const col = (x >> 2) % 2 ? "#fff4f0" : "#ff8a9a"; P.r(x, 2, 1, 6, col); P.r(x, 8, 1, x % 4 < 2 ? 2 : 1, col); }
+      P.r(0, 1, 36, 1, "#d85a70");
+      P.e(10, 17, 3.5, 2.5, GC.water); P.r(13, 16, 2, 1, GC.water); P.r(9, 14, 2, 1, GC.waterD);
+      P.r(19, 18, 3, 2, GC.white); P.r(24, 18, 3, 2, GC.white);
+      const heart = [".x.x.", "xxxxx", ".xxx.", "..x.."];
+      heart.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "x") P.p(16 + x, 29 + y, GC.pink); }));
+    } },
+];
+const DECOR_BY_ID = {};
+for (const d of DECOR) DECOR_BY_ID[d.id] = d;
+
+function decorUnlocked(d) {
+  const u = d.unlock;
+  if (!u) return true;
+  if (u.friend) return maxFriend({ friendLvl }) >= u.friend;
+  if (u.peak) return moodPeak >= u.peak;
+  if (u.goal) return !!achievements[u.goal];
+  return true;
+}
+
+// ---------- state ----------
+function newGarden() {
+  return { items: [], inv: {}, visits: 0, bubbles: 0, pets: 0, awayCollected: 0, placedEver: 0, welcomed: false, pending: null };
+}
+let garden = newGarden();
+let lastActiveLoaded = 0;
+let cozyCache = -1;
+let gSel = null, gDrag = null;
+let visitors = [], gBubbles = [];
+let visitorT = 2, gAmbT = 0, hiddenAt = 0;
+
+const isInt = v => typeof v === "number" && isFinite(v) && Math.floor(v) === v;
+function normalizeGarden(g) {
+  const out = newGarden();
+  if (!isObj(g)) return out;
+  for (const k of ["visits", "bubbles", "pets", "awayCollected", "placedEver"]) out[k] = isFinite(g[k]) && g[k] > 0 ? Math.floor(g[k]) : 0;
+  out.welcomed = !!g.welcomed;
+  if (isObj(g.inv)) for (const id in g.inv) if (DECOR_BY_ID[id] && g.inv[id] > 0) out.inv[id] = Math.floor(g.inv[id]);
+  if (Array.isArray(g.items)) {
+    for (const it of g.items) {
+      if (!isObj(it) || !DECOR_BY_ID[it.id]) continue;
+      const item = { id: it.id, c: isInt(it.c) ? it.c : 0, row: isInt(it.row) ? it.row : 0, rot: DECOR_BY_ID[it.id].rot && isInt(it.rot) ? ((it.rot % 4) + 4) % 4 : 0, f: it.f ? 1 : 0 };
+      // anything that no longer fits goes safely back to storage (never lost)
+      if (fits(item, item.c, item.row, item.rot, out.items)) out.items.push(item);
+      else out.inv[item.id] = (out.inv[item.id] || 0) + 1;
+    }
+  }
+  if (isObj(g.pending) && g.pending.hearts >= 0) {
+    const p = g.pending;
+    out.pending = {
+      secs: +p.secs || 0, hearts: Math.floor(+p.hearts || 0), visits: Math.floor(+p.visits || 0),
+      visitors: Array.isArray(p.visitors) ? p.visitors.filter(id => ANIMALS.some(a => a.id === id)).slice(0, 5) : [],
+      presents: Array.isArray(p.presents) ? p.presents.filter(isObj).slice(0, 6) : [],
+    };
+  }
+  return out;
+}
+function serializeGarden() {
+  return {
+    items: garden.items.map(it => ({ id: it.id, c: it.c, row: it.row, rot: it.rot, f: it.f })),
+    inv: garden.inv, visits: garden.visits, bubbles: garden.bubbles, pets: garden.pets,
+    awayCollected: garden.awayCollected, placedEver: garden.placedEver, welcomed: garden.welcomed, pending: garden.pending,
+  };
+}
+
+function gardenCozy() {
+  if (cozyCache >= 0) return cozyCache;
+  // duplicates count for half as much each time: decorating beats spamming one cheap item
+  const seen = {};
+  let z = 0;
+  for (const it of garden.items) {
+    const d = DECOR_BY_ID[it.id], k = seen[it.id] || 0;
+    z += d.cozy * Math.pow(0.5, k);
+    seen[it.id] = k + 1;
+  }
+  cozyCache = Math.round(z);
+  return cozyCache;
+}
+function gardenChanged() { cozyCache = -1; checkAchievements(); save(); }
+function gardenHas() { const h = {}; for (const it of garden.items) h[it.id] = true; return h; }
+function invCount(id) { return garden.inv[id] || 0; }
+function placedCount(id) { let n = 0; for (const it of garden.items) if (it.id === id) n++; return n; }
+
+// ---------- grid geometry ----------
+function itemDims(id, rot) { const d = DECOR_BY_ID[id]; return rot & 1 ? [d.fh, d.fw] : [d.fw, d.fh]; }
+function fits(it, c, row, rot, list) {
+  const [w, h] = itemDims(it.id, rot);
+  if (c < 0 || row < 0 || c + w > G_COLS || row + h > G_ROWS) return false;
+  for (const o of list || garden.items) {
+    if (o === it) continue;
+    const [ow, oh] = itemDims(o.id, o.rot);
+    if (c < o.c + ow && o.c < c + w && row < o.row + oh && o.row < row + h) return false;
+  }
+  return true;
+}
+function itemRect(it) {
+  const [w, h] = itemDims(it.id, it.rot);
+  return { x: it.c * G_CELL, y: gy0() + it.row * G_CELL, w: w * G_CELL, h: h * G_CELL };
+}
+function findFreeSpot(it, rot) {
+  let best = null, bd = 1e9;
+  for (let row = 0; row < G_ROWS; row++) for (let c = 0; c < G_COLS; c++) {
+    if (!fits(it, c, row, rot)) continue;
+    const d = Math.abs(c + 0.5 - G_COLS / 2) + Math.abs(row - G_ROWS * 0.55) * 0.8;
+    if (d < bd) { bd = d; best = [c, row]; }
+  }
+  return best;
+}
+// art pixel (ax, ay) of an item -> logical screen point (handles flip + rotation)
+function artToScreen(it, ax, ay) {
+  const d = DECOR_BY_ID[it.id], R = itemRect(it);
+  if (!it.rot) {
+    const left = R.x + R.w / 2 - d.aw * G_U / 2, top = R.y + R.h - d.ah * G_U;
+    let x = left + ax * G_U;
+    if (it.f) x = 2 * (R.x + R.w / 2) - x;
+    return [x, top + ay * G_U];
+  }
+  let dx = (ax - d.aw / 2) * G_U, dy = (ay - d.ah / 2) * G_U;
+  if (it.f) dx = -dx;
+  const cx = R.x + R.w / 2, cy = R.y + R.h / 2;
+  if (it.rot === 1) return [cx - dy, cy + dx];
+  if (it.rot === 2) return [cx - dx, cy - dy];
+  return [cx + dy, cy - dx];
+}
+
+// ---------- pixel art (painted once per item into a small canvas, auto-outlined) ----------
+const decorArt = new Map();
+function makeArt(w, h, paint) {
+  let c;
+  try { c = document.createElement("canvas"); } catch (e) { return null; }
+  c.width = w + 2; c.height = h + 2;
+  const g = c.getContext && c.getContext("2d");
+  if (!g) return null;
+  const P = {
+    r(x, y, ww, hh, col) { g.fillStyle = col; g.fillRect(x + 1, y + 1, ww, hh); },
+    p(x, y, col) { g.fillStyle = col; g.fillRect(x + 1, y + 1, 1, 1); },
+    e(cx, cy, rx, ry, col) {
+      g.fillStyle = col;
+      for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+        const dy = (y + 0.5 - cy) / ry;
+        if (Math.abs(dy) > 1) continue;
+        const hw = rx * Math.sqrt(1 - dy * dy), x0 = Math.round(cx - hw), x1 = Math.round(cx + hw);
+        if (x1 > x0) g.fillRect(x0 + 1, y + 1, x1 - x0, 1);
+      }
+    },
+    ef(x0, y0, ww, hh, fn) {
+      for (let y = y0; y < y0 + hh; y++) for (let x = x0; x < x0 + ww; x++) {
+        const col = fn(x, y);
+        if (col) { g.fillStyle = col; g.fillRect(x + 1, y + 1, 1, 1); }
+      }
+    },
+  };
+  paint(P);
+  try {
+    // 1px dark outline around every opaque shape, like the critter sprites
+    const img = g.getImageData(0, 0, c.width, c.height), a = img.data, W2 = c.width, H2 = c.height;
+    const solid = new Uint8Array(W2 * H2);
+    for (let i = 0; i < W2 * H2; i++) solid[i] = a[i * 4 + 3] > 40 ? 1 : 0;
+    for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+      const i = y * W2 + x;
+      if (solid[i]) continue;
+      if ((x > 0 && solid[i - 1]) || (x < W2 - 1 && solid[i + 1]) || (y > 0 && solid[i - W2]) || (y < H2 - 1 && solid[i + W2])) {
+        a[i * 4] = 0x2c; a[i * 4 + 1] = 0x20; a[i * 4 + 2] = 0x30; a[i * 4 + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+  } catch (e) {}
+  return c;
+}
+function getDecorArt(d) {
+  let a = decorArt.get(d.id);
+  if (a === undefined) { a = makeArt(d.aw, d.ah, d.paint); decorArt.set(d.id, a); }
+  return a;
+}
+
+// ---------- visitors ----------
+const ACT_DUR = { sit: [6, 9], nap: [7, 10], sniff: [3, 4.5], dance: [5, 7], splash: [5, 7], play: [4, 6], swing: [6, 8], dig: [5, 7], watch: [5, 7], arch: [1.6, 2], house: [4.5, 6], tea: [6, 8] };
+function releaseItem(it) {
+  if (!it.occ) return;
+  for (const v of it.occ) if (v && v.item === it) { v.item = null; v.spot = -1; v.state = "walk"; pickTarget(v); }
+  it.occ = null;
+}
+function releaseVisitor(v) {
+  if (v.item && v.item.occ) v.item.occ[v.spot] = null;
+  v.item = null; v.spot = -1;
+}
+function pickTarget(v) {
+  let total = 0;
+  const cands = [];
+  for (const it of garden.items) {
+    const d = DECOR_BY_ID[it.id];
+    if (!d.act || it === (gDrag && gDrag.moved && gDrag.item)) continue;
+    const occ = it.occ || [];
+    for (let s = 0; s < d.spots.length; s++) {
+      if (occ[s]) continue;
+      if (it === v.lastItem && garden.items.length > 1) continue;
+      const w = d.cozy + 4;
+      cands.push([it, s, w]); total += w;
+    }
+  }
+  if (cands.length && v.acts < v.maxActs) {
+    let r = Math.random() * total;
+    let pick = cands[0];
+    for (const cnd of cands) { r -= cnd[2]; if (r <= 0) { pick = cnd; break; } }
+    const [it, s] = pick;
+    it.occ = it.occ || [];
+    it.occ[s] = v;
+    v.item = it; v.spot = s; v.state = "walk";
+    [v.tx, v.ty] = spotPos(it, s);
+    return;
+  }
+  if (!garden.items.length && v.acts < 1) {
+    // empty yard: stroll to a random spot, sniff the grass, then head home
+    v.acts++;
+    v.state = "walk"; v.item = null;
+    v.tx = 40 + Math.random() * (W - 80); v.ty = gy0() + 40 + Math.random() * (G_ROWS * G_CELL - 70);
+    return;
+  }
+  v.state = "leave"; v.item = null;
+  v.tx = v.x < W / 2 ? -30 : W + 30; v.ty = v.y;
+}
+function spotPos(it, s) {
+  const sp = DECOR_BY_ID[it.id].spots[s];
+  const [x, y] = artToScreen(it, sp[0], sp[1]);
+  return [clamp(x, 14, W - 14), clamp(y, gy0() + 14, H - 64)];
+}
+function gardenMaxVisitors() { return Math.min(unlockedList().length, 2 + Math.floor(gardenCozy() / 20), 7); }
+function visitorInterval() { const z = gardenCozy(); return z > 0 ? Math.max(3, 12 - z * 0.06) : 10; }
+function spawnVisitor() {
+  const list = unlockedList();
+  if (!list.length) return;
+  const here = {};
+  for (const v of visitors) here[v.animal.id] = true;
+  let pool = list.filter(a => !here[a.id]);
+  if (!pool.length) pool = list;
+  const a = pool[Math.floor(Math.random() * pool.length)];
+  const left = Math.random() < 0.5;
+  const v = {
+    animal: a, x: left ? -20 : W + 20, y: gy0() + 40 + Math.random() * (G_ROWS * G_CELL - 70),
+    state: "walk", t: 0, dur: 0, acts: 0, maxActs: 2 + Math.floor(Math.random() * 2), item: null, spot: -1, lastItem: null,
+    face: left ? 1 : -1, hop: Math.random() * 6, seed: Math.floor(Math.random() * 999), pets: 0, petCD: 0, heartT: 0, tx: 0, ty: 0,
+  };
+  garden.visits++;
+  pickTarget(v);
+  visitors.push(v);
+  saveSoon();
+  if (garden.visits % 5 === 0) checkAchievements();
+}
+function bubbleValue(d) { return Math.max(1, Math.round(1 + gardenCozy() * 0.06 + d.cozy * 0.25)); }
+function dropBubble(x, y, val) {
+  if (gBubbles.length >= 12) { gBubbles[0].val += val; return; }
+  gBubbles.push({ x: clamp(x, 18, W - 18), y: clamp(y, gy0() - 10, H - 80), val, t: 0, ph: Math.random() * 6 });
+}
+function collectBubble(b) {
+  const i = gBubbles.indexOf(b);
+  if (i < 0) return;
+  gBubbles.splice(i, 1);
+  joy += b.val;
+  garden.bubbles++;
+  sfxDrop(); buzz("pet");
+  spawnHearts(b.x, b.y, 4, true);
+  addFloat({ x: b.x, y: b.y - 14, text: "+" + b.val + " ♥", life: 0.9, vy: -30, color: C.heart, size: 13 });
+  if (garden.bubbles % 5 === 0) checkAchievements();
+  saveSoon();
+}
+function petVisitor(v) {
+  v.heartT = 1.4;
+  spawnHearts(v.x, v.y - 30, 3, true);
+  sfxPet(); buzz("pet");
+  if (v.petCD <= 0 && v.pets < 3) {
+    v.pets++; v.petCD = 2.5;
+    joy += 2; garden.pets++;
+    critterHugs[v.animal.id] = (critterHugs[v.animal.id] || 0) + 1;
+    checkFriendship(v.animal);
+    addFloat({ x: v.x, y: v.y - 46, text: "+2 ♥", life: 0.9, vy: -28, color: C.heart, size: 12 });
+    saveSoon();
+  }
+}
+
+function updateVisitor(v, dt) {
+  v.t += dt; v.hop += dt * 9;
+  if (v.petCD > 0) v.petCD -= dt;
+  if (v.heartT > 0) v.heartT -= dt;
+  if (v.state === "walk" || v.state === "leave") {
+    const dx = v.tx - v.x, dy = v.ty - v.y, dd = Math.hypot(dx, dy);
+    const sp = 40 * dt;
+    if (Math.abs(dx) > 1) v.face = dx > 0 ? 1 : -1;
+    if (dd <= sp + 0.5) {
+      v.x = v.tx; v.y = v.ty;
+      if (v.state === "leave") { v.dead = true; return; }
+      if (v.item) {
+        const d = DECOR_BY_ID[v.item.id];
+        v.state = "act"; v.t = 0;
+        const r = ACT_DUR[d.act] || [4, 6];
+        v.dur = r[0] + Math.random() * (r[1] - r[0]);
+        if (d.act === "sniff" || d.act === "arch") { v.heartT = 1.6; spawnHearts(v.x, v.y - 30, d.act === "arch" ? 7 : 3, true); }
+        if (d.act === "arch") popFx(v.x, v.y - 24, "#ffc0dc", 0.8);
+      } else pickTarget(v);
+    } else { v.x += dx / dd * sp; v.y += dy / dd * sp; }
+    return;
+  }
+  if (v.state === "act") {
+    const it = v.item;
+    if (!it || garden.items.indexOf(it) < 0) { releaseVisitor(v); pickTarget(v); return; }
+    const d = DECOR_BY_ID[it.id];
+    if (d.act === "splash" && Math.random() < dt * 4) particles.push({ kind: "spark", x: v.x + (Math.random() - 0.5) * 16, y: v.y - 6, vx: (Math.random() - 0.5) * 50, vy: -50 - Math.random() * 40, life: 0.5, max: 0.5, size: 2, color: "#a8e0ff", t: 0 });
+    if (d.act === "dig" && Math.random() < dt * 5) particles.push({ kind: "spark", x: v.x + v.face * 8, y: v.y - 4, vx: v.face * (20 + Math.random() * 30), vy: -40 - Math.random() * 30, life: 0.45, max: 0.45, size: 2, color: GC.sandD, t: 0 });
+    if (d.act === "play" && Math.random() < dt * 1.2) it.wig = 0.5;
+    if (d.act === "tea") v.heartT = Math.max(v.heartT, 0.2);
+    if (v.t >= v.dur) {
+      const chance = d.act === "house" || d.act === "tea" || d.act === "arch" ? 0.85 : 0.55;
+      if (d.act === "house") { popFx(v.x, v.y - 20, "#fff0a0", 0.7); v.heartT = 1.2; }
+      if (Math.random() < chance) dropBubble(v.x, v.y - 34, bubbleValue(d));
+      releaseVisitor(v);
+      v.lastItem = it;
+      v.acts++;
+      pickTarget(v);
+    }
+  }
+}
+
+function updateGarden(dt) {
+  visitorT -= dt;
+  if (visitorT <= 0) {
+    visitorT = visitorInterval() * (0.7 + Math.random() * 0.6);
+    if (visitors.length < gardenMaxVisitors()) spawnVisitor();
+  }
+  for (const v of visitors) updateVisitor(v, dt);
+  for (let i = visitors.length - 1; i >= 0; i--) if (visitors[i].dead) { releaseVisitor(visitors[i]); visitors.splice(i, 1); }
+  for (const b of gBubbles) b.t += dt;
+  // ambient item life: bubbles, fountain spray, swing, toy wiggles
+  gAmbT += dt;
+  for (const it of garden.items) {
+    if (it.wig > 0) it.wig = Math.max(0, it.wig - dt);
+    if (it.id === "swing") {
+      const on = !!(it.occ && it.occ[0] && it.occ[0].state === "act");
+      it.swA = on ? Math.sin(time * 3.2) * 0.42 : (it.swA || 0) * Math.pow(0.1, dt);
+    } else if (it.id === "bubbles" && Math.random() < dt * 2.2) {
+      const [x, y] = artToScreen(it, 6, 1);
+      particles.push({ kind: "bubble", float: true, x, y, vx: (Math.random() - 0.5) * 24, vy: -20 - Math.random() * 20, life: 2.2, max: 2.2, size: 2.5 + Math.random() * 3, t: 0, wob: Math.random() * 6, color: "#ffffff" });
+    } else if (it.id === "fountain" && Math.random() < dt * 8) {
+      const [x, y] = artToScreen(it, 12, 6);
+      particles.push({ kind: "spark", x, y, vx: (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 30, life: 0.7, max: 0.7, size: 1.6, color: "#c8ecff", t: 0 });
+    } else if (it.id === "tea" && Math.random() < dt * 1.5) {
+      const [x, y] = artToScreen(it, 10, 13);
+      particles.push({ kind: "poof", float: true, x, y, vx: (Math.random() - 0.5) * 6, vy: -14, life: 1.1, max: 1.1, size: 3, color: "rgba(255,255,255,0.8)", t: 0 });
+    }
+  }
+  updateParticles(dt);
+}
+
+// ---------- drawing ----------
+let gSkyGrad = null, gSkyH = 0;
+function drawGardenBg() {
+  const top = gy0();
+  if (!gSkyGrad || gSkyH !== H) {
+    gSkyGrad = ctx.createLinearGradient(0, 0, 0, top);
+    gSkyGrad.addColorStop(0, "#9ed4ff"); gSkyGrad.addColorStop(1, "#ffeef4");
+    gSkyH = H;
+  }
+  ctx.fillStyle = gSkyGrad;
+  ctx.fillRect(0, 0, W, top);
+  drawSun(W - 52, Math.max(50, top * 0.35), 18, 1);
+  for (const cl of decorClouds) {
+    cl.x += cl.sp * frameDt * 0.6;
+    if (cl.x > W + 70) cl.x = -70;
+    if (cl.y < top - 60) drawCloud(cl.x, cl.y, cl.s * 0.8, "rgba(255,255,255,0.85)", { shade: "rgba(236,240,250,0.8)" });
+  }
+  // soft far hills
+  ctx.fillStyle = "#a8dc88";
+  ctx.beginPath(); ctx.moveTo(0, top - 20);
+  ctx.quadraticCurveTo(W * 0.3, top - 70, W * 0.6, top - 28); ctx.quadraticCurveTo(W * 0.85, top - 6, W, top - 40);
+  ctx.lineTo(W, top); ctx.lineTo(0, top); ctx.closePath(); ctx.fill();
+  // lawn with a gentle checker so the grid feels natural
+  ctx.fillStyle = "#88d064";
+  ctx.fillRect(0, top - 10, W, H - top + 10);
+  ctx.fillStyle = "#91d86c";
+  for (let r = 0; r < G_ROWS; r++) for (let c = (r & 1); c < G_COLS; c += 2) ctx.fillRect(c * G_CELL, top + r * G_CELL, G_CELL, G_CELL);
+  ctx.fillStyle = "#a6e47e";
+  for (let i = 0; i < 40; i++) {
+    const x = (i * 83 + 17) % W, y = top + ((i * 47) % (G_ROWS * G_CELL));
+    ctx.fillRect(x, y, 2, 1); ctx.fillRect(x + 1, y - 1, 1, 1);
+  }
+  // hedge + picket fence along the back
+  ctx.fillStyle = "#5aa848";
+  for (let x = -6; x < W + 12; x += 16) { ctx.beginPath(); ctx.arc(x, top - 14, 11, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = "#6cbc56";
+  for (let x = 2; x < W + 12; x += 16) { ctx.beginPath(); ctx.arc(x, top - 20, 6, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = "#fffaf0";
+  ctx.fillRect(0, top - 18, W, 3); ctx.fillRect(0, top - 9, W, 3);
+  for (let x = 4; x < W; x += 12) { ctx.fillRect(x, top - 24, 6, 22); ctx.fillRect(x + 1, top - 26, 4, 2); }
+  ctx.fillStyle = "rgba(180,150,160,0.35)";
+  ctx.fillRect(0, top - 3, W, 3);
+}
+
+function drawDecorItem(it, x0, y0) {
+  const d = DECOR_BY_ID[it.id], art = getDecorArt(d);
+  const R = itemRect(it);
+  // soft ground shadow
+  ctx.fillStyle = "rgba(40,60,30,0.16)";
+  ctx.beginPath(); ctx.ellipse(R.x + R.w / 2, R.y + R.h - 3, R.w * 0.46, Math.min(8, R.h * 0.22), 0, 0, Math.PI * 2); ctx.fill();
+  if (d.id === "lantern") {
+    const [lx, ly] = artToScreen(it, 6, 7);
+    ctx.fillStyle = "rgba(255,230,140," + (0.18 + Math.sin(time * 2.5 + it.c) * 0.06) + ")";
+    ctx.beginPath(); ctx.arc(lx, ly, 18, 0, Math.PI * 2); ctx.fill();
+  }
+  if (!art) return;
+  const aw = art.width * G_U, ah = art.height * G_U;
+  ctx.save();
+  if (!it.rot) {
+    const cx = R.x + R.w / 2;
+    let wig = it.wig > 0 ? Math.sin(it.wig * 30) * 0.12 * it.wig : 0;
+    ctx.translate(cx, R.y + R.h + G_U);
+    if (wig) ctx.rotate(wig);
+    if (it.f) ctx.scale(-1, 1);
+    ctx.drawImage(art, -aw / 2, -ah, aw, ah);
+  } else {
+    ctx.translate(R.x + R.w / 2, R.y + R.h / 2);
+    ctx.rotate(it.rot * Math.PI / 2);
+    if (it.f) ctx.scale(-1, 1);
+    ctx.drawImage(art, -aw / 2, -ah / 2, aw, ah);
+  }
+  ctx.restore();
+  if (d.id === "swing") drawSwingSeat(it);
+  if (d.id === "pond") {
+    const ph = (time * 0.6 + it.c * 0.3) % 1;
+    const [px, py] = artToScreen(it, 20, 12);
+    ctx.strokeStyle = "rgba(255,255,255," + (0.5 * (1 - ph)) + ")"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(px, py, 4 + ph * 12, 2 + ph * 5, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  if (d.id === "fountain") {
+    const [fx, fy] = artToScreen(it, 12, 4);
+    ctx.globalAlpha = 0.45 + Math.sin(time * 2) * 0.1;
+    const cols = ["#ff8a9a", "#ffd66b", "#9ae070", "#7ec8ff", "#c9a0ff"];
+    ctx.lineWidth = 2;
+    cols.forEach((col, i) => { ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(fx, fy + 8, 16 - i * 2, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); });
+    ctx.globalAlpha = 1;
+  }
+}
+function swingSeatPos(it) {
+  const [pxl, pyl] = artToScreen(it, 6.5, 4), [pxr] = artToScreen(it, 17.5, 4);
+  const L = 22 * G_U, a = it.swA || 0;
+  const cx = (pxl + pxr) / 2;
+  return { px: cx, py: pyl, sx: cx + Math.sin(a) * L, sy: pyl + Math.cos(a) * L, a, half: Math.abs(pxr - pxl) / 2 };
+}
+function drawSwingSeat(it) {
+  const s = swingSeatPos(it);
+  ctx.save();
+  ctx.translate(s.px, s.py); ctx.rotate(-s.a);
+  const L = 22 * G_U;
+  ctx.fillStyle = "#e8d8c0";
+  ctx.fillRect(-s.half - 1, 0, 2, L); ctx.fillRect(s.half - 1, 0, 2, L);
+  ctx.fillStyle = "#2c2030"; ctx.fillRect(-s.half - 4, L - 2, s.half * 2 + 8, 8);
+  ctx.fillStyle = GC.woodL; ctx.fillRect(-s.half - 2, L, s.half * 2 + 4, 4);
+  ctx.restore();
+}
+
+const visitorFx = { acc: null, heartEyes: false, rot: 0, nap: false, sq: 0, flip: false };
+function drawVisitor(v) {
+  const scale = 1.5, s = scale * SPRITE_SIZE;
+  let x = v.x, y = v.y, bounce = 0, rot = 0, nap = false, hide = false;
+  const act = v.state === "act" && v.item ? DECOR_BY_ID[v.item.id].act : null;
+  if (v.state !== "act") bounce = -Math.abs(Math.sin(v.hop)) * 4;
+  else if (act === "nap") { nap = true; if (v.item.id === "hammock") { rot = -1.35 * (v.face || 1); y += 4; } }
+  else if (act === "splash") bounce = -Math.abs(Math.sin(v.t * 6)) * 5;
+  else if (act === "dance") { rot = Math.sin(v.t * 5) * 0.3; bounce = -Math.abs(Math.sin(v.t * 10)) * 4; }
+  else if (act === "play" || act === "watch") bounce = -Math.abs(Math.sin(v.t * 7)) * 7;
+  else if (act === "dig") rot = Math.sin(v.t * 14) * 0.08;
+  else if (act === "sit" || act === "tea") bounce = Math.sin(v.t * 2) * 0.8;
+  else if (act === "house") hide = v.t > 0.45 && v.t < v.dur - 0.5;
+  else if (act === "swing") { const sp = swingSeatPos(v.item); x = sp.sx; y = sp.sy + 2; rot = -sp.a; }
+  if (hide) return;
+  const fx = visitorFx;
+  fx.acc = equippedFor(v.animal.id); fx.heartEyes = v.heartT > 0; fx.rot = rot; fx.nap = nap; fx.flip = v.face < 0;
+  fx.sq = act === "sit" || act === "tea" ? 0.04 : 0;
+  let a = 1;
+  if (act === "house") a = v.t < 0.45 ? 1 - v.t / 0.45 : Math.min(1, (v.t - (v.dur - 0.5)) / 0.5);
+  if (a < 1) ctx.globalAlpha = Math.max(0, a);
+  drawSprite(v.animal, x, y - s * 0.42, scale, false, bounce, false, v.seed, fx);
+  ctx.globalAlpha = 1;
+}
+function drawBubble(b) {
+  const bob = Math.sin(b.t * 3 + b.ph) * 3;
+  const pop = Math.min(1, b.t / 0.25);
+  const r = 13 * (0.6 + 0.4 * easeOutBack(pop));
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.beginPath(); ctx.arc(b.x, b.y + bob, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(255,150,200,0.9)"; ctx.lineWidth = 1.5; ctx.stroke();
+  drawPixelHeart(b.x, b.y + bob - 1, 6, C.heart);
+  ctx.fillStyle = "#fff"; ctx.fillRect(b.x - r * 0.5, b.y + bob - r * 0.55, 2, 2);
+}
+
+const gDrawList = [];
+function drawGarden() {
+  drawGardenBg();
+  const top = gy0();
+  const editing = !!gSel;
+  if (editing) {
+    ctx.strokeStyle = "rgba(255,255,255,0.28)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let c = 0; c <= G_COLS; c++) { ctx.moveTo(c * G_CELL + 0.5, top); ctx.lineTo(c * G_CELL + 0.5, top + G_ROWS * G_CELL); }
+    for (let r = 0; r <= G_ROWS; r++) { ctx.moveTo(0, top + r * G_CELL + 0.5); ctx.lineTo(W, top + r * G_CELL + 0.5); }
+    ctx.stroke();
+  }
+  if (gSel) {
+    const R = itemRect(gSel);
+    const ok = !gDrag || !gDrag.moved || gDrag.valid;
+    ctx.fillStyle = ok ? "rgba(140,255,170,0.35)" : "rgba(255,120,140,0.4)";
+    ctx.fillRect(R.x, R.y, R.w, R.h);
+  }
+  // depth-sorted items + visitors
+  gDrawList.length = 0;
+  for (const it of garden.items) { const R = itemRect(it); gDrawList.push({ k: R.y + R.h, it, v: null }); }
+  for (const v of visitors) {
+    let k = v.y;
+    if (v.state === "act" && v.item) { const R = itemRect(v.item); k = R.y + R.h + 0.5; }
+    gDrawList.push({ k, it: null, v });
+  }
+  gDrawList.sort((a, b) => a.k - b.k);
+  for (const e of gDrawList) { if (e.it) drawDecorItem(e.it); else drawVisitor(e.v); }
+  if (gSel) {
+    const R = itemRect(gSel);
+    const pulse = 0.5 + 0.5 * Math.sin(time * 6);
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255," + (0.6 + pulse * 0.4) + ")"; ctx.lineWidth = 2;
+    if (ctx.setLineDash) ctx.setLineDash([5, 4]);
+    ctx.lineDashOffset = -time * 14;
+    roundRect(R.x - 2, R.y - 2, R.w + 4, R.h + 4, 6); ctx.stroke();
+    ctx.restore();
+  }
+  drawParticles();
+  for (const b of gBubbles) drawBubble(b);
+  drawGardenHUD();
+  drawStoryBanner();
+  drawLevelUp();
+}
+
+function drawGardenHUD() {
+  ctx.fillStyle = "rgba(255,250,245,0.94)";
+  roundRect(8, 8, W - 16, 50, 12); ctx.fill();
+  ctx.strokeStyle = C.panelBorder; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left"; ctx.fillStyle = C.heart; font(14, true);
+  ctx.fillText("♥ " + joy, 18, 24);
+  ctx.textAlign = "center"; ctx.fillStyle = C.text; font(15, true);
+  ctx.fillText("My Garden", W / 2, 24);
+  ctx.textAlign = "right"; ctx.fillStyle = "#3f9a48"; font(12, true);
+  ctx.fillText("✿ Cozy " + gardenCozy(), W - 18, 24);
+  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
+  let hint;
+  if (gSel) hint = gDrag && gDrag.moved ? (gDrag.valid ? "Let go to place it here" : "Not enough room there…") : "Drag to move · snaps to the grid";
+  else if (!garden.items.length) hint = "Tap Decor to make your yard cozy ✿";
+  else hint = visitors.length + (visitors.length === 1 ? " visitor" : " visitors") + " · tap a pal to pet · tap ♥ to collect";
+  ctx.fillText(hint, W / 2, 44);
+  uiButtons = [];
+  const by = H - 52;
+  if (gSel) {
+    const d = DECOR_BY_ID[gSel.id];
+    const items = [];
+    if (d.rot) items.push(["↻ Turn", "g_rot", "#d0e8ff", "#80b0e0"]);
+    items.push(["⇋ Flip", "g_flip", "#e8d0ff", "#c090e0"]);
+    items.push(["Store", "g_store", "#ffe8b0", "#e0c060"]);
+    items.push(["✓ Done", "g_done", C.btn, "#ff80b0"]);
+    const gap = 6, bw = (W - 16 - gap * (items.length - 1)) / items.length;
+    items.forEach((b, i) => uiButtons.push(btn(8 + i * (bw + gap), by, bw, 44, b[0], { id: b[1], size: 13, bg: b[2], border: b[3] })));
+  } else {
+    uiButtons.push(btn(8, by, 116, 44, "◂ Back", { id: "close", size: 14, bg: "#f5e6ee", border: "#d0b0c0" }));
+    uiButtons.push(btn(132, by, W - 140, 44, "✿ Decor Shop", { id: "decor", size: 15, bg: "#d0ffd8", border: "#70c080" }));
+  }
+}
+
+// ---------- entering / leaving ----------
+function openGarden() {
+  openPanel("garden");
+  gSel = null; gDrag = null;
+  visitors.length = 0; gBubbles.length = 0; particles.length = 0;
+  for (const it of garden.items) { it.occ = null; it.wig = 0; it.swA = 0; }
+  visitorT = 0.6;
+  if (!garden.welcomed) {
+    // a little housewarming gift so the yard is never empty on day one
+    garden.welcomed = true;
+    for (const id of ["flowerbed", "ball"]) {
+      const it = { id, c: 0, row: 0, rot: 0, f: 0 };
+      const spot = id === "flowerbed" ? [4, 9] : [10, 11];
+      if (fits(it, spot[0], spot[1], 0)) { it.c = spot[0]; it.row = spot[1]; garden.items.push(it); garden.placedEver++; }
+      else garden.inv[id] = invCount(id) + 1;
+    }
+    showBanner("Welcome to your garden!", "A housewarming gift: flowers & a ball ✿", 3.2);
+    gardenChanged();
+  }
+  // a couple of friends are already hanging out when you arrive
+  const pre = Math.min(2, gardenMaxVisitors());
+  for (let i = 0; i < pre; i++) {
+    spawnVisitor();
+    const v = visitors[visitors.length - 1];
+    if (v && v.state === "walk") { v.x = v.tx + (Math.random() - 0.5) * 30; v.y = v.ty + 6; }
+  }
+}
+function leaveGarden() {
+  let sum = 0;
+  for (const b of gBubbles) { sum += b.val; garden.bubbles++; }
+  gBubbles.length = 0;
+  if (sum > 0) { joy += sum; toast("Collected " + sum + " ♥ from the garden", C.heart); }
+  for (const v of visitors) releaseVisitor(v);
+  visitors.length = 0;
+  gSel = null; gDrag = null;
+  scene = prevScene || "title";
+  checkAchievements();
+  save();
+}
+
+// ---------- placement ----------
+function placeFromInv(id) {
+  if (!invCount(id)) return false;
+  const it = { id, c: 0, row: 0, rot: 0, f: 0 };
+  const spot = findFreeSpot(it, 0);
+  if (!spot) { toast("No room! Store something first", C.textSoft); sfxNope(); return false; }
+  garden.inv[id]--;
+  if (!garden.inv[id]) delete garden.inv[id];
+  it.c = spot[0]; it.row = spot[1];
+  garden.items.push(it);
+  garden.placedEver++;
+  gSel = it;
+  const R = itemRect(it);
+  popFx(R.x + R.w / 2, R.y + R.h / 2, "#fff4a0", 1);
+  spawnSparkles(R.x + R.w / 2, R.y + R.h / 2, 12);
+  sfxPlace(); buzz("unlock");
+  gardenChanged();
+  return true;
+}
+function buyDecor(id) {
+  const d = DECOR_BY_ID[id];
+  if (!d || !decorUnlocked(d) || joy < d.cost) return false;
+  joy -= d.cost;
+  garden.inv[id] = invCount(id) + 1;
+  sfxUnlock(); buzz("unlock");
+  toast(d.name + " is yours! ✿", C.heart);
+  save();
+  return true;
+}
+function gardenAction(id) {
+  const it = gSel;
+  if (!it) return;
+  if (id === "g_done") { gSel = null; return; }
+  if (id === "g_store") {
+    releaseItem(it);
+    garden.items.splice(garden.items.indexOf(it), 1);
+    garden.inv[it.id] = invCount(it.id) + 1;
+    gSel = null;
+    toast(DECOR_BY_ID[it.id].name + " stored", C.textSoft);
+    sfxClick();
+    gardenChanged();
+    return;
+  }
+  if (id === "g_flip") { it.f ^= 1; releaseItem(it); sfxPlace(); save(); return; }
+  if (id === "g_rot" && DECOR_BY_ID[it.id].rot) {
+    const nr = (it.rot + 1) % 4;
+    let spot = fits(it, it.c, it.row, nr) ? [it.c, it.row] : null;
+    if (!spot) {
+      const [w, h] = itemDims(it.id, nr);
+      for (let dr = -h; dr <= h && !spot; dr++) for (let dc = -w; dc <= w && !spot; dc++) if (fits(it, it.c + dc, it.row + dr, nr)) spot = [it.c + dc, it.row + dr];
+    }
+    if (!spot) { toast("No room to turn it here", C.textSoft); sfxNope(); return; }
+    it.rot = nr; it.c = spot[0]; it.row = spot[1];
+    releaseItem(it); sfxPlace(); save();
+  }
+}
+
+// ---------- garden input ----------
+function itemAt(p) {
+  // topmost first (reverse depth order); hit the footprint or the visible art above it
+  let best = null, bk = -1;
+  for (const it of garden.items) {
+    const R = itemRect(it), d = DECOR_BY_ID[it.id];
+    const artTop = it.rot ? R.y : Math.min(R.y, R.y + R.h - d.ah * G_U);
+    const artL = it.rot ? R.x : Math.min(R.x, R.x + R.w / 2 - d.aw * G_U / 2);
+    const artW = it.rot ? R.w : Math.max(R.w, d.aw * G_U);
+    if (pointIn(p.x, p.y, artL, artTop, artW, R.y + R.h - artTop) && R.y + R.h > bk) { best = it; bk = R.y + R.h; }
+  }
+  return best;
+}
+function gardenDown(p, touch) {
+  for (let i = gBubbles.length - 1; i >= 0; i--) {
+    const b = gBubbles[i];
+    if (dist2(p.x, p.y, b.x, b.y) < 22 * 22) { collectBubble(b); return; }
+  }
+  if (p.y < 60) return;
+  if (gSel) {
+    const R = itemRect(gSel);
+    if (pointIn(p.x, p.y, R.x - 6, R.y - 10, R.w + 12, R.h + 16)) { startItemDrag(gSel, p, touch); return; }
+  }
+  for (let i = visitors.length - 1; i >= 0; i--) {
+    const v = visitors[i];
+    if (v.state === "act" && v.item && DECOR_BY_ID[v.item.id].act === "house") continue;
+    if (dist2(p.x, p.y, v.x, v.y - 18) < 22 * 22) { petVisitor(v); return; }
+  }
+  const it = itemAt(p);
+  if (it) { startItemDrag(it, p, touch); return; }
+  gSel = null;
+}
+function startItemDrag(it, p, touch) {
+  const R = itemRect(it);
+  gDrag = { item: it, ox: p.x - R.x, oy: p.y - R.y, sx: p.x, sy: p.y, moved: false, valid: true, oc: it.c, orow: it.row, lift: 0 };
+}
+function gardenMove(p) {
+  const g = gDrag;
+  if (!g) return;
+  if (!g.moved && dist2(p.x, p.y, g.sx, g.sy) > 64) {
+    g.moved = true; gSel = g.item; releaseItem(g.item); sfxClick();
+  }
+  if (!g.moved) return;
+  const [w, h] = itemDims(g.item.id, g.item.rot);
+  const c = clamp(Math.round((p.x - g.ox) / G_CELL), 0, G_COLS - w);
+  const row = clamp(Math.round((p.y - g.oy - g.lift - gy0()) / G_CELL), 0, G_ROWS - h);
+  if (c !== g.item.c || row !== g.item.row) {
+    g.item.c = c; g.item.row = row;
+    g.valid = fits(g.item, c, row, g.item.rot);
+  }
+}
+function gardenUp(p, cancelled) {
+  const g = gDrag;
+  gDrag = null;
+  if (!g) return;
+  if (!g.moved) { gSel = gSel === g.item ? gSel : g.item; if (gSel) sfxClick(); return; }
+  if (!cancelled && fits(g.item, g.item.c, g.item.row, g.item.rot)) {
+    const R = itemRect(g.item);
+    spawnSparkles(R.x + R.w / 2, R.y + R.h - 6, 8);
+    sfxPlace(); buzz("pet");
+    save();
+  } else {
+    g.item.c = g.oc; g.item.row = g.orow;
+    sfxNope();
+  }
+}
+
+// ---------- decor shop ----------
+let decorTab = "furniture";
+function decorPreview(d, cx, cy, box) {
+  const art = getDecorArt(d);
+  if (!art) return;
+  const m = Math.max(art.width, art.height);
+  const s = m * 2 <= box ? 2 : m * 1.5 <= box ? 1.5 : 1;
+  ctx.drawImage(art, Math.round(cx - art.width * s / 2), Math.round(cy - art.height * s / 2), art.width * s, art.height * s);
+}
+function drawDecor() {
+  panelHeader("Garden Decor", "Hearts " + joy + " ♥ · Coziness " + gardenCozy() + " ✿");
+  const tw = (W - 44 - 18) / 4;
+  DECOR_CATS.forEach((t, i) => {
+    const on = decorTab === t[0];
+    uiButtons.push(btn(22 + i * (tw + 6), 78, tw, 42, t[1], { id: "dtab_" + t[0], size: 12, r: 10, bg: on ? C.btn : "#f5e6ee", border: on ? "#ff80b0" : "#d0b0c0" }));
+  });
+  const top = 128, bottom = H - 74, rowH = 64;
+  const list = DECOR.filter(d => d.cat === decorTab);
+  setListExtent(top, bottom, list.length * rowH + 4);
+  listClip(top, bottom);
+  list.forEach((d, i) => {
+    const y = top + 4 + i * rowH - listScroll;
+    if (y > bottom || y + rowH < top) return;
+    const open = decorUnlocked(d), inv = invCount(d.id), placed = placedCount(d.id);
+    ctx.fillStyle = placed ? "rgba(200,240,190,0.6)" : "rgba(255,240,248,0.9)";
+    roundRect(22, y, W - 44, rowH - 6, 10); ctx.fill();
+    ctx.strokeStyle = placed ? "#80c060" : C.panelBorder; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    roundRect(28, y + 5, 48, 48, 8); ctx.fill();
+    if (!open) ctx.globalAlpha = 0.45;
+    decorPreview(d, 52, y + 29, 46);
+    ctx.globalAlpha = 1;
+    const nameW = open ? (inv ? W - 186 - 84 : W - 112 - 84) : W - 44 - 64 - 120;
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text; fitFont(d.name, nameW, 13, true, 9);
+    ctx.fillText(d.name, 84, y + 16);
+    ctx.fillStyle = "#3f9a48"; font(10, true);
+    ctx.fillText("✿ +" + d.cozy + " cozy", 84, y + 32);
+    ctx.fillStyle = C.textSoft;
+    const status = placed || inv ? (placed ? "in yard ×" + placed : "") + (placed && inv ? " · " : "") + (inv ? "stored ×" + inv : "") : d.fw + "×" + d.fh + " tiles";
+    fitFont(status, nameW, 10, false, 7.5);
+    ctx.fillText(status, 84, y + 46);
+    if (!open) {
+      ctx.textAlign = "right"; ctx.fillStyle = "#a07890"; font(11, true);
+      ctx.fillText("🔒 Locked", W - 34, y + 20);
+      font(9.5, false); ctx.fillText(d.unlock.text, W - 34, y + 38);
+      return;
+    }
+    const can = joy >= d.cost;
+    listBtn(W - 108, y + 8, 80, 42, d.cost + " ♥", {
+      id: can ? "dbuy_" + d.id : null, size: 13, r: 10,
+      bg: can ? C.btn : "#eee4ea", border: can ? "#ff80b0" : "#d8c8d0", color: can ? C.btnText : "#a898a8",
+    }, top, bottom);
+    if (inv) listBtn(W - 186, y + 8, 72, 42, "Place", { id: "dplace_" + d.id, size: 13, r: 10, bg: "#d0ffd8", border: "#70c080" }, top, bottom);
+  });
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+
+// ---------- while you were away ----------
+function computeAway(sec, cozy, animals, rng) {
+  rng = rng || Math.random;
+  const s = Math.max(0, Math.min(AWAY_CAP, +sec || 0));
+  if (!(cozy > 0) || s < AWAY_MIN) return null;
+  const hrs = s / 3600;
+  const hearts = Math.floor((15 + cozy * 4) * hrs);
+  if (hearts < 1) return null;
+  const visits = Math.max(1, Math.floor(hrs * Math.min(12, 2 + cozy / 15)));
+  const pool = (animals || []).map(a => a.id);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+  const vis = pool.slice(0, Math.min(5, visits));
+  const presents = [];
+  const nP = cozy >= 20 && vis.length ? Math.min(4, Math.floor(hrs / 2)) : 0;
+  const cheap = DECOR.filter(d => d.cost <= 260 && !d.unlock);
+  for (let i = 0; i < nP; i++) {
+    const from = vis[i % vis.length];
+    if (rng() < 0.5) presents.push({ from, item: cheap[Math.floor(rng() * cheap.length)].id });
+    else presents.push({ from, hearts: 40 + Math.round(cozy) });
+  }
+  return { secs: s, hearts, visits, visitors: vis, presents };
+}
+function mergeAway(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const vis = a.visitors.slice();
+  for (const id of b.visitors) if (vis.indexOf(id) < 0 && vis.length < 5) vis.push(id);
+  return { secs: a.secs + b.secs, hearts: a.hearts + b.hearts, visits: a.visits + b.visits, visitors: vis, presents: a.presents.concat(b.presents).slice(0, 6) };
+}
+function grantAway(sec) {
+  const r = computeAway(sec, gardenCozy(), unlockedList());
+  if (!r) return false;
+  garden.pending = mergeAway(garden.pending, r);
+  save();
+  return true;
+}
+function awayTotal(p) { let t = p.hearts; for (const pr of p.presents) if (pr.hearts) t += pr.hearts; return t; }
+let awayReturn = "title", awayT = 0;
+function openAway(from) {
+  if (!garden.pending) return;
+  awayReturn = from === "play" ? "pause" : (from === "away" || from === "whatsnew" ? "title" : from || "title");
+  scene = "away"; awayT = 0;
+}
+function collectAway() {
+  const p = garden.pending;
+  if (p) {
+    const total = awayTotal(p);
+    joy += total;
+    for (const pr of p.presents) if (pr.item && DECOR_BY_ID[pr.item]) garden.inv[pr.item] = invCount(pr.item) + 1;
+    garden.awayCollected++;
+    garden.pending = null;
+    sfxGift(); buzz("gift");
+    spawnConfetti(30);
+    toast("+" + total + " ♥ from your garden!", C.heart);
+    checkAchievements();
+    save();
+  }
+  scene = awayReturn || "title";
+}
+function fmtDur(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? h + "h " + m + "m" : Math.max(1, m) + " min";
+}
+function drawSceneStatic(sc) {
+  if (sc === "pause") { renderPlay(); drawPause(); }
+  else if (sc === "garden") drawGarden();
+  else if (sc === "settings") drawSettings();
+  else if (sc === "shop") drawShop();
+  else if (sc === "album") drawAlbum();
+  else if (sc === "achievements") drawAchievements();
+  else if (sc === "decor") drawDecor();
+  else { drawTitle(); drawStoryBanner(); }
+}
+function drawAwayCard(dt) {
+  awayT += dt;
+  const p = garden.pending;
+  if (!p) { scene = awayReturn; return; }
+  ctx.fillStyle = "rgba(40,20,50," + (0.5 * Math.min(1, awayT / 0.25)) + ")";
+  ctx.fillRect(0, 0, W, H);
+  const ph = 400, top = Math.round(H / 2 - ph / 2);
+  const e = easeOutBack(Math.min(1, awayT / 0.42));
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, awayT / 0.2);
+  ctx.translate(W / 2, top + ph / 2); ctx.scale(0.85 + 0.15 * e, 0.85 + 0.15 * e); ctx.translate(-W / 2, -(top + ph / 2));
+  solidPanel(24, top, W - 48, ph);
+  // a strip of garden at the top of the card
+  ctx.save();
+  roundRect(34, top + 12, W - 68, 96, 12); ctx.clip();
+  const sg = ctx.createLinearGradient(0, top + 12, 0, top + 108);
+  sg.addColorStop(0, "#bfe4ff"); sg.addColorStop(1, "#fff0f5");
+  ctx.fillStyle = sg; ctx.fillRect(34, top + 12, W - 68, 96);
+  ctx.fillStyle = "#88d064"; ctx.fillRect(34, top + 84, W - 68, 24);
+  ctx.fillStyle = "#fffaf0";
+  for (let x = 38; x < W - 34; x += 12) ctx.fillRect(x, top + 64, 6, 22);
+  ctx.fillRect(34, top + 70, W - 68, 3);
+  const vis = p.visitors.length ? p.visitors : ["cat"];
+  vis.forEach((id, i) => {
+    const a = ANIMALS.find(x => x.id === id) || ANIMALS[0];
+    const x = W / 2 + (i - (vis.length - 1) / 2) * 50;
+    const hop = Math.max(0, Math.sin(awayT * 5 - i * 0.9)) * 7;
+    drawSprite(a, x, top + 76 - hop, 1.45, false, 0, false, i * 20, { heartEyes: true, acc: equippedFor(id) });
+    drawPixelHeart(x + 14, top + 44 - hop - ((awayT * 20 + i * 7) % 12), 4, "#ff8ab8");
+  });
+  ctx.restore();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(20, true);
+  ctx.fillText("While you were away…", W / 2, top + 132);
+  font(12, false); ctx.fillStyle = C.textSoft;
+  ctx.fillText(fmtDur(p.secs) + " · " + p.visits + " cozy " + (p.visits === 1 ? "visit" : "visits") + " to your garden", W / 2, top + 156);
+  font(12, true); ctx.fillStyle = C.textSoft;
+  ctx.fillText("Your friends left you", W / 2, top + 186);
+  const count = Math.floor(awayTotal(p) * Math.min(1, awayT / 0.8));
+  ctx.fillStyle = C.heart; font(28, true);
+  ctx.fillText("♥ +" + count, W / 2, top + 218);
+  font(11, false); ctx.fillStyle = C.text;
+  p.presents.slice(0, 3).forEach((pr, i) => {
+    const who = (ANIMALS.find(a => a.id === pr.from) || ANIMALS[0]).name;
+    const txt = pr.item && DECOR_BY_ID[pr.item] ? "🎁 " + who + " brought a " + DECOR_BY_ID[pr.item].name + "!" : "🎁 " + who + " found a shiny acorn: +" + (pr.hearts || 0) + " ♥";
+    fitFont(txt, W - 90, 11, false, 8.5);
+    ctx.fillText(txt, W / 2, top + 250 + i * 18);
+  });
+  if (p.presents.length > 3) { font(10, false); ctx.fillStyle = C.textSoft; ctx.fillText("…and " + (p.presents.length - 3) + " more little gifts", W / 2, top + 304); }
+  ctx.restore();
+  uiButtons = [];
+  uiButtons.push(btn(W / 2 - 90, top + ph - 68, 180, 50, "Collect ♥", { id: "away_ok", size: 18 }));
+}
+
+// ---------- garden sounds ----------
+function sfxPlace() {
+  const t = sfxT(); if (t < 0) return;
+  noiseHit(A.sfxBus, t, 0.08, 0.12, "lowpass", 900, 0.8, 300);
+  tone(A.sfxBus, "triangle", mtof(79), t + 0.03, 0.03, 0.08, { a: 0.003, d: 0.07, s: 0.3, r: 0.1 });
+  tone(A.sfxBus, "triangle", mtof(86), t + 0.09, 0.03, 0.06, { a: 0.003, d: 0.07, s: 0.3, r: 0.12 });
+}
+function sfxNope() {
+  const t = sfxT(); if (t < 0) return;
+  tone(A.sfxBus, "sine", 330, t, 0.05, 0.08, { a: 0.004, d: 0.08, s: 0.3, r: 0.1, slideTo: 250, slideT: 0.12 });
+}
+
+// ---------- away tracking ----------
+function checkAwayOnBoot() {
+  if (lastActiveLoaded > 0) grantAway((Date.now() - lastActiveLoaded) / 1000);
+  return !!garden.pending;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  if (!hiddenAt) return;
+  const sec = (Date.now() - hiddenAt) / 1000;
+  hiddenAt = 0;
+  if (grantAway(sec) && scene !== "away" && scene !== "whatsnew") openAway(scene);
+});
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -5753,7 +6929,10 @@ if (freshSave) {
   tutorialDone = false;
   lastVersionSeen = APP_VERSION;
 } else if (lastVersionSeen < APP_VERSION) {
-  openWhatsNew("title");
+  checkAwayOnBoot();
+  openWhatsNew("title"); // the away card (if any) follows when this closes
+} else if (checkAwayOnBoot()) {
+  openAway("title");
 }
 initDecor();
 resize();
@@ -5767,17 +6946,25 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
       return { mood, joy, scene, critters, gloomClouds, powerups, drops, gift, activeEvent, stats, totalHugs,
         critterHugs, friendLvl, ownedAcc, equipped, musicOn, sfxOn, uiButtons, H, combo, magnetT, slowT, levelUpFx,
         listMax, listScroll, unlocked, achievements, giftStreak, lastGiftDay,
-        tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time };
+        tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time,
+        garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
       else if (k === "eventTimer") eventTimer = v; else if (k === "powerTimer") powerTimer = v;
       else if (k === "lastGiftDay") lastGiftDay = v; else if (k === "giftStreak") giftStreak = v;
       else if (k === "tutorialDone") tutorialDone = v;
+      else if (k === "garden") { garden = normalizeGarden(v); cozyCache = -1; }
+      else if (k === "gSel") gSel = v;
+      else if (k === "lastActiveLoaded") lastActiveLoaded = v;
     },
     music, SONGS, SONG_ERRORS, frame, ensureAudio, musicTick, startEvent, spawnPowerup, activatePowerup,
     hugCritter, doUI, save, load, openGift, checkDailyGift, setMusicOn, setSfxOn, playTap, targetTier,
     APP_VERSION, tutBubbleTop, TUT_STEPS, shooGloom, showBanner, perfLog,
+    DECOR, DECOR_BY_ID, G_CELL, G_COLS, G_ROWS, gy0, itemRect, fits, findFreeSpot, artToScreen, computeAway, mergeAway, grantAway,
+    openGarden, leaveGarden, placeFromInv, buyDecor, gardenAction, gardenCozy, normalizeGarden, serializeGarden, spawnVisitor,
+    updateGarden, collectBubble, dropBubble, openAway, collectAway, checkAwayOnBoot, decorUnlocked, toolbarRect, AWAY_CAP, AWAY_MIN,
+    gardenDown, gardenMove, gardenUp, checkAchievements, GOALS,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
