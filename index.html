@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="5.0-garden">
+<meta name="hc-version" content="6.0-arcade">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -57,7 +57,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v5 — the Critter Garden: decorate a yard, visiting critters, away gifts
+// Happy Critters v6 — the Arcade: Memory Match, Bubble Bath, Catch the Treats
 
 const W = 360;
 let H = 540;
@@ -66,7 +66,7 @@ const COMBO_WINDOW = 1.4;
 const SPAWN_BASE = 0.95;
 const SAVE_KEY = "happyCritters_v2";
 const SAVE_KEY_V1 = "happyCritters_v1";
-const SAVE_VER = 5;
+const SAVE_VER = 6;
 
 const C = {
   white: "#fffaf5", text: "#4a3050", textSoft: "#7a5a70",
@@ -1871,6 +1871,8 @@ const ACCESSORIES = [
   { id: "daisy", name: "Ear Daisy", short: "Daisy", friend: 2 },
   { id: "crown", name: "Golden Crown", short: "Crown", friend: 3 },
   { id: "halo", name: "Star Halo", short: "Halo", friend: 4 },
+  { id: "duckhat", name: "Rubber Duck Hat", short: "Duck", arcade: true },
+  { id: "clover", name: "Lucky Clover", short: "Clover", arcade: true },
 ];
 const SHOP_ACCS = ACCESSORIES.filter(a => a.cost);
 const FRIEND_MILESTONES = [10, 50, 150, 500];
@@ -1948,6 +1950,15 @@ const GOALS = [
   { id: "bubble25", label: "Collect 25 heart bubbles", check: s => s.gardenBubbles >= 25, reward: 120 },
   { id: "away1", label: "Collect gifts left while away", check: s => s.awayCollected >= 1, reward: 80 },
   { id: "homes", label: "Build a Critter House & Tea Stand", check: s => !!(s.gardenHas.house && s.gardenHas.tea), reward: 250 },
+  // v6: Arcade (gift = a reward item added straight to your wardrobe / garden storage)
+  { id: "arcade1", label: "Play an arcade game", check: s => ARC_GAMES.some(g => s.arcade.plays[g] > 0), reward: 40 },
+  { id: "mem_win", label: "Win Memory Match", check: s => s.arcade.memWins[0] + s.arcade.memWins[1] + s.arcade.memWins[2] > 0, reward: 60 },
+  { id: "mem_hard", label: "Win Memory Match on Hard", check: s => s.arcade.memWins[2] > 0, reward: 200 },
+  { id: "mem3", label: "3★ in Memory Match", check: s => s.arcade.stars.memory >= 3, reward: 120, gift: { acc: "clover" } },
+  { id: "bubble2", label: "2★ in Bubble Bath", check: s => s.arcade.stars.bubble >= 2, reward: 100, gift: { acc: "duckhat" } },
+  { id: "bubble3", label: "3★ in Bubble Bath", check: s => s.arcade.stars.bubble >= 3, reward: 200, gift: { decor: "tub" } },
+  { id: "treats3", label: "3★ in Catch the Treats", check: s => s.arcade.stars.treats >= 3, reward: 200, gift: { decor: "cupcake" } },
+  { id: "arcdaily", label: "Collect all 3 arcade daily bonuses", check: s => s.arcade.allDailyDays >= 1, reward: 150 },
 ];
 
 const POWERUPS = {
@@ -2089,6 +2100,8 @@ function load() {
     garden = normalizeGarden(d.garden);
     cozyCache = -1;
     lastActiveLoaded = typeof d.lastActive === "number" && isFinite(d.lastActive) ? d.lastActive : 0;
+    // v6: arcade bests & daily bonuses (older saves start fresh here)
+    arcade = normalizeArcade(d.arcade);
     if (!isFinite(joy)) joy = 0;
     if (!isFinite(mood)) mood = 8;
     if (!isFinite(moodPeak)) moodPeak = mood;
@@ -2105,7 +2118,7 @@ function save() {
       critterHugs, friendLvl, ownedAcc, equipped,
       lastGiftDay, giftStreak, bestGiftStreak, giftsOpened, stats, albumNew,
       hapticsOn, tutorialDone, lastVersionSeen,
-      garden: serializeGarden(), lastActive: Date.now(),
+      garden: serializeGarden(), lastActive: Date.now(), arcade,
     }));
     saveDirty = false;
   } catch (e) {}
@@ -2384,6 +2397,99 @@ const SONGS = [
   },
 ];
 const SONG_ERRORS = [];
+// v6: short cheerful loops for the mini-games (same note format, played at the lively "75%" layer)
+const ARCADE_SONGS = {
+  memory: {
+    name: "Card Garden", bpm: 100, key: 7,
+    A: {
+      ch: ["G", "Em", "C", "D", "G", "Em", ["Am", "D"], "G"],
+      mel: [
+        "D5.4 G5.2 B5.2 A5.4 G5.4",
+        "E5.4 G5.2 B5.2 E6.4 D6.4",
+        "C6.2 B5.2 A5.2 G5.2 E5.4 C5.4",
+        "D5.6 F#5.2 A5.6 -.2",
+        "B5.4 A5.2 G5.2 D5.4 G5.4",
+        "E5.2 F#5.2 G5.2 B5.2 E6.6 -.2",
+        "C6.4 A5.4 D6.4 F#5.4",
+        "G5.8 -.4 D5.2 B4.2",
+      ],
+    },
+    B: {
+      ch: ["C", "D", "Bm", "Em", "Am", "D", ["C", "D"], "G"],
+      mel: [
+        "E5.2 G5.2 C6.4 B5.2 A5.2 G5.4",
+        "F#5.2 A5.2 D6.4 C6.2 B5.2 A5.4",
+        "B5.4 F#5.4 D5.4 F#5.4",
+        "G5.4 E5.4 B4.6 -.2",
+        "A5.2 C6.2 E6.4 C6.2 A5.2 E5.4",
+        "D5.2 F#5.2 A5.4 C6.4 A5.4",
+        "G5.2 E5.2 C5.2 E5.2 F#5.2 A5.2 D6.4",
+        "G5.6 -.2 B5.2 D6.2 G6.4",
+      ],
+    },
+    form: ["A", "B"],
+  },
+  bubble: {
+    name: "Bubble Pop", bpm: 132, key: 0,
+    A: {
+      ch: ["C", "F", "G", "C", "Am", "F", "G", "C"],
+      mel: [
+        "C5.2 E5.2 G5.2 E5.2 C6.4 G5.4",
+        "A5.2 F5.2 C5.2 F5.2 A5.4 -.4",
+        "G5.2 B5.2 D6.2 B5.2 G5.2 F5.2 E5.2 D5.2",
+        "E5.4 G5.4 C5.6 -.2",
+        "C6.2 -.2 A5.2 -.2 E5.2 A5.2 C6.4",
+        "A5.2 G5.2 F5.2 A5.2 C6.4 A5.4",
+        "B5.2 A5.2 G5.2 F5.2 D5.4 B4.4",
+        "C5.4 E5.2 G5.2 C6.4 -.4",
+      ],
+    },
+    B: {
+      ch: ["F", "G", "Em", "Am", "F", "G", ["F", "G"], "C"],
+      mel: [
+        "F5.2 A5.2 C6.4 A5.2 F5.2 A5.4",
+        "G5.2 B5.2 D6.4 B5.2 G5.2 D5.4",
+        "E5.2 G5.2 B5.2 G5.2 E5.4 B4.4",
+        "A4.2 C5.2 E5.2 A5.2 -.4 E5.4",
+        "F5.1 -.1 F5.2 A5.2 C6.2 D6.2 C6.2 A5.4",
+        "G5.1 -.1 G5.2 B5.2 D6.2 E6.2 D6.2 B5.4",
+        "A5.2 G5.2 F5.2 E5.2 D5.2 E5.2 F5.2 G5.2",
+        "C6.6 -.2 G5.2 E5.2 C5.4",
+      ],
+    },
+    form: ["A", "B"],
+  },
+  treats: {
+    name: "Snack Dash", bpm: 120, key: 5,
+    A: {
+      ch: ["F", "Bb", "C", "F", "Dm", "Bb", "C", "F"],
+      mel: [
+        "F5.2 A5.2 C6.2 A5.2 F5.2 A5.2 C6.4",
+        "D6.2 -.2 Bb5.2 -.2 F5.2 G5.2 A5.2 Bb5.2",
+        "C6.2 Bb5.2 A5.2 G5.2 E5.4 C5.4",
+        "F5.4 A5.4 F5.6 -.2",
+        "D5.2 F5.2 A5.2 D6.2 C6.2 A5.2 F5.4",
+        "Bb5.2 A5.2 G5.2 F5.2 D5.4 F5.4",
+        "G5.2 A5.2 Bb5.2 C6.2 E6.4 C6.4",
+        "F6.4 C6.4 F5.4 -.4",
+      ],
+    },
+    B: {
+      ch: ["Bb", "C", "Am", "Dm", "Bb", "C", ["Gm", "C"], "F"],
+      mel: [
+        "D6.2 C6.2 Bb5.2 F5.2 D5.4 F5.4",
+        "E5.2 G5.2 C6.4 Bb5.2 G5.2 E5.4",
+        "A5.2 C6.2 E6.4 C6.2 A5.2 E5.4",
+        "F5.2 A5.2 D6.6 -.2 A5.2 F5.2",
+        "Bb5.1 -.1 Bb5.2 D6.2 F6.2 D6.2 Bb5.2 F5.4",
+        "C6.1 -.1 C6.2 E6.2 G6.2 E6.2 C6.2 G5.4",
+        "Bb5.2 A5.2 G5.2 Bb5.2 A5.2 G5.2 E5.4",
+        "F5.6 -.2 C6.2 A5.2 F5.4",
+      ],
+    },
+    form: ["A", "B"],
+  },
+};
 
 function noteToMidi(n) {
   const m = /^([A-G][#b]?)(\d)$/.exec(n);
@@ -2417,6 +2523,7 @@ function compileSection(song, secName) {
   return { mel, chords };
 }
 for (const s of SONGS) s.compiled = { A: compileSection(s, "A"), B: compileSection(s, "B") };
+for (const k in ARCADE_SONGS) { const s = ARCADE_SONGS[k]; s.compiled = { A: compileSection(s, "A"), B: compileSection(s, "B") }; }
 
 // Gloom version: flatten scale degrees 3, 6 and 7 (parallel minor)
 function minorize(midi, key) {
@@ -2431,7 +2538,7 @@ function chordTones(ch, baseOct) {
 const TIER_AT = [0, 25, 50, 75, 100];
 const LOOKAHEAD = 0.1, TICK_MS = 25;
 const music = {
-  timer: null, nextTime: 0, step: 0, formIdx: 0, songIdx: 0, tier: 0, bpm: 100,
+  timer: null, nextTime: 0, step: 0, formIdx: 0, songIdx: 0, tier: 0, bpm: 100, mode: null, modeKey: null,
   stats: { melody: 0, bass: 0, drums: 0, arp: 0, harmony: 0, sparkle: 0, tierChanges: 0, bars: 0 },
 };
 
@@ -2441,6 +2548,15 @@ function targetTier() {
   const cur = music.tier;
   if (t < cur && cur < 4 && mood > TIER_AT[cur] - 3) t = cur; // small hysteresis going down
   return t;
+}
+// the mini-games swap in their own loop; the meadow song picks up again from a section start afterwards
+function curSong() { return music.mode || SONGS[music.songIdx]; }
+function setMusicMode(key) {
+  const song = key ? ARCADE_SONGS[key] || null : null;
+  if (song === music.mode) return;
+  music.mode = song; music.modeKey = song ? key : null;
+  music.step = 0; music.formIdx = 0;
+  if (song) { music.tier = 3; music.bpm = song.bpm; }
 }
 function tierBpm(song, tier) { return song.bpm * (tier === 0 ? 0.86 : tier === 4 ? 1.05 : 1); }
 function stepDur() { return 60 / music.bpm / 4; }
@@ -2473,6 +2589,7 @@ function musicTick() {
 function advanceSection() {
   music.step = 0;
   music.formIdx++;
+  if (music.mode) { music.formIdx %= music.mode.form.length; return; }
   const song = SONGS[music.songIdx];
   if (music.formIdx >= song.form.length) {
     music.formIdx = 0;
@@ -2481,16 +2598,16 @@ function advanceSection() {
 }
 
 function scheduleStep(t) {
-  const song = SONGS[music.songIdx];
-  const secName = song.form[music.formIdx];
+  const song = curSong();
+  const secName = song.form[music.formIdx % song.form.length];
   const sec = song.compiled[secName];
   const s = music.step;
   const inBar = s % 16;
   if (inBar === 0) {
     // layer / tempo changes only happen on bar boundaries
-    const nt = targetTier();
+    const nt = music.mode ? 3 : targetTier();
     if (nt !== music.tier) { music.tier = nt; music.stats.tierChanges++; }
-    music.bpm = tierBpm(song, music.tier);
+    music.bpm = music.mode ? song.bpm : tierBpm(song, music.tier);
     music.stats.bars++;
   }
   if (!musicOn) return;
@@ -2853,6 +2970,8 @@ const ACC_ART = {
   heartclip: { rows: ["aa.aa", "aaaaa", ".aaa.", "..a.."], cmap: { a: "#ff4f8b" }, at: (hx, top) => [hx - 7, top - 2] },
   daisy: { rows: [".w.", "wyw", ".w."], cmap: { w: "#ffffff", y: "#ffc800" }, at: (hx, top) => [hx + 4, top - 1] },
   crown: { rows: ["a.a.a", "aaaaa", "abara"], cmap: { a: "#ffd700", r: "#ff4f6f", b: "#60c0ff" }, at: (hx, top) => [hx - 2.5, top - 3] },
+  duckhat: { rows: ["....yy..", "...yyeyo", "y..yyyy.", "yyyyyyy.", ".yyyyy.."], cmap: { y: "#ffd84a", e: "#2c2030", o: "#ff9a3a" }, at: (hx, top) => [hx - 4, top - 5] },
+  clover: { rows: ["gg.gg", "gglgg", ".lll.", "gglgg", "gg.gg"], cmap: { g: "#50b848", l: "#8ee070" }, at: (hx, top) => [hx + 2.5, top - 2] },
 };
 
 const ACC_PAD = 8;
@@ -2936,7 +3055,7 @@ function drawZzz(animalId, ox, oy, u) {
 function accAvailable(id, animalId) {
   const a = ACCESSORIES.find(x => x.id === id);
   if (!a) return false;
-  if (a.cost) return !!ownedAcc[a.id];
+  if (a.cost || a.arcade) return !!ownedAcc[a.id];
   return (friendLvl[animalId] || 0) >= a.friend;
 }
 function accOptions(animalId) { return ACCESSORIES.filter(a => accAvailable(a.id, animalId)); }
@@ -4501,7 +4620,7 @@ function checkAchievements() {
     cloudsShooed, sadCheered, moodPeak, dawnCount,
     friendLvl, ownedAcc, equipped, stats, giftsOpened, bestGiftStreak,
     gardenPlaced: garden.placedEver, cozy: gardenCozy(), gardenVisits: garden.visits,
-    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(),
+    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(), arcade,
   };
   for (const g of GOALS) {
     if (achievements[g.id]) continue;
@@ -4512,6 +4631,15 @@ function checkAchievements() {
       joy += g.reward;
       addMood(1.5);
       toast("✨ " + g.label + "! +" + g.reward);
+      if (g.gift && g.gift.acc && !ownedAcc[g.gift.acc]) {
+        ownedAcc[g.gift.acc] = true; albumNew = true;
+        const acc = ACCESSORIES.find(x => x.id === g.gift.acc);
+        toast("🎁 New accessory: " + (acc ? acc.name : g.gift.acc) + "!", C.heart);
+      }
+      if (g.gift && g.gift.decor && DECOR_BY_ID[g.gift.decor]) {
+        garden.inv[g.gift.decor] = (garden.inv[g.gift.decor] || 0) + 1;
+        toast("🎁 New decoration: " + DECOR_BY_ID[g.gift.decor].name + "!", C.heart);
+      }
       sfxUnlock();
       buzz("unlock");
       save();
@@ -4775,8 +4903,9 @@ function drawTitle() {
   uiButtons.push(btn(lx, 346 + oy, tw, 44, "Garden ✿" + (garden.pending ? "•" : ""), { id: "garden", size: 13, bg: "#c8f0c0", border: "#60b060" }));
   uiButtons.push(btn(lx + tw + 8, 346 + oy, tw, 44, "Album" + (albumNew ? " •" : ""), { id: "album", size: 13, bg: "#ffd8e8", border: "#ff90b8" }));
   uiButtons.push(btn(lx + 2 * (tw + 8), 346 + oy, tw, 44, "Goals", { id: "ach", size: 13, bg: "#e8d0ff", border: "#c090e0" }));
-  uiButtons.push(btn(lx, 400 + oy, bw, 44, "Shop", { id: "shop", size: 14, bg: "#ffe8b0", border: "#e0c060" }));
-  uiButtons.push(btn(rx, 400 + oy, bw, 44, "Settings", { id: "settings", size: 14, bg: "#d0e8ff", border: "#80b0e0" }));
+  uiButtons.push(btn(lx, 400 + oy, tw, 44, "Shop", { id: "shop", size: 13, bg: "#ffe8b0", border: "#e0c060" }));
+  uiButtons.push(btn(lx + tw + 8, 400 + oy, tw, 44, "Arcade ★", { id: "arcade", size: 13, bg: "#d8e0ff", border: "#8898e0" }));
+  uiButtons.push(btn(lx + 2 * (tw + 8), 400 + oy, tw, 44, "Settings", { id: "settings", size: 13, bg: "#d0e8ff", border: "#80b0e0" }));
   let y = 454 + oy;
   if (moodPeak >= 100) {
     uiButtons.push(btn(W / 2 - 80, y, 160, 44, "New Dawn (" + dawnCount + ")", { id: "dawn", size: 13, bg: "#ffe0a0", border: "#e0a040" }));
@@ -4796,7 +4925,8 @@ function drawTitle() {
 }
 
 // bottom toolbar geometry (6 buttons, each ≥ 44px tall and ~52px wide on a 390px phone)
-const TOOLBAR_N = 6, TOOLBAR_IDS = ["pause", "settings", "shop", "garden", "album", "ach"];
+// v6: ♪/settings moved into the pause menu so the Arcade fits without crowding
+const TOOLBAR_N = 6, TOOLBAR_IDS = ["pause", "shop", "garden", "arcade", "album", "ach"];
 function toolbarRect(i) {
   if (typeof i === "string") i = TOOLBAR_IDS.indexOf(i);
   const gap = 5, bw = (W - 16 - gap * (TOOLBAR_N - 1)) / TOOLBAR_N;
@@ -4877,9 +5007,9 @@ function drawHUD() {
   uiButtons = [];
   const items = [
     ["II", "pause", "#d0e8ff", "#80b0e0"],
-    ["♪", "settings", "#d0ffd8", "#70c080"],
     ["Shop", "shop", "#ffe8b0", "#e0c060"],
     ["Yard✿", "garden", "#c8f0c0", "#60b060"],
+    ["Games", "arcade", "#d8e0ff", "#8898e0"],
     ["Album" + (albumNew ? "•" : ""), "album", "#ffd8e8", "#ff90b8"],
     ["Goals", "ach", "#e8d0ff", "#c090e0"],
   ];
@@ -5175,7 +5305,8 @@ function drawPause() {
   uiButtons = [];
   uiButtons.push(btn(W / 2 - 100, top + 84, 200, 50, "Resume", { id: "resume", size: 17 }));
   toggleButtons(W / 2 - 100, top + 146, 200);
-  uiButtons.push(btn(W / 2 - 100, top + 262, 200, 46, "Title", { id: "title", size: 15, bg: "#e8d0ff", border: "#c090e0" }));
+  uiButtons.push(btn(W / 2 - 100, top + 262, 96, 46, "Settings", { id: "settings", size: 14, bg: "#d0e8ff", border: "#80b0e0" }));
+  uiButtons.push(btn(W / 2 + 4, top + 262, 96, 46, "Title", { id: "title", size: 15, bg: "#e8d0ff", border: "#c090e0" }));
   ctx.fillStyle = C.textSoft; font(10, false);
   ctx.fillText("Hugs " + totalHugs + " · Best combo " + highCombo + "×", W / 2, top + 328);
 }
@@ -5183,7 +5314,8 @@ function drawPause() {
 // ===================== UI ACTIONS =====================
 function openPanel(name) {
   if (scene === "play" || scene === "title") prevScene = scene;
-  if (scene === "play" && name === "garden") prevScene = "pause"; // come back to a paused meadow, never an ambush
+  if (scene === "play" && (name === "garden" || name === "arcade")) prevScene = "pause"; // come back to a paused meadow, never an ambush
+  if (scene === "pause") prevScene = "pause";
   scene = name;
   listScroll = 0; listMax = 0;
   drag = null;
@@ -5218,6 +5350,9 @@ function doUI(id) {
     scene = prevScene || "title"; return;
   }
   if (id === "garden") { if (tut) return; openGarden(); return; }
+  if (id === "arcade") { if (tut) return; openArcade(); return; }
+  if (id.startsWith("arc_")) { arcadeAction(id); return; }
+  if (id.startsWith("mg_")) { mgAction(id); return; }
   if (id === "decor") { gSel = null; const ps = prevScene; openPanel("decor"); prevScene = ps; return; }
   if (id === "away_ok") { collectAway(); return; }
   if (id.startsWith("g_")) { gardenAction(id); return; }
@@ -5337,6 +5472,7 @@ canvas.addEventListener("pointerdown", (e) => {
     if (pointIn(p.x, p.y, b.x, b.y, b.w, b.h)) { doUI(b.id); return; }
   }
   if (scene === "garden") { gardenDown(p, e.pointerType !== "mouse"); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
+  if (scene === "mg") { mgDown(p); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (scene === "play" && tut && tutBubbleHit(p)) return; // the tutorial card swallows stray taps
   if (scene === "play") playTap(p);
   else if (scene === "title") tapGloom(p);
@@ -5346,6 +5482,7 @@ canvas.addEventListener("pointermove", (e) => {
   const p = canvasPos(e);
   if (e.pointerType === "mouse" || pointer.down) { hitUI = p; pointer.x = p.x; pointer.y = p.y; }
   if (gDrag && scene === "garden") gardenMove(p);
+  if (scene === "mg") mgMove(p);
   if (drag) {
     const dy = p.y - drag.y0;
     if (Math.abs(dy) > 8) drag.moved = true;
@@ -5400,6 +5537,8 @@ window.addEventListener("keydown", (e) => {
     else if (scene === "pause") scene = "play";
     else if (scene === "whatsnew") closeWhatsNew();
     else if (scene === "away") collectAway();
+    else if (scene === "mg" && mg) { if (mg.state === "result") quitMg(); else if (mg.paused) mg.paused = false; else mgPause(); }
+    else if (scene === "arcade") scene = prevScene || "title";
     else if (scene === "garden") { if (gSel) gSel = null; else leaveGarden(); }
     else if (scene === "decor") scene = "garden";
     else if (inPanel) scene = prevScene;
@@ -5460,6 +5599,11 @@ function stepScene(dt) {
     drawGarden();
   } else if (scene === "decor") {
     drawDecor();
+  } else if (scene === "arcade") {
+    drawArcade();
+  } else if (scene === "mg") {
+    updateMg(dt);
+    drawMg();
   } else if (scene === "away") {
     if (awayReturn === "title") updateTitle(dt);
     else if (awayReturn === "garden") updateGarden(dt);
@@ -5495,18 +5639,18 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 5;
-const APP_LABEL = "v5";
+const APP_VERSION = 6;
+const APP_LABEL = "v6";
 const WHATS_NEW = {
-  title: "What's new ✿",
-  sub: "The Critter Garden",
+  title: "What's new ★",
+  sub: "The Arcade",
   items: [
-    "Your very own Critter Garden ✿",
-    "20 hand-made decorations to place",
-    "Pals visit, swing, splash & nap",
-    "Coziness brings more visitors & ♥",
-    "Little gifts left while you're away",
-    "8 new garden goals to complete",
+    "New Arcade with 3 mini-games ★",
+    "Memory Match in three sizes",
+    "Bubble Bath: pop, pop, sparkle!",
+    "Catch the Treats with your pals",
+    "Daily bonuses, bests & new rewards",
+    "Settings now live in the pause menu",
   ],
 };
 
@@ -5942,6 +6086,24 @@ const DECOR = [
       P.r(1, 6, 10, 10, GC.purp); P.r(1, 6, 10, 1, "#e6d4ff"); P.r(1, 15, 10, 1, "#a07ad8");
       P.p(3, 10, "#2c2030"); P.p(8, 10, "#2c2030"); P.r(5, 12, 2, 1, "#2c2030"); P.p(2, 12, "#ff9ab0"); P.p(9, 12, "#ff9ab0");
       P.r(4, 0, 4, 1, GC.pink); P.r(3, 1, 1, 3, GC.pink); P.r(8, 1, 1, 3, GC.pink); P.r(4, 4, 4, 1, GC.pink); P.r(5, 5, 2, 1, GC.pinkD);
+    } },
+  { id: "tub", name: "Bubble Tub", cat: "toys", cost: 1500, cozy: 15, fw: 2, fh: 1, aw: 24, ah: 16, act: "splash", spots: [[12, 10]], unlock: { goal: "bubble3", text: "Arcade: 3★ Bubble Bath" },
+    paint(P) {
+      P.r(3, 13, 2, 3, "#e0b040"); P.r(19, 13, 2, 3, "#e0b040");
+      P.e(12, 8, 12, 6, "#fff4f8"); P.r(1, 12, 22, 1, "#f0dce8");
+      P.r(8, 9, 3, 2, "#ffc0dc"); P.r(15, 10, 3, 2, "#ffc0dc");
+      for (const [x, y, r] of [[4, 4, 3], [9, 3, 3.5], [15, 3, 3], [20, 4, 3]]) P.e(x, y, r, r - 0.5, "#ffffff");
+      P.p(8, 2, "#d8f0ff"); P.p(16, 2, "#d8f0ff");
+      P.r(18, 0, 3, 2, "#ffd84a"); P.p(21, 1, "#ff9a3a"); P.p(19, 0, "#2c2030");
+    } },
+  { id: "cupcake", name: "Cupcake Stand", cat: "homes", cost: 2500, cozy: 20, fw: 2, fh: 1, aw: 24, ah: 26, act: "tea", spots: [[3, 28], [21, 28]], unlock: { goal: "treats3", text: "Arcade: 3★ Catch the Treats" },
+    paint(P) {
+      P.r(2, 19, 2, 7, GC.woodD); P.r(20, 19, 2, 7, GC.woodD);
+      P.r(0, 14, 24, 5, "#ffb0c8"); for (let x = 0; x < 24; x += 4) P.e(x + 2, 19, 2, 1.5, "#ffb0c8");
+      P.r(0, 14, 24, 1, "#ffd0e0");
+      P.r(11, 3, 2, 11, "#e6e0f0"); P.r(3, 12, 18, 2, "#f6f2ff"); P.r(6, 6, 12, 2, "#f6f2ff");
+      for (const x of [4, 10, 16]) { P.r(x, 10, 4, 2, "#7ec8ff"); P.e(x + 2, 9, 2.5, 1.8, x === 10 ? "#c9a0ff" : "#ff8ab8"); P.p(x + 2, 7, "#ff4f6f"); }
+      P.r(10, 4, 4, 2, "#7ec8ff"); P.e(12, 3, 2.5, 1.8, "#fff2dc"); P.p(12, 1, "#ff4f6f");
     } },
   { id: "arch", name: "Heart Arch", cat: "homes", cost: 1000, cozy: 18, fw: 2, fh: 1, aw: 24, ah: 34, act: "arch", spots: [[12, 32]], unlock: { friend: 2, text: "Friendship Lv 2" },
     paint(P) {
@@ -6841,6 +7003,8 @@ function drawSceneStatic(sc) {
   else if (sc === "album") drawAlbum();
   else if (sc === "achievements") drawAchievements();
   else if (sc === "decor") drawDecor();
+  else if (sc === "arcade") drawArcade();
+  else if (sc === "mg") { mgPause(); drawMg(); }
   else { drawTitle(); drawStoryBanner(); }
 }
 function drawAwayCard(dt) {
@@ -6922,6 +7086,895 @@ document.addEventListener("visibilitychange", () => {
   if (grantAway(sec) && scene !== "away" && scene !== "whatsnew") openAway(scene);
 });
 
+// ===================== ARCADE (v6) =====================
+// Three short mini-games: Critter Memory Match, Bubble Bath and Catch the Treats.
+// Rewards are a friendly bonus: a daily first-play gift per game, plus round hearts with a daily cap.
+const ARC_GAMES = ["memory", "bubble", "treats"];
+const ARC_DAILY = 80;        // first finished round of the day, per game
+const ARC_DAY_CAP = 600;     // round hearts per game per day (the daily bonus is on top)
+const ARC_SCORE_CAP = 120;   // most hearts a single Bubble Bath / Treats round can give
+const MEM_TIERS = [
+  { name: "Easy", cols: 3, rows: 4, base: 20 },
+  { name: "Medium", cols: 4, rows: 4, base: 35 },
+  { name: "Hard", cols: 4, rows: 5, base: 55 },
+];
+const ROUND_SECS = 45;
+const BUB_STARS = [0, 1400, 3000];  // score for 2★ / 3★ (tuned with simulated players in test/arcade.mjs)
+const TRT_STARS = [0, 600, 1050];
+const SCORE_PER_HEART = { bubble: 25, treats: 10 };
+const ARC_INFO = {
+  memory: { name: "Memory Match", blurb: "Find the matching pairs!", col: "#ffd8e8", border: "#ff90b8" },
+  bubble: { name: "Bubble Bath", blurb: "Pop bubbles · skip gloomy ones", col: "#d0ecff", border: "#80b0e0" },
+  treats: { name: "Catch the Treats", blurb: "Drag the basket · dodge gloom", col: "#fff0c8", border: "#e0c060" },
+};
+
+function newArcade() {
+  return {
+    plays: { memory: 0, bubble: 0, treats: 0 },
+    best: { bubble: 0, treats: 0 },
+    memBest: [0, 0, 0],      // fewest moves per size (0 = not won yet)
+    memTime: [0, 0, 0],      // fastest win per size, seconds
+    memWins: [0, 0, 0],
+    stars: { memory: 0, bubble: 0, treats: 0 },
+    daily: { memory: "", bubble: "", treats: "" },
+    day: "", dayEarned: { memory: 0, bubble: 0, treats: 0 },
+    allDailyDay: "", allDailyDays: 0,
+    golden: 0, earned: 0,
+  };
+}
+let arcade = newArcade();
+const numOr0 = v => (typeof v === "number" && isFinite(v) && v > 0 ? v : 0);
+function normalizeArcade(d) {
+  const o = newArcade();
+  if (!isObj(d)) return o;
+  for (const g of ARC_GAMES) {
+    if (isObj(d.plays)) o.plays[g] = Math.floor(numOr0(d.plays[g]));
+    if (isObj(d.stars)) o.stars[g] = Math.min(3, Math.floor(numOr0(d.stars[g])));
+    if (isObj(d.daily) && typeof d.daily[g] === "string") o.daily[g] = d.daily[g];
+    if (isObj(d.dayEarned)) o.dayEarned[g] = Math.floor(numOr0(d.dayEarned[g]));
+  }
+  if (isObj(d.best)) { o.best.bubble = Math.floor(numOr0(d.best.bubble)); o.best.treats = Math.floor(numOr0(d.best.treats)); }
+  for (const k of ["memBest", "memTime", "memWins"]) if (Array.isArray(d[k])) for (let i = 0; i < 3; i++) o[k][i] = numOr0(d[k][i]);
+  if (typeof d.day === "string") o.day = d.day;
+  if (typeof d.allDailyDay === "string") o.allDailyDay = d.allDailyDay;
+  o.allDailyDays = Math.floor(numOr0(d.allDailyDays));
+  o.golden = Math.floor(numOr0(d.golden));
+  o.earned = Math.floor(numOr0(d.earned));
+  return o;
+}
+function memTierOpen(t) { return t === 0 || arcade.memWins[t - 1] > 0; }
+function dailyReady(g) { return arcade.daily[g] !== todayKey(); }
+
+// ---------- rewards (pure-ish so tests can check the caps) ----------
+function memStars(moves, pairs) { return moves <= Math.ceil(pairs * 1.5) ? 3 : moves <= Math.ceil(pairs * 2.25) ? 2 : 1; }
+function scoreStars(game, score) { const t = game === "bubble" ? BUB_STARS : TRT_STARS; return score >= t[2] ? 3 : score >= t[1] ? 2 : 1; }
+function roundBase(game, info) {
+  if (game === "memory") return Math.round(MEM_TIERS[info.tier].base * (1 + 0.5 * (info.stars - 1)));
+  return Math.min(ARC_SCORE_CAP, Math.floor(Math.max(0, info.score) / SCORE_PER_HEART[game]));
+}
+function arcadeReward(game, base, today) {
+  const a = arcade;
+  if (a.day !== today) { a.day = today; a.dayEarned = { memory: 0, bubble: 0, treats: 0 }; }
+  const room = Math.max(0, ARC_DAY_CAP - a.dayEarned[game]);
+  const hearts = Math.max(0, Math.min(base, room));
+  a.dayEarned[game] += hearts;
+  let daily = 0;
+  if (a.daily[game] !== today) { daily = ARC_DAILY; a.daily[game] = today; }
+  if (a.allDailyDay !== today && ARC_GAMES.every(g => a.daily[g] === today)) { a.allDailyDay = today; a.allDailyDays++; }
+  a.earned += hearts + daily;
+  return { hearts, daily, capped: hearts < base };
+}
+
+// ---------- art ----------
+const arcArt = new Map();
+function aArt(key, w, h, paint) {
+  let a = arcArt.get(key);
+  if (a === undefined) { a = makeArt(w, h, paint); arcArt.set(key, a); }
+  return a;
+}
+const TREATS = {
+  cookie: P => { P.e(5, 5, 5, 5, "#e0a060"); P.e(4, 4, 3, 3, "#eab070"); for (const [x, y] of [[3, 3], [6, 2], [7, 6], [3, 7], [5, 5]]) P.p(x, y, "#7a4a2a"); },
+  berry: P => { P.e(5, 6.5, 4.5, 4, "#ff4f6f"); P.r(3, 0, 5, 2, "#50b848"); P.p(5, 2, "#50b848"); for (const [x, y] of [[3, 5], [6, 5], [4, 8], [7, 7], [5, 3]]) P.p(x, y, "#ffe080"); P.p(3, 4, "#ffb0c0"); },
+  fish: P => { P.e(4.5, 5, 4.5, 3.2, "#7ec8ff"); P.r(8, 2, 2, 6, "#4aa0e0"); P.p(2, 4, "#2c2030"); P.r(4, 6, 3, 1, "#d8f4ff"); },
+  carrot: P => { for (let y = 3; y < 10; y++) { const w = Math.max(1, Math.round((10 - y) * 0.75)); P.r(5 - Math.floor(w / 2), y, w, 1, "#ff9a3a"); } P.r(3, 0, 1, 3, "#50b848"); P.r(5, 0, 1, 3, "#6cc050"); P.r(7, 0, 1, 3, "#50b848"); P.p(4, 5, "#ffc080"); },
+  cupcake: P => { P.r(2, 6, 7, 4, "#7ec8ff"); P.p(3, 7, "#b0e0ff"); P.p(6, 7, "#b0e0ff"); P.e(5.5, 4.5, 4.5, 2.6, "#ffb8d8"); P.e(5.5, 3, 3, 1.8, "#ffd0e4"); P.p(5, 0, "#ff4f6f"); P.p(5, 1, "#ff4f6f"); P.p(3, 4, "#fff"); },
+};
+const TREAT_KINDS = Object.keys(TREATS);
+function treatArt(k) { return aArt("t_" + k, 10, 10, TREATS[k]); }
+function tubArt() {
+  return aArt("tub", 60, 26, P => {
+    P.r(8, 21, 4, 5, "#e0b040"); P.r(48, 21, 4, 5, "#e0b040"); P.r(7, 24, 6, 2, "#e0b040"); P.r(47, 24, 6, 2, "#e0b040");
+    P.ef(0, 0, 60, 24, (x, y) => {
+      const dx = (x + 0.5 - 30) / 30, dy = (y + 0.5) / 23;
+      if (dx * dx + dy * dy * dy * dy > 1) return null;
+      return y < 3 ? "#ffffff" : y > 18 ? "#f0dce8" : (x < 8 ? "#fff0f6" : "#fff8fb");
+    });
+    P.r(3, 3, 54, 1, "#f0dce8");
+    for (const [x, y] of [[14, 10], [36, 13], [46, 8]]) { P.r(x, y, 4, 3, "#ffc0dc"); P.p(x + 1, y + 1, "#ff8ab8"); }
+  });
+}
+function basketArt() {
+  return aArt("basket", 30, 16, P => {
+    P.r(4, 0, 2, 6, "#9a5f34"); P.r(24, 0, 2, 6, "#9a5f34"); P.r(4, 0, 22, 2, "#9a5f34");
+    P.ef(0, 5, 30, 11, (x, y) => { if (y > 13 && (x < 2 || x > 27)) return null; return (x + (y >> 1)) % 4 < 2 ? "#e8b078" : "#c88a52"; });
+    P.r(0, 5, 30, 2, "#9a5f34"); P.r(2, 7, 26, 1, "#ffb0c8");
+  });
+}
+
+// ---------- round state ----------
+let mg = null;
+function openArcade() { openPanel("arcade"); setMusicMode(null); }
+function arcCritter() {
+  const list = unlockedList();
+  return list[Math.floor(Math.random() * list.length)] || ANIMALS[0];
+}
+function startMg(game, tier) {
+  if (game === "memory" && !memTierOpen(tier || 0)) return false;
+  mg = { game, tier: tier || 0, state: "intro", t: 0, time: 0, paused: false, score: 0, combo: 0, comboT: 0, best: 0,
+    critter: arcCritter(), sadT: 0, happyT: 0, result: null, pops: 0, oops: 0, gold: 0, caught: 0 };
+  scene = "mg";
+  particles.length = 0; floatTexts.length = 0;
+  setMusicMode(game);
+  if (game === "memory") memInit();
+  else if (game === "bubble") { mg.bubbles = []; mg.spawnT = 0.2; }
+  else { mg.items = []; mg.spawnT = 0.4; mg.bx = W / 2; mg.tx = W / 2; }
+  return true;
+}
+function quitMg() {
+  mg = null;
+  scene = "arcade";
+  particles.length = 0;
+  setMusicMode(null);
+}
+function mgPause() { if (mg && (mg.state === "intro" || mg.state === "play")) mg.paused = true; }
+function mgOnHidden() { if (scene === "mg") mgPause(); }
+
+// ---------- Memory Match ----------
+function shuffleArr(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+const MEM_DECOR = ["sunflower", "ball", "yarn", "berry", "lantern", "mushrooms", "flowerbed", "bubbles", "tree", "bench", "swing", "blanket"];
+function memFaces(n) {
+  const crit = shuffleArr(unlockedList().map(a => ({ k: "c", id: a.id, a })));
+  const accs = shuffleArr(Object.keys(ACC_ART).map(id => ({ k: "a", id })));
+  const decs = shuffleArr(MEM_DECOR.map(id => ({ k: "d", id })));
+  const nCrit = Math.min(crit.length, n > 1 ? n - 1 : n); // always at least one accessory card for variety
+  const out = crit.slice(0, nCrit);
+  for (const f of accs.concat(decs)) { if (out.length >= n) break; out.push(f); }
+  return out;
+}
+function memInit() {
+  const T = MEM_TIERS[mg.tier], pairs = T.cols * T.rows / 2;
+  const faces = memFaces(pairs);
+  const cards = [];
+  faces.forEach(f => { for (let k = 0; k < 2; k++) cards.push({ face: f, key: f.k + ":" + f.id, up: false, matched: false, anim: 1, wig: 0, pop: 0 }); });
+  shuffleArr(cards);
+  cards.forEach((c, i) => { c.i = i; c.deal = i * 0.04; });
+  mg.cards = cards; mg.open = []; mg.moves = 0; mg.pairs = pairs; mg.pairsLeft = pairs; mg.missT = 0; mg.streak = 0;
+}
+function memLayout() {
+  const T = MEM_TIERS[mg.tier];
+  const top = 80, bottom = H - 20, gap = 8, availH = bottom - top;
+  let cw = (W - 24 - gap * (T.cols - 1)) / T.cols, ch = cw * 1.22;
+  if (ch * T.rows + gap * (T.rows - 1) > availH) { ch = (availH - gap * (T.rows - 1)) / T.rows; cw = ch / 1.22; }
+  const gw = cw * T.cols + gap * (T.cols - 1), gh = ch * T.rows + gap * (T.rows - 1);
+  return { cw, ch, gap, x0: (W - gw) / 2, y0: top + (availH - gh) / 2, cols: T.cols };
+}
+function memCardRect(i, L) {
+  L = L || memLayout();
+  const c = i % L.cols, r = Math.floor(i / L.cols);
+  return { x: L.x0 + c * (L.cw + L.gap), y: L.y0 + r * (L.ch + L.gap), w: L.cw, h: L.ch };
+}
+function memHideOpen() {
+  for (const k of mg.open) { const c = mg.cards[k]; c.up = false; c.anim = 0; }
+  mg.open = []; mg.missT = 0;
+}
+function memTap(i) {
+  if (!mg || mg.game !== "memory" || mg.state !== "play" || mg.paused) return "ignored";
+  const c = mg.cards[i];
+  if (!c || c.matched || c.up) return "ignored";
+  if (mg.open.length === 2) memHideOpen(); // quick players don't have to wait for the flip-back
+  c.up = true; c.anim = 0;
+  mg.open.push(i);
+  sfxFlip(); buzz("ui");
+  if (mg.open.length < 2) return "flip";
+  mg.moves++;
+  const a = mg.cards[mg.open[0]], b = mg.cards[mg.open[1]];
+  if (a.key === b.key) {
+    a.matched = b.matched = true; a.pop = b.pop = 1;
+    mg.open = []; mg.pairsLeft--; mg.streak++;
+    const L = memLayout();
+    for (const cc of [a, b]) { const R = memCardRect(cc.i, L); spawnHearts(R.x + R.w / 2, R.y + R.h / 2, 3, true); spawnSparkles(R.x + R.w / 2, R.y + R.h / 2, 6); }
+    sfxMatch(mg.streak); buzz("pet");
+    if (mg.streak >= 2) { const R = memCardRect(b.i, L); addFloat({ x: R.x + R.w / 2, y: R.y, text: mg.streak + " in a row!", life: 0.9, vy: -30, color: "#ff70a8", size: 12 }); }
+    if (!mg.pairsLeft) { mg.state = "won"; mg.t = 0; }
+    return "match";
+  }
+  mg.missT = 0.8; mg.streak = 0;
+  a.wig = b.wig = 0.4;
+  sfxMiss();
+  return "miss";
+}
+function memUpdate(dt) {
+  if (mg.state === "play") mg.time += dt;
+  for (const c of mg.cards) {
+    if (c.anim < 1) c.anim = Math.min(1, c.anim + dt / 0.22);
+    if (c.wig > 0) c.wig = Math.max(0, c.wig - dt);
+    if (c.pop > 0) c.pop = Math.max(0, c.pop - dt * 2.2);
+  }
+  if (mg.missT > 0) { mg.missT -= dt; if (mg.missT <= 0) memHideOpen(); }
+  if (mg.state === "won" && mg.t > 1.3) finishRound();
+}
+function drawMemFace(f, cx, cy, box) {
+  if (f.k === "c") {
+    drawSprite(f.a, cx, cy, box / SPRITE_SIZE * 0.78, false, 0, false, 3, null);
+  } else if (f.k === "a") {
+    const art = ACC_ART[f.id];
+    if (art) {
+      const w = Math.max(...art.rows.map(r => r.length)), h = art.rows.length;
+      const u = Math.max(2, Math.floor(box * 0.62 / Math.max(w, h)));
+      drawPattern(art.rows, art.cmap, 0, 0, Math.round(cx - w * u / 2), Math.round(cy - h * u / 2), u, true);
+    }
+  } else {
+    const d = DECOR_BY_ID[f.id], a = d && getDecorArt(d);
+    if (a) {
+      const s = Math.max(1, Math.floor(box * 0.84 / Math.max(a.width, a.height) * 2) / 2);
+      ctx.drawImage(a, Math.round(cx - a.width * s / 2), Math.round(cy - a.height * s / 2), a.width * s, a.height * s);
+    }
+  }
+}
+function drawMemCard(c, R) {
+  const dealK = mg.state === "intro" ? clamp((mg.t - c.deal) / 0.3, 0, 1) : 1;
+  if (dealK <= 0) return;
+  const showFace = c.up || c.matched;
+  // flip: squash to 0 width at the midpoint, swap faces there
+  const p = c.anim;
+  const flipW = p < 1 ? Math.abs(1 - 2 * p) : 1;
+  const faceNow = p < 0.5 ? !showFace : showFace;
+  const pop = 1 + (c.pop > 0 ? Math.sin(c.pop * Math.PI) * 0.12 : 0);
+  const wig = c.wig > 0 ? Math.sin(c.wig * 40) * 3 * (c.wig / 0.4) : 0;
+  const cx = R.x + R.w / 2 + wig, cy = R.y + R.h / 2;
+  const e = easeOutBack(dealK);
+  ctx.save();
+  ctx.translate(cx, cy + (1 - dealK) * 30);
+  ctx.scale(Math.max(0.02, flipW) * pop * e, pop * e);
+  const x = -R.w / 2, y = -R.h / 2;
+  ctx.fillStyle = "rgba(60,30,60,0.18)";
+  roundRect(x + 2, y + 4, R.w, R.h, 10); ctx.fill();
+  if (faceNow) {
+    ctx.fillStyle = c.matched ? "#f2fff0" : "#fffaf2";
+    roundRect(x, y, R.w, R.h, 10); ctx.fill();
+    ctx.strokeStyle = c.matched ? "#80c870" : "#ffb8d0"; ctx.lineWidth = 2.5; ctx.stroke();
+    drawMemFace(c.face, 0, 2, Math.min(R.w, R.h));
+    if (c.matched) drawPixelHeart(x + R.w - 11, y + 11, 4, "#ff6b9d");
+  } else {
+    ctx.fillStyle = "#ff9ec8";
+    roundRect(x, y, R.w, R.h, 10); ctx.fill();
+    ctx.strokeStyle = "#e0608f"; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = "#ffb8d8";
+    roundRect(x + 5, y + 5, R.w - 10, R.h - 10, 7); ctx.fill();
+    for (let yy = y + 14; yy < y + R.h - 8; yy += 16) for (let xx = x + 13 + ((yy / 16) & 1) * 8; xx < x + R.w - 8; xx += 16) drawPixelHeart(xx, yy, 2.5, "rgba(255,255,255,0.55)");
+    drawPixelHeart(0, 0, Math.min(R.w, R.h) * 0.14, "#ff5a8a");
+  }
+  ctx.restore();
+}
+function drawMemory() {
+  drawArcadeBg("#ffe8f2", "#ffd0e4");
+  const L = memLayout();
+  mg.cards.forEach((c, i) => drawMemCard(c, memCardRect(i, L)));
+  drawParticles();
+  const T = MEM_TIERS[mg.tier];
+  drawMgHud("Moves " + mg.moves, "Memory · " + T.name, fmtClock(mg.time));
+}
+function fmtClock(s) { s = Math.floor(s); return Math.floor(s / 60) + ":" + pad2(s % 60); }
+
+// ---------- Bubble Bath ----------
+function tubRect() { const w = 180, h = 78; return { x: W / 2 - w / 2, y: H - 30 - h, w, h }; }
+function bubSpawn() {
+  const k = Math.min(1, mg.time / ROUND_SECS), T = tubRect();
+  const r0 = Math.random();
+  const type = r0 < 0.05 ? "gold" : r0 < 0.05 + 0.07 + 0.09 * k ? "gloom" : "n";
+  const x = T.x + 20 + Math.random() * (T.w - 40), y = T.y + 6;
+  const vy = -(46 + Math.random() * 26) * (1 + 0.8 * k);
+  const tx = 30 + Math.random() * (W - 60);
+  const travel = (y - 90) / -vy;
+  mg.bubbles.push({ type, x, y, r: type === "gold" ? 17 : type === "gloom" ? 18 : 13 + Math.random() * 9, vx: (tx - x) / travel, vy, ph: Math.random() * 6, t: 0 });
+}
+function bubPoints(base) { const mult = Math.min(5, 1 + Math.floor(mg.combo / 5)); return base * mult; }
+function bubPop(b, chained) {
+  const i = mg.bubbles.indexOf(b);
+  if (i < 0) return 0;
+  mg.bubbles.splice(i, 1);
+  let pts;
+  if (b.type === "gloom") {
+    mg.combo = 0; mg.comboT = 0; mg.oops++;
+    pts = -20; mg.sadT = 0.9;
+    for (let k = 0; k < 6; k++) particles.push({ kind: "poof", x: b.x + (Math.random() - 0.5) * 20, y: b.y + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5) * 30, vy: -10, life: 0.6, max: 0.6, size: 7, color: "rgba(120,110,140,0.7)", t: 0, float: true });
+    sfxOops(); buzz("shoo");
+  } else {
+    mg.combo++; mg.comboT = 1.1; mg.pops++;
+    pts = bubPoints(b.type === "gold" ? 50 : 10);
+    particles.push({ kind: "ring", x: b.x, y: b.y, life: 0.3, max: 0.3, size: b.r * 0.8, color: b.type === "gold" ? "#ffd84a" : "#bfe8ff", t: 0, grow: 70, lw: 2 });
+    for (let k = 0; k < 5; k++) { const a = Math.random() * 6.28; particles.push({ kind: "spark", x: b.x + Math.cos(a) * b.r, y: b.y + Math.sin(a) * b.r, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, life: 0.35, max: 0.35, size: 2, color: b.type === "gold" ? "#ffe080" : "#ffffff", t: 0 }); }
+    if (!chained) sfxPop(mg.combo);
+    buzz("pet");
+    if (b.type === "gold") {
+      mg.gold++; mg.happyT = 1;
+      sfxShiny(); popFx(b.x, b.y, "#fff2a0", 1.2);
+      // golden bubbles pop their neighbours too: a lovely chain
+      for (const o of mg.bubbles.slice()) if (o.type === "n" && dist2(o.x, o.y, b.x, b.y) < 95 * 95) bubPop(o, true); // each adds its own points
+    }
+  }
+  mg.score = Math.max(0, mg.score + pts);
+  if (!chained) addFloat({ x: b.x, y: b.y - 10, text: (pts > 0 ? "+" : "") + pts, life: 0.7, vy: -34, color: pts < 0 ? "#8a7a9a" : b.type === "gold" ? "#e0a000" : "#ff70a8", size: pts >= 50 ? 15 : 12 });
+  return pts;
+}
+function bubTap(p) {
+  let best = null, bd = 1e9;
+  for (const b of mg.bubbles) {
+    if (b.type === "gloom") continue;
+    const d = dist2(p.x, p.y, b.x, b.y), rr = b.r + 12;
+    if (d < rr * rr && d < bd) { best = b; bd = d; }
+  }
+  if (!best) for (const b of mg.bubbles) if (b.type === "gloom" && dist2(p.x, p.y, b.x, b.y) < b.r * b.r) { best = b; break; }
+  if (best) bubPop(best);
+  return best;
+}
+function bubUpdate(dt) {
+  if (mg.state === "play") {
+    mg.time += dt;
+    const k = Math.min(1, mg.time / ROUND_SECS);
+    mg.spawnT -= dt;
+    if (mg.spawnT <= 0) { bubSpawn(); mg.spawnT = (0.62 - 0.36 * k) * (0.8 + Math.random() * 0.4); }
+    if (mg.comboT > 0) { mg.comboT -= dt; if (mg.comboT <= 0) mg.combo = 0; }
+    if (mg.time >= ROUND_SECS) { mg.state = "end"; mg.t = 0; sfxWhistle(); }
+  }
+  for (const b of mg.bubbles) {
+    b.t += dt;
+    b.x += (b.vx + Math.sin(b.t * 2.2 + b.ph) * 16) * dt;
+    b.y += b.vy * dt;
+    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); } else if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
+  }
+  prune(mg.bubbles, b => b.y > 72 + b.r * 0.5);
+  if (mg.sadT > 0) mg.sadT -= dt;
+  if (mg.happyT > 0) mg.happyT -= dt;
+  if (mg.state === "end") {
+    // time's up: the remaining bubbles pop one by one (just for show), then our pal giggles, sparkly clean
+    if (mg.bubbles.length && mg.t > 0.3) { const b = mg.bubbles[0]; mg.bubbles.shift(); popFx(b.x, b.y, "#dff4ff", 0.5); if (Math.random() < 0.5) sfxPop(3 + Math.floor(Math.random() * 6)); }
+    if (mg.t > 0.8 && !mg.clean) { mg.clean = true; sfxGiggle(); spawnSparkles(W / 2, tubRect().y - 20, 26); showBanner("Squeaky clean! ✨", mg.critter.name + " is all sparkly", 2.2); }
+    if (mg.t > 2.6) finishRound();
+  }
+}
+function drawBubble2(b) {
+  const r = b.r;
+  if (b.type === "gloom") {
+    ctx.fillStyle = "rgba(140,128,160,0.55)";
+    ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(90,80,110,0.9)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#6a6080";
+    ctx.beginPath(); ctx.arc(b.x - 5, b.y + 1, 5, 0, Math.PI * 2); ctx.arc(b.x + 1, b.y - 3, 6, 0, Math.PI * 2); ctx.arc(b.x + 6, b.y + 2, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2c2030";
+    ctx.fillRect(b.x - 4, b.y, 2, 2); ctx.fillRect(b.x + 2, b.y, 2, 2);
+    ctx.fillRect(b.x - 2, b.y + 4, 4, 1);
+    return;
+  }
+  const gold = b.type === "gold";
+  ctx.fillStyle = gold ? "rgba(255,220,90,0.55)" : "rgba(235,248,255,0.35)";
+  ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = gold ? "#e8a800" : "rgba(150,200,255,0.95)";
+  ctx.stroke();
+  if (!gold) { ctx.strokeStyle = "rgba(255,170,220,0.8)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(b.x, b.y, r - 2.5, Math.PI * 0.1, Math.PI * 0.7); ctx.stroke(); }
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(Math.round(b.x - r * 0.5), Math.round(b.y - r * 0.55), 3, 3);
+  ctx.fillRect(Math.round(b.x - r * 0.25), Math.round(b.y - r * 0.7), 2, 2);
+  if (gold) {
+    drawSparkle(b.x, b.y, 7 + Math.sin(b.t * 8) * 1.5, "#fff8d0");
+  }
+}
+function drawBathBg() {
+  const floorY = H - 60;
+  ctx.fillStyle = "#d8f2ec";
+  ctx.fillRect(0, 0, W, floorY);
+  ctx.fillStyle = "#c4e8e0";
+  for (let y = 0; y < floorY; y += 30) ctx.fillRect(0, y, W, 2);
+  for (let y = 0, r = 0; y < floorY; y += 30, r++) for (let x = (r & 1) * 15; x < W; x += 30) ctx.fillRect(x, y, 2, 30);
+  // round window with sky
+  const wx = 70, wy = 150;
+  ctx.fillStyle = "#fff8f0"; ctx.beginPath(); ctx.arc(wx, wy, 38, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#a8dcff"; ctx.beginPath(); ctx.arc(wx, wy, 31, 0, Math.PI * 2); ctx.fill();
+  drawCloud(wx - 6, wy + 4, 0.5, "#ffffff");
+  ctx.fillStyle = "#fff8f0"; ctx.fillRect(wx - 2, wy - 31, 4, 62); ctx.fillRect(wx - 31, wy - 2, 62, 4);
+  // towel on a rail
+  const tx = W - 86;
+  ctx.fillStyle = "#c8b0a0"; ctx.fillRect(tx - 8, 118, 72, 5);
+  ctx.fillStyle = "#ffb0c8"; ctx.fillRect(tx, 121, 56, 70);
+  ctx.fillStyle = "#ff90b0"; ctx.fillRect(tx, 176, 56, 5); ctx.fillRect(tx, 184, 56, 3);
+  ctx.fillStyle = "#2c2030"; ctx.fillRect(tx - 1, 121, 1, 70); ctx.fillRect(tx + 56, 121, 1, 70); ctx.fillRect(tx, 191, 56, 1);
+  // little shelf: shampoo bottles and a plant
+  const sy = Math.min(floorY - 150, 270);
+  ctx.fillStyle = "#c88a52"; ctx.fillRect(W - 120, sy, 96, 6); ctx.fillStyle = "#9a5f34"; ctx.fillRect(W - 120, sy + 6, 96, 2);
+  const bottle = (x, w, h, col, cap) => { ctx.fillStyle = "#2c2030"; ctx.fillRect(x - 1, sy - h - 1, w + 2, h + 1); ctx.fillStyle = col; ctx.fillRect(x, sy - h, w, h); ctx.fillStyle = cap; ctx.fillRect(x + w / 2 - 3, sy - h - 6, 6, 6); ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(x + 2, sy - h + 3, 2, h - 6); };
+  bottle(W - 112, 14, 26, "#ff9ec8", "#ffffff"); bottle(W - 92, 12, 20, "#8ad0ff", "#ffd66b"); bottle(W - 76, 12, 30, "#c9a0ff", "#ff8ab8");
+  ctx.fillStyle = "#2c2030"; ctx.fillRect(W - 57, sy - 15, 20, 15); ctx.fillStyle = "#ff9e7a"; ctx.fillRect(W - 56, sy - 14, 18, 14);
+  ctx.fillStyle = "#4a9a3a"; ctx.beginPath(); ctx.ellipse(W - 47, sy - 22, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#6cc050"; ctx.beginPath(); ctx.ellipse(W - 50, sy - 25, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+  // lazy background bubbles drifting up the wall
+  for (let i = 0; i < 9; i++) {
+    const ph = (time * 0.05 + i * 0.137) % 1, x = (i * 97 + 40) % (W - 30) + 15 + Math.sin(time + i) * 8, y = floorY - ph * (floorY - 80);
+    ctx.globalAlpha = 0.35 * Math.sin(ph * Math.PI);
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 4 + (i % 3) * 2, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // floor
+  ctx.fillStyle = "#ffd8e4"; ctx.fillRect(0, floorY, W, H - floorY);
+  ctx.fillStyle = "#ffc4d6";
+  for (let x = 0, i = 0; x < W; x += 24, i++) if (i & 1) ctx.fillRect(x, floorY, 24, H - floorY);
+  ctx.fillStyle = "#f0b0c4"; ctx.fillRect(0, floorY, W, 3);
+}
+function drawTubScene() {
+  const T = tubRect(), art = tubArt();
+  // water + foam behind our pal
+  ctx.fillStyle = "#bfe6ff";
+  ctx.beginPath(); ctx.ellipse(W / 2, T.y + 10, T.w * 0.46, 12, 0, 0, Math.PI * 2); ctx.fill();
+  const cr = mg.critter, clean = mg.state === "end" || mg.state === "result";
+  const giggle = clean || mg.happyT > 0;
+  const bob = giggle ? -Math.abs(Math.sin(time * 9)) * 6 : Math.sin(time * 2.2) * 2;
+  drawSprite(cr, W / 2, T.y - 30, 2.6, clean && mg.clean, bob, mg.sadT > 0, 5, { acc: equippedFor(cr.id), heartEyes: giggle && mg.sadT <= 0, rot: giggle ? Math.sin(time * 12) * 0.08 : 0 });
+  if (art) ctx.drawImage(art, T.x - 3, T.y - 3, art.width * 3, art.height * 3);
+  // foam along the rim
+  ctx.fillStyle = "#ffffff";
+  for (let k = 0; k < 11; k++) {
+    const fx = T.x + 10 + k * (T.w - 20) / 10, fr = 8 + ((k * 37) % 5) + Math.sin(time * 3 + k) * 1.2;
+    ctx.beginPath(); ctx.arc(fx, T.y + 4, fr, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = "#e4f4ff";
+  for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(T.x + 24 + k * 27, T.y + 8, 4, 0, Math.PI * 2); ctx.fill(); }
+  // rubber duck on the rim
+  const dx = T.x + T.w - 26, dy = T.y - 6 + Math.sin(time * 3) * 1.5;
+  drawPattern(["..yy...", ".yyeyo.", "y.yyyy.", "yyyyyy.", ".yyyy.."], { y: "#ffd84a", e: "#2c2030", o: "#ff9a3a" }, 0, 0, dx, dy, 2, true);
+}
+function drawBubbleGame() {
+  drawBathBg();
+  drawTubScene();
+  for (const b of mg.bubbles) drawBubble2(b);
+  drawParticles();
+  const left = mg.time < ROUND_SECS ? Math.ceil(ROUND_SECS - mg.time) : 0;
+  drawMgHud("♥ " + mg.score, "Bubble Bath", left + "s");
+  drawRoundBar(mg.time / ROUND_SECS);
+  drawComboChip();
+  drawStoryBanner();
+}
+
+// ---------- Catch the Treats ----------
+const BASKET_Y_OFF = 96;
+function trtSpawn() {
+  const k = Math.min(1, mg.time / ROUND_SECS);
+  const r0 = Math.random();
+  const kind = r0 < 0.05 ? "star" : r0 < 0.05 + 0.08 + 0.1 * k ? "gloom" : TREAT_KINDS[Math.floor(Math.random() * TREAT_KINDS.length)];
+  mg.items.push({ kind, x: 26 + Math.random() * (W - 52), y: 70, vy: (95 + Math.random() * 45) * (1 + 0.9 * k), rot: Math.random() * 6, vr: (Math.random() - 0.5) * 4, t: 0 });
+}
+function trtCatch(it) {
+  let pts;
+  if (it.kind === "gloom") {
+    mg.combo = 0; mg.oops++; pts = -20; mg.sadT = 0.9;
+    for (let k = 0; k < 6; k++) particles.push({ kind: "poof", x: it.x + (Math.random() - 0.5) * 20, y: it.y, vx: (Math.random() - 0.5) * 40, vy: -20, life: 0.6, max: 0.6, size: 7, color: "rgba(120,110,140,0.7)", t: 0, float: true });
+    sfxOops(); buzz("shoo");
+  } else {
+    mg.combo++; mg.caught++;
+    pts = bubPoints(it.kind === "star" ? 40 : 10);
+    mg.happyT = 0.5;
+    spawnSparkles(it.x, it.y, it.kind === "star" ? 14 : 5);
+    if (it.kind === "star") { sfxShiny(); popFx(it.x, it.y, "#fff2a0", 1); } else sfxCatch(mg.combo);
+    buzz("pet");
+  }
+  mg.score = Math.max(0, mg.score + pts);
+  addFloat({ x: it.x, y: it.y - 20, text: (pts > 0 ? "+" : "") + pts, life: 0.7, vy: -34, color: pts < 0 ? "#8a7a9a" : it.kind === "star" ? "#e0a000" : "#ff70a8", size: pts >= 40 ? 15 : 12 });
+}
+function trtUpdate(dt) {
+  mg.bx += (mg.tx - mg.bx) * Math.min(1, dt * 16);
+  mg.bx = clamp(mg.bx, 30, W - 30);
+  const by = H - BASKET_Y_OFF;
+  if (mg.state === "play") {
+    mg.time += dt;
+    const k = Math.min(1, mg.time / ROUND_SECS);
+    mg.spawnT -= dt;
+    if (mg.spawnT <= 0) { trtSpawn(); mg.spawnT = (0.85 - 0.45 * k) * (0.8 + Math.random() * 0.4); }
+    if (mg.time >= ROUND_SECS) { mg.state = "end"; mg.t = 0; sfxWhistle(); }
+  }
+  for (const it of mg.items) {
+    it.t += dt; it.y += it.vy * dt; it.rot += it.vr * dt;
+    if (!it.done && it.y >= by - 4 && it.y <= by + 16 && Math.abs(it.x - mg.bx) < 36) { it.done = true; if (mg.state === "play") trtCatch(it); }
+    else if (!it.done && it.y > H - 40) {
+      it.done = true;
+      if (it.kind !== "gloom" && mg.state === "play") { mg.combo = 0; particles.push({ kind: "poof", x: it.x, y: H - 44, vx: 0, vy: -8, life: 0.4, max: 0.4, size: 6, color: "rgba(255,255,255,0.8)", t: 0, float: true }); }
+    }
+  }
+  prune(mg.items, it => !it.done);
+  if (mg.sadT > 0) mg.sadT -= dt;
+  if (mg.happyT > 0) mg.happyT -= dt;
+  if (mg.state === "end") {
+    if (mg.t > 0.6 && !mg.clean) { mg.clean = true; sfxGiggle(); spawnHearts(mg.bx, by - 40, 10, true); showBanner("Yum! Snack time!", mg.critter.name + " is happily munching", 2.2); }
+    if (mg.t > 2.4) finishRound();
+  }
+}
+function drawTreatItem(it) {
+  if (it.kind === "star") {
+    ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot * 0.3);
+    ctx.fillStyle = "#ffd84a"; ctx.strokeStyle = "#2c2030"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 6 : 14; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    ctx.closePath(); ctx.stroke(); ctx.fill();
+    ctx.fillStyle = "#fff6c0"; ctx.fillRect(-4, -5, 3, 3);
+    ctx.restore();
+    return;
+  }
+  if (it.kind === "gloom") {
+    ctx.fillStyle = "#8a80a0";
+    ctx.beginPath(); ctx.arc(it.x - 8, it.y + 2, 8, 0, Math.PI * 2); ctx.arc(it.x + 2, it.y - 4, 10, 0, Math.PI * 2); ctx.arc(it.x + 10, it.y + 3, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2c2030"; ctx.fillRect(it.x - 5, it.y, 2, 2); ctx.fillRect(it.x + 3, it.y, 2, 2); ctx.fillRect(it.x - 2, it.y + 5, 5, 1);
+    ctx.fillStyle = "#9ab0e0"; ctx.fillRect(it.x - 6, it.y + 12 + (it.t * 30) % 8, 1, 3); ctx.fillRect(it.x + 5, it.y + 14 + (it.t * 30 + 4) % 8, 1, 3);
+    return;
+  }
+  const a = treatArt(it.kind);
+  if (!a) return;
+  ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(Math.sin(it.rot) * 0.35);
+  ctx.drawImage(a, -a.width * 1.5, -a.height * 1.5, a.width * 3, a.height * 3);
+  ctx.restore();
+}
+function drawTreatsGame() {
+  drawPicnicBg();
+  for (const it of mg.items) drawTreatItem(it);
+  const by = H - BASKET_Y_OFF, bx = mg.bx;
+  const happy = mg.happyT > 0 || mg.state === "end" || mg.state === "result";
+  const hop = happy ? -Math.abs(Math.sin(time * 10)) * 5 : 0;
+  drawSprite(mg.critter, bx, by - 14 + hop, 2.2, false, 0, mg.sadT > 0, 9, { acc: equippedFor(mg.critter.id), heartEyes: happy && mg.sadT <= 0 });
+  const art = basketArt();
+  if (art) ctx.drawImage(art, bx - art.width * 1.5, by - 6 + hop, art.width * 3, art.height * 3);
+  drawParticles();
+  const left = mg.time < ROUND_SECS ? Math.ceil(ROUND_SECS - mg.time) : 0;
+  drawMgHud("♥ " + mg.score, "Catch the Treats", left + "s");
+  drawRoundBar(mg.time / ROUND_SECS);
+  drawComboChip();
+  drawStoryBanner();
+}
+function drawPicnicBg() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#9ed4ff"); g.addColorStop(0.7, "#ffeef4");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (const cl of decorClouds) { cl.x += cl.sp * frameDt * 0.5; if (cl.x > W + 70) cl.x = -70; drawCloud(cl.x, cl.y + 40, cl.s * 0.7, "rgba(255,255,255,0.85)"); }
+  const gy = H - 80;
+  ctx.fillStyle = "#a8dc88";
+  ctx.beginPath(); ctx.moveTo(0, gy - 30); ctx.quadraticCurveTo(W * 0.35, gy - 80, W * 0.7, gy - 30); ctx.quadraticCurveTo(W * 0.9, gy - 10, W, gy - 40); ctx.lineTo(W, gy); ctx.lineTo(0, gy); ctx.fill();
+  ctx.fillStyle = "#88d064"; ctx.fillRect(0, gy, W, H - gy);
+  ctx.fillStyle = "#a6e47e";
+  for (let i = 0; i < 24; i++) { const x = (i * 71 + 13) % W, y = gy + 6 + (i * 29) % (H - gy - 10); ctx.fillRect(x, y, 2, 1); ctx.fillRect(x + 1, y - 1, 1, 1); }
+}
+
+// ---------- shared HUD / flow ----------
+function drawArcadeBg(a, b) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, a); g.addColorStop(1, b);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  for (let y = 0, r = 0; y < H; y += 40, r++) for (let x = (r & 1) * 20; x < W; x += 40) drawPixelHeart(x + 10, y + 20, 3, "rgba(255,255,255,0.45)");
+}
+function drawMgHud(left, title, right) {
+  ctx.fillStyle = "rgba(255,250,245,0.95)";
+  roundRect(8, 8, W - 16, 56, 12); ctx.fill();
+  ctx.strokeStyle = C.panelBorder; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left"; ctx.fillStyle = C.heart; font(15, true);
+  ctx.fillText(left, 18, 27);
+  ctx.fillStyle = C.textSoft; font(11, true);
+  ctx.fillText(right, 18, 46);
+  ctx.textAlign = "center"; ctx.fillStyle = C.text;
+  fitFont(title, W - 180, 15, true, 10);
+  ctx.fillText(title, W / 2, 36);
+  uiButtons = [];
+  if (mg.state !== "result") uiButtons.push(btn(W - 60, 14, 46, 44, "II", { id: "mg_pause", size: 15, bg: "#d0e8ff", border: "#80b0e0" }));
+}
+function drawRoundBar(k) {
+  const x = 18, y = 70, w = W - 36;
+  ctx.fillStyle = "rgba(60,50,70,0.25)"; roundRect(x, y, w, 7, 3.5); ctx.fill();
+  ctx.fillStyle = k > 0.8 ? "#ff8a9a" : "#8ad8a0";
+  roundRect(x, y, Math.max(7, w * (1 - clamp(k, 0, 1))), 7, 3.5); ctx.fill();
+}
+function drawComboChip() {
+  if (mg.combo < 5 || mg.state !== "play") return;
+  const mult = Math.min(5, 1 + Math.floor(mg.combo / 5));
+  const pulse = 1 + Math.sin(time * 10) * 0.05;
+  ctx.save(); ctx.translate(W / 2, 96); ctx.scale(pulse, pulse);
+  ctx.fillStyle = "rgba(255,250,245,0.92)"; roundRect(-54, -13, 108, 26, 13); ctx.fill();
+  ctx.strokeStyle = "#ff9ec8"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#ff5a8a"; font(13, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Combo ×" + mult + " · " + mg.combo, 0, 1);
+  ctx.restore();
+}
+function drawIntroCard() {
+  const k = mg.t;
+  const info = ARC_INFO[mg.game];
+  if (mg.game === "memory") return;
+  const n = 3 - Math.floor(k / 0.6);
+  ctx.fillStyle = "rgba(40,20,50,0.25)"; ctx.fillRect(0, 0, W, H);
+  const top = H / 2 - 90;
+  solidPanel(40, top, W - 80, 150);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText(info.name, W / 2, top + 30);
+  ctx.fillStyle = C.textSoft; font(12, false);
+  ctx.fillText(mg.game === "bubble" ? "Tap bubbles · gold = bonus!" : "Drag to move the basket", W / 2, top + 58);
+  ctx.fillText(mg.game === "bubble" ? "Leave the gloomy ones be" : "Catch treats · dodge gloom", W / 2, top + 76);
+  const sc = 1 + (1 - (k % 0.6) / 0.6) * 0.3;
+  ctx.save(); ctx.translate(W / 2, top + 116); ctx.scale(sc, sc);
+  ctx.fillStyle = C.heart; font(28, true); ctx.fillText(n > 0 ? String(n) : "Go!", 0, 0);
+  ctx.restore();
+}
+function updateMg(dt) {
+  if (!mg) { scene = "arcade"; return; }
+  if (mg.paused) return;
+  mg.t += dt;
+  if (mg.state === "intro") {
+    const dur = mg.game === "memory" ? 0.3 + mg.cards.length * 0.04 : 1.8;
+    if (Math.floor((mg.t - dt) / 0.6) !== Math.floor(mg.t / 0.6) && mg.game !== "memory" && mg.t < 1.8) sfxTick();
+    if (mg.t >= dur) { mg.state = "play"; mg.t = 0; if (mg.game !== "memory") sfxGo(); }
+  }
+  if (mg.game === "memory") memUpdate(dt);
+  else if (mg.game === "bubble") bubUpdate(dt);
+  else trtUpdate(dt);
+  if (mg.state === "result") mg.rt = (mg.rt || 0) + dt;
+  updateParticles(dt);
+}
+function drawMg() {
+  if (!mg) return;
+  if (mg.game === "memory") drawMemory();
+  else if (mg.game === "bubble") drawBubbleGame();
+  else drawTreatsGame();
+  if (mg.state === "intro") drawIntroCard();
+  if (mg.state === "result") drawResultCard();
+  else if (mg.paused) drawMgPause();
+}
+function finishRound() {
+  if (!mg || mg.state === "result") return;
+  const g = mg.game, a = arcade, today = todayKey();
+  const info = { tier: mg.tier, score: mg.score };
+  let newBest = false;
+  if (g === "memory") {
+    info.stars = memStars(mg.moves, mg.pairs);
+    const t = mg.tier;
+    a.memWins[t]++;
+    if (!a.memBest[t] || mg.moves < a.memBest[t]) { newBest = a.memBest[t] > 0; a.memBest[t] = mg.moves; }
+    if (!a.memTime[t] || mg.time < a.memTime[t]) a.memTime[t] = Math.round(mg.time * 10) / 10;
+  } else {
+    info.stars = scoreStars(g, mg.score);
+    if (mg.score > a.best[g]) { newBest = a.best[g] > 0; a.best[g] = mg.score; }
+    if (g === "bubble") a.golden += mg.gold;
+  }
+  a.stars[g] = Math.max(a.stars[g], info.stars);
+  a.plays[g]++;
+  const base = roundBase(g, info);
+  const r = arcadeReward(g, base, today);
+  joy += r.hearts + r.daily;
+  mg.result = { stars: info.stars, base, hearts: r.hearts, daily: r.daily, capped: r.capped, newBest, unlockedNext: g === "memory" && mg.tier < 2 && a.memWins[mg.tier] === 1 };
+  mg.state = "result"; mg.rt = 0;
+  mg.bubbles && (mg.bubbles.length = 0);
+  sfxVictory(); buzz("unlock");
+  spawnConfetti(30);
+  checkAchievements();
+  save();
+}
+function drawStarShape(cx, cy, r, filled, k) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k);
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  ctx.closePath();
+  ctx.fillStyle = filled ? "#ffd84a" : "#e8dde6"; ctx.fill();
+  ctx.strokeStyle = filled ? "#b07a10" : "#c8b8c8"; ctx.lineWidth = 2.5; ctx.stroke();
+  if (filled) { ctx.fillStyle = "#fff4c0"; ctx.fillRect(-r * 0.35, -r * 0.35, r * 0.22, r * 0.22); }
+  ctx.restore();
+}
+function drawResultCard() {
+  const R = mg.result, t = mg.rt || 0;
+  ctx.fillStyle = "rgba(40,20,50," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
+  const ph = 372, top = Math.round(H / 2 - ph / 2);
+  const e = easeOutBack(Math.min(1, t / 0.4));
+  ctx.save();
+  ctx.translate(W / 2, top + ph / 2); ctx.scale(0.85 + 0.15 * e, 0.85 + 0.15 * e); ctx.translate(-W / 2, -(top + ph / 2));
+  solidPanel(24, top, W - 48, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const title = mg.game === "memory" ? "All matched!" : mg.game === "bubble" ? "Squeaky clean!" : "Yum, what a haul!";
+  ctx.fillStyle = C.text; font(21, true); ctx.fillText(title, W / 2, top + 32);
+  for (let i = 0; i < 3; i++) {
+    const st = t - 0.35 - i * 0.22;
+    const k = st <= 0 ? 0 : easeOutBack(Math.min(1, st / 0.3));
+    if (st > 0 && st - frameDt <= 0 && i < R.stars) sfxStar(i);
+    drawStarShape(W / 2 + (i - 1) * 56, top + 80 - (i === 1 ? 6 : 0), i === 1 ? 24 : 20, i < R.stars, Math.max(0.01, k));
+  }
+  ctx.fillStyle = C.textSoft; font(13, false);
+  let y = top + 128;
+  const A = arcade;
+  if (mg.game === "memory") {
+    ctx.fillText(MEM_TIERS[mg.tier].name + " · " + mg.moves + " moves · " + fmtClock(mg.time), W / 2, y);
+    ctx.fillText("Best: " + A.memBest[mg.tier] + " moves · " + fmtClock(A.memTime[mg.tier]), W / 2, y + 20);
+  } else {
+    ctx.fillText("Score " + mg.score + (mg.game === "bubble" ? " · " + mg.pops + " pops" : " · " + mg.caught + " treats"), W / 2, y);
+    ctx.fillText("Best: " + A.best[mg.game], W / 2, y + 20);
+  }
+  if (R.newBest) {
+    const wob = Math.sin(time * 5) * 0.05;
+    ctx.save(); ctx.translate(W - 70, top + 62); ctx.rotate(0.25 + wob);
+    ctx.fillStyle = "#ff6b9d"; roundRect(-34, -11, 68, 22, 11); ctx.fill();
+    ctx.fillStyle = "#fff"; font(11, true); ctx.fillText("New best!", 0, 1);
+    ctx.restore();
+  }
+  // our pal cheering in the middle of the card
+  const hop = Math.abs(Math.sin(t * 6)) * 8;
+  drawSprite(mg.critter, W / 2, top + 268 - hop, 2.0, false, 0, false, 11, { acc: equippedFor(mg.critter.id), heartEyes: true });
+  y += 56;
+  ctx.fillStyle = C.heart; font(24, true);
+  const tot = R.hearts + R.daily;
+  ctx.fillText("♥ +" + Math.floor(tot * Math.min(1, t / 0.9)), W / 2, y);
+  font(11, false); ctx.fillStyle = C.textSoft;
+  const parts = [];
+  if (R.hearts) parts.push(R.hearts + " for the round");
+  if (R.daily) parts.push(R.daily + " daily bonus ✦");
+  if (parts.length) ctx.fillText(parts.join(" + "), W / 2, y + 24);
+  if (R.capped) ctx.fillText("Today's round hearts are all collected, play just for fun!", W / 2, y + 42);
+  else if (R.unlockedNext) { ctx.fillStyle = "#3f9a48"; font(12, true); ctx.fillText("✿ " + MEM_TIERS[mg.tier + 1].name + " size unlocked!", W / 2, y + 42); }
+  ctx.restore();
+  uiButtons = [];
+  const by = top + ph - 66;
+  const hasNext = mg.game === "memory" && mg.tier < 2 && memTierOpen(mg.tier + 1);
+  const n = hasNext ? 3 : 2, gap = 8, bw = (W - 64 - gap * (n - 1)) / n;
+  const items = [["Again", "mg_again", C.btn, "#ff80b0"], ["Arcade", "mg_arcade", "#e8d0ff", "#c090e0"]];
+  if (hasNext) items.splice(1, 0, [MEM_TIERS[mg.tier + 1].name + " ▸", "mg_next", "#d0ffd8", "#70c080"]);
+  if (t > 0.5) items.forEach((it, i) => uiButtons.push(btn(32 + i * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
+}
+function drawMgPause() {
+  ctx.fillStyle = "rgba(40,20,50,0.45)"; ctx.fillRect(0, 0, W, H);
+  const top = Math.round(H / 2 - 190);
+  solidPanel(36, top, W - 72, 380);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(22, true); ctx.fillText("Paused", W / 2, top + 32);
+  ctx.fillStyle = C.textSoft; font(12, false); ctx.fillText(ARC_INFO[mg.game].name + " is waiting for you", W / 2, top + 58);
+  uiButtons = [];
+  uiButtons.push(btn(W / 2 - 100, top + 78, 200, 50, "Resume", { id: "mg_resume", size: 17 }));
+  toggleButtons(W / 2 - 100, top + 140, 200);
+  uiButtons.push(btn(W / 2 - 100, top + 252, 200, 46, "Restart", { id: "mg_again", size: 15, bg: "#d0ffd8", border: "#70c080" }));
+  uiButtons.push(btn(W / 2 - 100, top + 308, 200, 46, "Quit to Arcade", { id: "mg_quit", size: 15, bg: "#e8d0ff", border: "#c090e0" }));
+}
+function mgDown(p) {
+  if (!mg || mg.paused || mg.state === "result") return;
+  if (mg.game === "memory") {
+    if (mg.state !== "play") return;
+    const L = memLayout();
+    for (let i = 0; i < mg.cards.length; i++) { const R = memCardRect(i, L); if (pointIn(p.x, p.y, R.x - 3, R.y - 3, R.w + 6, R.h + 6)) { memTap(i); return; } }
+  } else if (mg.game === "bubble") { if (mg.state === "play") bubTap(p); }
+  else mg.tx = p.x;
+}
+function mgMove(p) { if (mg && mg.game === "treats" && !mg.paused && pointer.down) mg.tx = p.x; }
+function mgAction(id) {
+  if (!mg) return;
+  if (id === "mg_pause") { mgPause(); return; }
+  if (id === "mg_resume") { mg.paused = false; return; }
+  if (id === "mg_quit" || id === "mg_arcade") { quitMg(); return; }
+  if (id === "mg_again") { startMg(mg.game, mg.tier); return; }
+  if (id === "mg_next") { startMg("memory", Math.min(2, mg.tier + 1)); }
+}
+
+// ---------- arcade hub ----------
+function drawArcadePreview(game, cx, cy) {
+  if (game === "memory") {
+    ctx.save(); ctx.translate(cx - 12, cy); ctx.rotate(-0.15);
+    ctx.fillStyle = "#ff9ec8"; roundRect(-14, -18, 28, 36, 6); ctx.fill(); ctx.strokeStyle = "#e0608f"; ctx.lineWidth = 2; ctx.stroke();
+    drawPixelHeart(0, 0, 4, "#ff5a8a");
+    ctx.restore();
+    ctx.save(); ctx.translate(cx + 12, cy + 2); ctx.rotate(0.12);
+    ctx.fillStyle = "#fffaf2"; roundRect(-14, -18, 28, 36, 6); ctx.fill(); ctx.strokeStyle = "#ffb8d0"; ctx.lineWidth = 2; ctx.stroke();
+    drawSprite(ANIMALS[0], 0, 0, 0.9, false, 0, false, 1, null);
+    ctx.restore();
+  } else if (game === "bubble") {
+    const a = tubArt();
+    if (a) ctx.drawImage(a, cx - a.width / 2, cy - 2, a.width, a.height);
+    for (const [dx, dy, r] of [[-14, -14, 6], [4, -22, 8], [16, -10, 5]]) {
+      ctx.fillStyle = "rgba(220,240,255,0.7)"; ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#8ac0f0"; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  } else {
+    const a = basketArt(), c = treatArt("cookie"), b = treatArt("berry");
+    if (a) ctx.drawImage(a, cx - a.width, cy + 2, a.width * 2, a.height * 2);
+    if (c) ctx.drawImage(c, cx - 18, cy - 22, c.width * 2, c.height * 2);
+    if (b) ctx.drawImage(b, cx + 2, cy - 30, b.width * 2, b.height * 2);
+  }
+}
+function drawArcade() {
+  panelHeader("Arcade", "Hearts " + joy + " ♥ · a daily bonus in each game");
+  const top = 84, bottom = H - 76, n = 3, gap = 10;
+  const ch = Math.min(150, (bottom - top - gap * (n - 1)) / n);
+  const A = arcade;
+  ARC_GAMES.forEach((g, i) => {
+    const info = ARC_INFO[g], y = top + i * (ch + gap);
+    ctx.fillStyle = info.col; roundRect(22, y, W - 44, ch, 14); ctx.fill();
+    ctx.strokeStyle = info.border; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.6)"; roundRect(30, y + 8, 64, 64, 10); ctx.fill();
+    drawArcadePreview(g, 62, y + 40);
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text; font(15, true); ctx.fillText(info.name, 104, y + 20);
+    ctx.fillStyle = C.textSoft; fitFont(info.blurb, W - 150, 11, false, 8.5); ctx.fillText(info.blurb, 104, y + 38);
+    const best = g === "memory" ? (A.memBest.some(Boolean) ? "Best: " + A.memBest.map(b => b || "–").join(" / ") + " moves" : "No wins yet") : (A.best[g] ? "Best: " + A.best[g] : "No score yet");
+    ctx.fillText(best + "  " + "★".repeat(A.stars[g]) + "☆".repeat(3 - A.stars[g]), 104, y + 55);
+    const ready = dailyReady(g);
+    ctx.fillStyle = ready ? "#e05a90" : "#3f9a48"; font(10, true);
+    ctx.textAlign = "right";
+    ctx.fillText(ready ? "✦ Daily +" + ARC_DAILY + " ♥" : "✓ Daily done", W - 32, y + 20);
+    const by = y + ch - 52;
+    if (g === "memory") {
+      const bw = (W - 44 - 24 - 16) / 3;
+      MEM_TIERS.forEach((T, t) => {
+        const open = memTierOpen(t);
+        uiButtons.push(btn(34 + t * (bw + 8), by, bw, 44, (open ? "" : "🔒 ") + T.name + " " + T.cols + "×" + T.rows, {
+          id: open ? "arc_memory_" + t : "arc_locked_" + t, size: open ? 12 : 10.5,
+          bg: open ? "#fff" : "#eee4ea", border: open ? info.border : "#d8c8d0", color: open ? C.btnText : "#a898a8",
+        }));
+      });
+    } else {
+      uiButtons.push(btn(W - 158, by, 124, 44, "Play ▸", { id: "arc_" + g, size: 15, bg: "#fff", border: info.border }));
+    }
+  });
+  panelFooter();
+}
+function arcadeAction(id) {
+  if (id.startsWith("arc_memory_")) { startMg("memory", +id.slice(11)); return; }
+  if (id.startsWith("arc_locked_")) { const t = +id.slice(11); toast("Win " + MEM_TIERS[t - 1].name + " first to unlock", C.textSoft); return; }
+  if (id === "arc_bubble" || id === "arc_treats") startMg(id.slice(4));
+}
+
+// ---------- sounds ----------
+function sfxFlip() {
+  const t = sfxT(); if (t < 0) return;
+  noiseHit(A.sfxBus, t, 0.06, 0.08, "bandpass", 3000, 1.2, 1500);
+  tone(A.sfxBus, "triangle", 660, t, 0.02, 0.05, { a: 0.003, d: 0.04, s: 0.3, r: 0.05, slideTo: 880, slideT: 0.05 });
+}
+function sfxMatch(n) {
+  const t = sfxT(); if (t < 0) return;
+  const b = Math.min(n, 6);
+  [0, 2, 4].forEach((k, i) => tone(A.sfxBus, "triangle", penta(b + k + 3, 72), t + i * 0.06, 0.04, 0.1, { a: 0.004, d: 0.08, s: 0.35, r: 0.14 }));
+}
+function sfxMiss() {
+  const t = sfxT(); if (t < 0) return;
+  tone(A.sfxBus, "sine", 392, t + 0.12, 0.05, 0.07, { a: 0.004, d: 0.08, s: 0.3, r: 0.1, slideTo: 330, slideT: 0.12 });
+}
+function sfxPop(combo) {
+  const t = sfxT(); if (t < 0) return;
+  noiseHit(A.sfxBus, t, 0.04, 0.09, "highpass", 2500, 0.8);
+  tone(A.sfxBus, "sine", penta(Math.min(combo, 14) + 4, 72), t, 0.015, 0.1, { a: 0.002, d: 0.05, s: 0.25, r: 0.08, slideTo: penta(Math.min(combo, 14) + 6, 72), slideT: 0.05 });
+}
+function sfxCatch(combo) {
+  const t = sfxT(); if (t < 0) return;
+  tone(A.sfxBus, A.pulse25, penta(Math.min(combo, 14) + 3, 72), t, 0.03, 0.07, { a: 0.003, d: 0.06, s: 0.3, r: 0.08 });
+  tone(A.sfxBus, "sine", penta(Math.min(combo, 14) + 5, 72), t + 0.05, 0.02, 0.06, { a: 0.003, d: 0.06, s: 0.3, r: 0.1 });
+}
+function sfxOops() {
+  const t = sfxT(); if (t < 0) return;
+  noiseHit(A.sfxBus, t, 0.2, 0.12, "lowpass", 900, 0.8, 300);
+  tone(A.sfxBus, "triangle", 300, t, 0.08, 0.08, { a: 0.005, d: 0.1, s: 0.4, r: 0.1, slideTo: 200, slideT: 0.18 });
+}
+function sfxTick() { const t = sfxT(); if (t < 0) return; tone(A.sfxBus, "sine", 880, t, 0.02, 0.07, { a: 0.003, d: 0.05, s: 0.3, r: 0.06 }); }
+function sfxGo() { const t = sfxT(); if (t < 0) return; tone(A.sfxBus, "triangle", 1320, t, 0.08, 0.09, { a: 0.004, d: 0.1, s: 0.5, r: 0.15 }); }
+function sfxWhistle() {
+  const t = sfxT(); if (t < 0) return;
+  tone(A.sfxBus, "sine", 1200, t, 0.12, 0.07, { a: 0.01, d: 0.05, s: 0.8, r: 0.08, slideTo: 1500, slideT: 0.1 });
+  tone(A.sfxBus, "sine", 1500, t + 0.16, 0.18, 0.07, { a: 0.01, d: 0.05, s: 0.8, r: 0.12 });
+}
+function sfxGiggle() {
+  const t = sfxT(); if (t < 0) return;
+  [0, 1, 2, 3].forEach(i => tone(A.sfxBus, "triangle", 700 + i * 60 + (i % 2) * 140, t + i * 0.08, 0.03, 0.07, { a: 0.003, d: 0.05, s: 0.3, r: 0.06, slideTo: 900 + i * 60, slideT: 0.05 }));
+}
+function sfxStar(i) {
+  const t = sfxT(); if (t < 0) return;
+  tone(A.sfxBus, "triangle", mtof(76 + i * 4), t, 0.05, 0.1, { a: 0.004, d: 0.1, s: 0.4, r: 0.2 });
+  tone(A.sfxBus, "sine", mtof(88 + i * 4), t + 0.03, 0.04, 0.05, { a: 0.004, d: 0.1, s: 0.3, r: 0.2 });
+}
+
+document.addEventListener("visibilitychange", () => { if (document.hidden) mgOnHidden(); });
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -6947,7 +8000,8 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         critterHugs, friendLvl, ownedAcc, equipped, musicOn, sfxOn, uiButtons, H, combo, magnetT, slowT, levelUpFx,
         listMax, listScroll, unlocked, achievements, giftStreak, lastGiftDay,
         tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time,
-        garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene };
+        garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
+        arcade, mg, ownedAcc, musicMode: music.modeKey };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -6957,6 +8011,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
       else if (k === "garden") { garden = normalizeGarden(v); cozyCache = -1; }
       else if (k === "gSel") gSel = v;
       else if (k === "lastActiveLoaded") lastActiveLoaded = v;
+      else if (k === "arcade") arcade = normalizeArcade(v);
     },
     music, SONGS, SONG_ERRORS, frame, ensureAudio, musicTick, startEvent, spawnPowerup, activatePowerup,
     hugCritter, doUI, save, load, openGift, checkDailyGift, setMusicOn, setSfxOn, playTap, targetTier,
@@ -6965,6 +8020,9 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     openGarden, leaveGarden, placeFromInv, buyDecor, gardenAction, gardenCozy, normalizeGarden, serializeGarden, spawnVisitor,
     updateGarden, collectBubble, dropBubble, openAway, collectAway, checkAwayOnBoot, decorUnlocked, toolbarRect, AWAY_CAP, AWAY_MIN,
     gardenDown, gardenMove, gardenUp, checkAchievements, GOALS,
+    ARC_GAMES, ARC_DAILY, ARC_DAY_CAP, ARC_SCORE_CAP, MEM_TIERS, ROUND_SECS, BUB_STARS, TRT_STARS, ARCADE_SONGS, ACCESSORIES,
+    openArcade, startMg, quitMg, memTap, memCardRect, memLayout, memStars, scoreStars, roundBase, arcadeReward, finishRound,
+    bubTap, bubPop, trtCatch, mgDown, mgMove, mgAction, mgOnHidden, normalizeArcade, memTierOpen, todayKey, setMusicMode,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
