@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="8.0-adventure">
+<meta name="hc-version" content="9.0-comforts">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -50,14 +50,21 @@
     cursor: pointer;
     touch-action: none;
   }
+  #hcnote { position: fixed; z-index: 6; }
+  #hcnote textarea {
+    width: 100%; height: 100%; resize: none; border: none; outline: none;
+    background: transparent; color: #4a3050; font: 13px/1.35 "Segoe UI", system-ui, sans-serif;
+    padding: 8px; user-select: text; -webkit-user-select: text; touch-action: auto;
+  }
 </style>
 </head>
 <body>
 <div id="wrap"><canvas id="c"></canvas></div>
+<div id="hcnote" hidden><textarea id="hcnote-text" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></div>
 <script>
 (() => {
 "use strict";
-// Happy Critters v8 — The Gloom King’s Hug: a storybook adventure across five regions
+// Happy Critters v9 — Little Comforts: backup codes, relaxed stages, dream jar, nicknames, postcards
 
 const W = 360;
 let H = 540;
@@ -66,7 +73,7 @@ const COMBO_WINDOW = 1.4;
 const SPAWN_BASE = 0.95;
 const SAVE_KEY = "happyCritters_v2";
 const SAVE_KEY_V1 = "happyCritters_v1";
-const SAVE_VER = 8;
+const SAVE_VER = 9;
 
 const C = {
   white: "#fffaf5", text: "#4a3050", textSoft: "#7a5a70",
@@ -3325,6 +3332,12 @@ const GOALS = [
   { id: "adv_stars25", label: "Collect 25 adventure stars", check: s => advTotalStars(s.adv) >= 25, reward: 200 },
   { id: "adv_stars45", label: "Collect all 45 adventure stars", check: s => advTotalStars(s.adv) >= 45, reward: 500 },
   { id: "adv_gloomlings", label: "Shoo or hug 60 gloomlings on adventures", check: s => s.adv.gloomHugs >= 60, reward: 120 },
+  // v9: little comforts
+  { id: "dream1", label: "Tuck a dream in the jar", check: s => !!(s.kind && s.kind.dream), reward: 40 },
+  { id: "name1", label: "Give a friend a nickname", check: s => !!(s.kind && Object.keys(s.kind.names).length), reward: 40 },
+  { id: "week1", label: "Finish a weekly challenge", check: s => s.kind && s.kind.weeks >= 1, reward: 80 },
+  { id: "card1", label: "Make a cozy postcard", check: s => s.kind && s.kind.postcards >= 1, reward: 40 },
+  { id: "chal1", label: "Try a Star Challenge stage", check: s => s.kind && s.kind.chalTries >= 1, reward: 60 },
 ];
 
 const POWERUPS = {
@@ -3472,6 +3485,8 @@ function load() {
     seasons = normalizeSeasons(d.seasons);
     // v8: adventure progress (older saves start at the beginning of the storybook)
     adv = normalizeAdv(d.adv);
+    // v9: comforts (older saves get the gentle defaults)
+    kind = normalizeKind(d.kind);
     if (!isFinite(joy)) joy = 0;
     if (!isFinite(mood)) mood = 8;
     if (!isFinite(moodPeak)) moodPeak = mood;
@@ -3489,6 +3504,7 @@ function save() {
       lastGiftDay, giftStreak, bestGiftStreak, giftsOpened, stats, albumNew,
       hapticsOn, tutorialDone, lastVersionSeen,
       garden: serializeGarden(), lastActive: Date.now(), arcade, seasons, adv,
+      kind: kindSnapshot(),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -4227,6 +4243,7 @@ function viewportSize() {
 
 const fontCache = new Map();
 function font(px, bold) {
+  if (typeof kind !== "undefined" && kind && kind.big) px = Math.round(px * 1.25);
   const k = bold ? -px : px;
   let f = fontCache.get(k);
   if (!f) { f = (bold ? "bold " : "") + px + 'px "Segoe UI", system-ui, sans-serif'; if (fontCache.size < 300) fontCache.set(k, f); }
@@ -4696,8 +4713,8 @@ function hugCritter(c, moodScale) {
   c.idle = null; c.idleT = 6 + Math.random() * 8;
   c.state = "happy";
   c.stateT = 0;
-  c.hugScale = 1.12;
-  c.sqT = 0; c.sqAmp = wasSad || c.shiny ? 0.34 : 0.27;
+  c.hugScale = (typeof kind !== "undefined" && kind && kind.motion) ? 1 : 1.12;
+  c.sqT = 0; c.sqAmp = (typeof kind !== "undefined" && kind && kind.motion) ? 0 : (wasSad || c.shiny ? 0.34 : 0.27);
   c.sad = false;
   c.dancing = mood >= 100;
   c.hugs++;
@@ -4750,7 +4767,9 @@ function hugCritter(c, moodScale) {
     sfxHug(mult);
   }
   if (mult >= 3) sfxCombo(mult);
-  if (mult >= 5) screenPulse = Math.min(0.6, 0.15 + mult * 0.025);
+  if (mult >= 5 && !(typeof kind !== "undefined" && kind && kind.motion)) screenPulse = Math.min(0.6, 0.15 + mult * 0.025);
+  maybeEncourage(c);
+  weekBump("hugs");
   comboBump = 1;
   if (milestone) { comboPop = 1; popFx(c.x, c.y - 6, mult >= 12 ? "#ffd700" : "#ff9ec8", 0.9 + Math.min(0.8, mult * 0.03)); }
   buzz(milestone || wasSad || c.shiny ? "combo" : "hug");
@@ -4865,8 +4884,11 @@ function updateCritter(c, dt) {
     }
   } else if (c.state === "happy") {
     c.stateT += dt;
-    c.y = c.baseY + Math.sin(c.stateT * 18) * 10 * Math.max(0, 1 - c.stateT);
-    c.hugScale = 1 + Math.sin(c.stateT * 12) * 0.06 * Math.max(0, 1 - c.stateT);
+    if (typeof kind !== "undefined" && kind && kind.motion) { c.y = c.baseY; c.hugScale = 1; }
+    else {
+      c.y = c.baseY + Math.sin(c.stateT * 18) * 10 * Math.max(0, 1 - c.stateT);
+      c.hugScale = 1 + Math.sin(c.stateT * 12) * 0.06 * Math.max(0, 1 - c.stateT);
+    }
     if (c.stateT > 0.55) {
       if (c.parade) {
         c.state = "leave"; c.stateT = 0; c.vx = (c.vx >= 0 ? 1 : -1) * 70;
@@ -4892,6 +4914,7 @@ function updateCritter(c, dt) {
 
 const HEART_COLS = ["#ff6b9d", "#ff6b9d", "#ff8ab8", "#ffd0e0", "#ff5a8a"];
 function spawnHearts(x, y, n, burst) {
+  if (typeof kind !== "undefined" && kind && kind.motion) n = Math.min(n, 3);
   for (let i = 0; i < n; i++) {
     // burst: fan out upward in an arc, then drift up with a gentle wobble
     const a = burst ? -Math.PI / 2 + ((i + 0.5) / n - 0.5) * 2.4 + (Math.random() - 0.5) * 0.3 : 0;
@@ -4933,6 +4956,7 @@ const isRoamer = c => !c.parade;
 const isFloating = c => c.state === "float";
 const notDead = o => !o.dead;
 function spawnSparkles(x, y, n) {
+  if (typeof kind !== "undefined" && kind && kind.motion) n = Math.min(n, 2);
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
     const sp = 30 + Math.random() * 70;
@@ -4944,6 +4968,7 @@ function spawnSparkles(x, y, n) {
   }
 }
 function spawnConfetti(n) {
+  if (typeof kind !== "undefined" && kind && kind.motion) n = Math.min(n, 6);
   const cols = ["#ff6b9d", "#ffd700", "#70c0ff", "#90e070", "#c9a0ff", "#ff9e7a"];
   for (let i = 0; i < n; i++) {
     confetti.push({
@@ -4987,6 +5012,7 @@ function updateParticles(dt) {
     cf.vy += 20 * dt;
   }
   prune(confetti, c => c.life > 0 && c.y < H + 20);
+  if (typeof updateKindTalk === "function") updateKindTalk(dt);
   // banners wait politely while a friendship level-up card is showing
   if (storyBanner && !levelUpFx) {
     storyBanner.life -= dt;
@@ -5040,6 +5066,7 @@ function shooGloom(gc, moodAmt) {
   addFloat({ x: gc.x + 16 * gc.s, y: gc.y, text: label, life: 1.0, vy: -35, color: "#b8a0f0", size: 14 });
   checkAchievements();
   if (tut) tutEvent("shoo");
+  weekBump("shoo");
   saveSoon();
 }
 
@@ -5335,6 +5362,10 @@ function startPlay() {
   giftCheckT = 0;
   storyBanner = null; bannerQueue.length = 0;
   tut = null;
+  if (tutorialDone) {
+    if (typeof maybeCheerDream === "function") maybeCheerDream();
+    if (typeof weekHello === "function") weekHello();
+  }
   if (!tutorialDone) {
     storySeen[0] = true;
     startTutorial();
@@ -5769,7 +5800,7 @@ function drawBackground() {
   for (let i = 0; i < (wc.season === "winter" ? 0 : 48); i++) {
     const gx = (i * 31 + 5) % W;
     const gy = H - 58;
-    const sway = Math.sin(time * 2.2 + i) * 3;
+    const sway = (typeof kind !== "undefined" && kind && kind.motion) ? 0 : Math.sin(time * 2.2 + i) * 3;
     ctx.beginPath();
     ctx.moveTo(gx, gy + 12);
     ctx.quadraticCurveTo(gx + sway, gy - 4, gx + sway * 1.4, gy - 16);
@@ -5780,7 +5811,7 @@ function drawBackground() {
     const f = flowers[i];
     const bloom = Math.min(1, Math.max(0, (wc.t - 0.15) / 0.55 + f.bloom * 0.2));
     if (bloom < 0.05) continue;
-    const sway = Math.sin(time * 1.5 + f.phase) * 2.2;
+    const sway = (typeof kind !== "undefined" && kind && kind.motion) ? 0 : Math.sin(time * 1.5 + f.phase) * 2.2;
     ctx.globalAlpha = bloom;
     drawSeasonFlower(f, bloom, sway, wc.grass, wc.season, i);
     ctx.globalAlpha = 1;
@@ -5808,7 +5839,7 @@ function applyWorldFilter() {
     ctx.fillStyle = "rgba(160,165,175," + ((1 - t) * 0.22) + ")";
     ctx.fillRect(0, 0, W, H);
   }
-  if (screenPulse > 0) {
+  if (screenPulse > 0 && !(typeof kind !== "undefined" && kind && kind.motion)) {
     ctx.fillStyle = "rgba(255,200,230," + (screenPulse * 0.22) + ")";
     ctx.fillRect(0, 0, W, H);
   }
@@ -5845,7 +5876,7 @@ function btn(x, y, w, h, label, opts) {
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.fillStyle = opts.color || C.btnText;
-  ctx.font = "bold " + (opts.size || 16) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.font = "bold " + ((opts.size || 16) * (typeof kind !== "undefined" && kind && kind.big ? 1.25 : 1)) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label, x + w / 2, y + h / 2 + 1);
@@ -5873,6 +5904,7 @@ function drawMoodMeter(x, y, w, h) {
   ctx.fillStyle = grad;
   roundRect(x, y, fw, h, h / 2);
   ctx.fill();
+  if (typeof drawMeterPattern === "function") drawMeterPattern(x, y, w, h, t);
   ctx.strokeStyle = "rgba(255,255,255,0.5)";
   ctx.lineWidth = 1.5;
   roundRect(x, y, w, h, h / 2);
@@ -5882,7 +5914,7 @@ function drawMoodMeter(x, y, w, h) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "rgba(74,48,80,0.85)";
-  ctx.fillText("Joy " + Math.floor(mood) + "%", x + w / 2, y + h / 2 + 0.5);
+  ctx.fillText(typeof meterLabel === "function" ? meterLabel() : "Joy " + Math.floor(mood) + "%", x + w / 2, y + h / 2 + 0.5);
 }
 
 function easeOutBack(t) { const c = 1.7; t = clamp(t, 0, 1) - 1; return 1 + (c + 1) * t * t * t + c * t * t; }
@@ -6028,7 +6060,7 @@ function checkAchievements() {
     cloudsShooed, sadCheered, moodPeak, dawnCount,
     friendLvl, ownedAcc, equipped, stats, giftsOpened, bestGiftStreak,
     gardenPlaced: garden.placedEver, cozy: gardenCozy(), gardenVisits: garden.visits,
-    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(), arcade, seasons, adv,
+    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(), arcade, seasons, adv, kind,
   };
   for (const g of GOALS) {
     if (achievements[g.id]) continue;
@@ -6118,7 +6150,7 @@ function heartRow(x, y, lvl, size) {
 // ===================== DRAW: WORLD OBJECTS =====================
 const critterFx = { acc: null, heartEyes: false, rot: 0, nap: false, sq: 0 }; // reused every frame
 function drawCritter(c) {
-  const bounce = c.state === "happy" ? Math.sin(c.stateT * 18) * 8
+  const bounce = (typeof kind !== "undefined" && kind && kind.motion) ? 0 : c.state === "happy" ? Math.sin(c.stateT * 18) * 8
     : c.dancing ? Math.sin(c.phase * 2) * 6
     : (c.idle === "wave" && c.state === "float") ? -Math.abs(Math.sin(time * 9)) * 4 : 0;
   let rot = 0;
@@ -6129,7 +6161,7 @@ function drawCritter(c) {
   if (c.state === "float" && !c.sad) sq += Math.sin(c.phase * 0.9) * (c.idle === "nap" ? 0.035 : 0.02);
   const fx = critterFx;
   fx.acc = equippedFor(c.animal.id); fx.heartEyes = c.heartEyesT > 0; fx.rot = rot;
-  fx.nap = c.idle === "nap" && c.state === "float"; fx.sq = sq;
+  fx.nap = c.idle === "nap" && c.state === "float"; fx.sq = (typeof kind !== "undefined" && kind && kind.motion) ? 0 : sq;
   if (c.idle === "gaze" && c.state === "float") fx.rot = -0.14;
   drawCritterGlow(c);
   drawSprite(c.animal, c.x, c.y, c.scale * c.hugScale, c.shiny, bounce, c.sad, c.phase, fx);
@@ -6453,6 +6485,8 @@ function renderPlay() {
   drawSeasonEvent();
   for (const p of powerups) drawPowerup(p);
   ctx.restore();
+  drawDreamJar();
+  drawKindTalk();
   drawHUD();
   if (tut && scene === "play") drawTutorial();
   drawStoryBanner();
@@ -6588,7 +6622,7 @@ function drawShop() {
 function drawAlbum() {
   const count = ANIMALS.filter(a => unlocked[a.id]).length;
   panelHeader("Critter Album", count + "/" + ANIMALS.length + " friends · hug to level up ♥");
-  const top = 78, bottom = H - 74, rowH = 86;
+  const top = 78, bottom = H - 74, rowH = 108;
   setListExtent(top, bottom, ANIMALS.length * rowH + 4);
   listClip(top, bottom);
   ANIMALS.forEach((a, i) => {
@@ -6604,8 +6638,8 @@ function drawAlbum() {
     if (owned) {
       drawSprite(a, 58, y + 38, 1.85, false, Math.sin(time * 3 + i) * 2, false, i * 40, { acc: equippedFor(a.id) });
       ctx.fillStyle = C.text;
-      fitFont(a.name, 140, 14, true);
-      ctx.fillText(a.name, 98, y + 15);
+      fitFont(palName(a), 130, 14, true);
+      ctx.fillText(palName(a), 98, y + 15);
       heartRow(104, y + 34, lvl, 5);
       font(10, true); ctx.fillStyle = C.heart;
       ctx.fillText("Lv " + lvl, 176, y + 35);
@@ -6618,9 +6652,12 @@ function drawAlbum() {
       const cur = equippedFor(a.id);
       const opts = accOptions(a.id);
       const label = cur ? ACCESSORIES.find(x => x.id === cur).short : (opts.length ? "Wear…" : "None");
-      listBtn(W - 108, y + 6, 78, 42, label, {
+      listBtn(W - 116, y + 8, 86, 44, label, {
         id: "wear_" + a.id, size: 12, r: 10,
         bg: cur ? "#fff0b0" : "#f5e6ee", border: cur ? "#e0c060" : "#d0b0c0",
+      }, top, bottom);
+      listBtn(W - 116, y + 56, 86, 44, kind.names[a.id] ? "Rename" : "Name", {
+        id: "name_" + a.id, size: 12, r: 10, bg: "#fff", border: "#e0b0c8",
       }, top, bottom);
     } else {
       ctx.save(); ctx.globalAlpha = 0.18;
@@ -6677,7 +6714,7 @@ function toggleButtons(x, y, w) {
 }
 
 const SETTINGS_H = 480;
-function drawSettings() {
+function drawSettings() { drawKindSettings(); return; if (false) {
   drawBackground();
   applyWorldFilter();
   const top = Math.round(H / 2 - SETTINGS_H / 2);
@@ -6719,11 +6756,12 @@ function drawSettings() {
   ctx.fillText("Happy Critters " + APP_LABEL + " · " + (isStandalone() ? "Home Screen app" : "made with ♥"), W / 2, top + 464);
 }
 
+}
 function drawPause() {
   ctx.fillStyle = "rgba(40,20,50,0.45)";
   ctx.fillRect(0, 0, W, H);
   const top = Math.round(H / 2 - 175);
-  panelBox(36, top, W - 72, 350);
+  panelBox(36, top, W - 72, 400);
   ctx.fillStyle = C.text;
   font(24, true);
   ctx.textAlign = "center";
@@ -6737,8 +6775,9 @@ function drawPause() {
   toggleButtons(W / 2 - 100, top + 146, 200);
   uiButtons.push(btn(W / 2 - 100, top + 262, 96, 46, "Settings", { id: "settings", size: 14, bg: "#d0e8ff", border: "#80b0e0" }));
   uiButtons.push(btn(W / 2 + 4, top + 262, 96, 46, "Title", { id: "title", size: 15, bg: "#e8d0ff", border: "#c090e0" }));
+  uiButtons.push(btn(W / 2 - 100, top + 314, 200, 44, "Postcard", { id: "postcard", size: 14, bg: "#fff0f8", border: "#e090b0" }));
   ctx.fillStyle = C.textSoft; font(10, false);
-  ctx.fillText("Hugs " + totalHugs + " · Best combo " + highCombo + "×", W / 2, top + 328);
+  ctx.fillText("Hugs " + totalHugs + " · Best combo " + highCombo + "×", W / 2, top + 376);
 }
 
 // ===================== UI ACTIONS =====================
@@ -6754,6 +6793,7 @@ function openPanel(name) {
 function doUI(id) {
   if (!id) return;
   sfxClick();
+  if (kindAction(id)) return;
   if (id === "play") { startPlay(); return; }
   if (id === "tut_next") { tutNext(); return; }
   if (id === "tut_skip") { finishTutorial(true); return; }
@@ -6765,7 +6805,7 @@ function doUI(id) {
   if (id === "dawn") { newDawn(); return; }
   if (id === "shop") { if (tut && tut.step === 3) finishTutorial(false, true); shopTab = "critters"; openPanel("shop"); return; }
   if (id === "ach") { checkAchievements(); openPanel("achievements"); return; }
-  if (id === "album") { albumNew = false; openPanel("album"); save(); return; }
+  if (id === "album") { albumNew = false; openPanel("album"); weekBump("album"); save(); return; }
   if (id === "settings") { openPanel("settings"); return; }
   if (id === "seasons") { scene = "seasons"; return; }
   if (id.startsWith("sea_")) { seasonsAction(id); return; }
@@ -6848,7 +6888,7 @@ function canvasPos(e) {
   const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
   return { x: ((clientX - r.left) / r.width) * W, y: ((clientY - r.top) / r.height) * H };
 }
-const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true };
+const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true, settings: true };
 const dist2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
 
 function tapGloom(p) {
@@ -6892,6 +6932,7 @@ function playTap(p) {
     const rad = Math.max(24, c.scale * SPRITE_SIZE * 0.55);
     if (dist2(p.x, p.y, c.x, c.y) < rad * rad) { petCritter(c); return; }
   }
+  if (tapDreamJar(p)) return;
 }
 
 canvas.addEventListener("pointerdown", (e) => {
@@ -6981,6 +7022,8 @@ window.addEventListener("keydown", (e) => {
     else if (scene === "garden") { if (gSel) gSel = null; else leaveGarden(); }
     else if (scene === "decor") scene = "garden";
     else if (scene === "seasons") scene = "settings";
+    else if (scene === "rename") { scene = "album"; hideNote(); }
+    else if (isKindScene(scene)) { hideNote(); scene = prevScene || "title"; }
     else if (inPanel) scene = prevScene;
   }
   if ((k === "Enter" || k === " ") && scene === "whatsnew") closeWhatsNew();
@@ -7049,6 +7092,8 @@ function stepScene(dt) {
   } else if (isAdvScene(scene)) {
     advStep(dt);
     advDraw();
+  } else if (isKindScene(scene)) {
+    drawKindScene();
   } else if (scene === "away") {
     if (awayReturn === "title") updateTitle(dt);
     else if (awayReturn === "garden") updateGarden(dt);
@@ -7057,6 +7102,8 @@ function stepScene(dt) {
   } else {
     scene = "title"; // unknown scene: never get stuck on a blank screen
   }
+  if (postcardArm) finishPostcard();
+  if (typeof syncNote === "function") syncNote();
   flushSave(dt);
 }
 
@@ -7084,19 +7131,19 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 8;
-const APP_LABEL = "v8";
+const APP_VERSION = 9;
+const APP_LABEL = "v9";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "The Gloom King's Hug",
-  pals: ["squirrel", "owl", "turtle", "bat"],
+  sub: "Little Comforts",
+  pals: ["cat", "bunny", "penguin", "gloomking"],
   items: [
-    "A storybook Adventure: tap Adventure ✦",
-    "5 gray regions to bring back to color",
-    "15 stages with fog, puddles & wind",
-    "Rescue 5 new friends along the way",
-    "Meet the grumpy (lonely) Gloom King",
-    "Earn stars for map treasures ★",
+    "Settings: a backup code you can copy",
+    "Relaxed stages, with no timer",
+    "A Dream Jar your critters cheer",
+    "Nicknames, postcards, gentler motion",
+    "A small challenge each week",
+    "Star Challenge, after the King",
   ],
 };
 
@@ -8123,7 +8170,7 @@ function drawVisitor(v) {
   if (hide) return;
   const fx = visitorFx;
   fx.acc = equippedFor(v.animal.id); fx.heartEyes = v.heartT > 0; fx.rot = rot; fx.nap = nap; fx.flip = v.face < 0;
-  fx.sq = act === "sit" || act === "tea" ? 0.04 : 0;
+  fx.sq = (typeof kind !== "undefined" && kind && kind.motion) ? 0 : (act === "sit" || act === "tea" ? 0.04 : 0);
   let a = 1;
   if (act === "house") a = v.t < 0.45 ? 1 - v.t / 0.45 : Math.min(1, (v.t - (v.dur - 0.5)) / 0.5);
   if (a < 1) ctx.globalAlpha = Math.max(0, a);
@@ -8217,8 +8264,9 @@ function drawGardenHUD() {
     const gap = 6, bw = (W - 16 - gap * (items.length - 1)) / items.length;
     items.forEach((b, i) => uiButtons.push(btn(8 + i * (bw + gap), by, bw, 44, b[0], { id: b[1], size: 13, bg: b[2], border: b[3] })));
   } else {
-    uiButtons.push(btn(8, by, 116, 44, "◂ Back", { id: "close", size: 14, bg: "#f5e6ee", border: "#d0b0c0" }));
-    uiButtons.push(btn(132, by, W - 140, 44, "✿ Decor Shop", { id: "decor", size: 15, bg: "#d0ffd8", border: "#70c080" }));
+    uiButtons.push(btn(8, by, 86, 44, "◂ Back", { id: "close", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
+    uiButtons.push(btn(100, by, 108, 44, "Postcard", { id: "postcard", size: 13, bg: "#fff0f8", border: "#e090b0" }));
+    uiButtons.push(btn(214, by, W - 222, 44, "✿ Decor", { id: "decor", size: 14, bg: "#d0ffd8", border: "#70c080" }));
   }
 }
 
@@ -8230,6 +8278,7 @@ function openGarden() {
   for (const it of garden.items) { it.occ = null; it.wig = 0; it.swA = 0; }
   visitorT = 0.6;
   if (isNight() && !seasons.lanternNight) { seasons.lanternNight = true; checkAchievements(); }
+  weekBump("garden");
   if (!garden.welcomed) {
     // a little housewarming gift so the yard is never empty on day one
     garden.welcomed = true;
@@ -8730,6 +8779,7 @@ function startMg(game, tier) {
     critter: arcCritter(), sadT: 0, happyT: 0, result: null, pops: 0, oops: 0, gold: 0, caught: 0 };
   scene = "mg";
   particles.length = 0; floatTexts.length = 0;
+  weekBump("arcade");
   setMusicMode(game);
   if (game === "memory") memInit();
   else if (game === "bubble") { mg.bubbles = []; mg.spawnT = 0.2; }
@@ -10283,12 +10333,8 @@ const advHasTreasure = (a, k) => advTotalStars(a) >= ADV_TREASURES[k].at;
 function advGoalsMet(def, res) {
   if (!res.win) return 0;
   let m = 1;
-  if (res.time <= def.par) m |= 2;
-  const x = def.x, n = x.n;
-  const ok = x.k === "combo" ? res.bestCombo >= n : x.k === "shoo" ? res.shoo >= n : x.k === "cheer" ? res.cheer >= n
-    : x.k === "fog" ? res.fog >= n : x.k === "lily" ? res.lily >= n : x.k === "gust" ? res.gust >= n
-    : x.k === "nosplit" ? res.splits === 0 : x.k === "waves" ? res.missed <= n : false;
-  if (ok) m |= 4;
+  if (advSecondStar(def, res)) m |= 2;
+  if (advThirdStar(def, res)) m |= 4;
   return m;
 }
 // hearts are a friendly bonus: a first win, each new star, and a little something for replays
@@ -10405,6 +10451,7 @@ function advStartStage(i, skipCut) {
   }
   setMusicMode(def.finale ? "adv_king" : "adv_r" + r);
   adv.plays++;
+  if (kind.challenge) { kind.chalTries++; saveSoon(); }
   return true;
 }
 function advSpawnPal() {
@@ -10542,7 +10589,7 @@ function advUpdate(dt) {
     else {
       advUpdateWorld(dt);
       if (st.meter >= 100 && (!st.def.rescue || st.rescued)) advFinish(true);
-      else if (st.time >= st.def.dur) advFinish(false);
+      else if (!kind.relaxed && st.time >= st.def.dur) advFinish(false);
     }
   } else if (st.state === "result") {
     st.rt += dt;
@@ -10645,7 +10692,7 @@ function advUpdateWorld(dt) {
 function advFinish(win) {
   if (!st || st.state === "result") return;
   const i = st.i, def = st.def, r = st.r;
-  const res = { win, time: st.time, bestCombo: st.bestCombo, shoo: st.shoo, cheer: st.cheer, fog: st.fog, lily: st.lily, gust: st.gust, splits: st.splits, missed: st.missed };
+  const res = { win, time: st.time, bestCombo: st.bestCombo, shoo: st.shoo, cheer: st.cheer, fog: st.fog, lily: st.lily, gust: st.gust, splits: st.splits, missed: st.missed, hugs: st.hugs, allHi: !!(st.fin && st.fin.friends.length && st.fin.friends.every(f => f.state !== "wait")) };
   const prev = adv.gm[i], mask = advGoalsMet(def, res);
   const wasRegionDone = advRegionDone(adv, r);
   adv.gm[i] = prev | mask;
@@ -10826,12 +10873,16 @@ function drawAdvHud() {
   roundRect(8, 8, W - 16, 62, 12); ctx.fill();
   ctx.strokeStyle = C.panelBorder; ctx.lineWidth = 2; ctx.stroke();
   ctx.textBaseline = "middle"; ctx.textAlign = "left";
-  ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText(R.name + " · " + (st.i % 3 + 1) + "/3", 18, 22);
+  ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText(R.name + " · " + (st.i % 3 + 1) + "/3" + (kind.challenge ? "  ★" : "") + (kind.relaxed ? "  ✿" : ""), 18, 22);
   ctx.fillStyle = C.text; fitFont(def.name, W - 150, 14, true, 10); ctx.fillText(def.name, 18, 39);
   if (!def.finale) {
-    const left = Math.max(0, def.dur - st.time);
-    ctx.textAlign = "right"; ctx.fillStyle = left < 15 ? "#e0608f" : C.textSoft; font(12, true);
-    ctx.fillText("⏱ " + fmtClock(Math.ceil(left)), W - 70, 30);
+    ctx.textAlign = "right"; font(12, true);
+    if (kind.relaxed) { ctx.fillStyle = "#3f9a48"; ctx.fillText("✿ no timer", W - 70, 30); }
+    else {
+      const left = Math.max(0, def.dur - st.time);
+      ctx.fillStyle = left < 15 ? "#e0608f" : C.textSoft;
+      ctx.fillText("⏱ " + fmtClock(Math.ceil(left)), W - 70, 30);
+    }
   }
   // color meter
   const x = 18, y = 52, w = W - 36, k = st.meter / 100;
@@ -10907,7 +10958,7 @@ function drawAdvIntro() {
 }
 function advGoalTexts(i) {
   const d = ADV_STAGES[i];
-  return [d.finale ? "Befriend the Gloom King" : d.rescue ? "Bring back the color & rescue a friend" : "Bring back the color", d.finale ? "Finish within " + fmtClock(d.par) : "Finish within " + fmtClock(d.par), d.x.text];
+  return [d.finale ? "Befriend the Gloom King" : d.rescue ? "Bring back the color & rescue a friend" : "Bring back the color", advSecondText(d), advThirdText(d)];
 }
 function drawAdvResult() {
   const R = st.result, t = st.rt;
@@ -11295,11 +11346,16 @@ function drawAdvMap() {
   if (T(0)) { const cols = ["#ff9ec8", "#ffd66b", "#90e070", "#70c0ff", "#c9a0ff"]; for (let k = 0; k < 13; k++) { const x = 20 + k * ((W - 40) / 12); ctx.fillStyle = cols[k % 5]; ctx.beginPath(); ctx.moveTo(x - 6, 70); ctx.lineTo(x + 6, 70); ctx.lineTo(x, 80 + Math.sin(time * 2 + k) * 1.5); ctx.fill(); } }
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = C.text; font(18, true); ctx.fillText("✦ Storybook Adventure ✦", W / 2, 30);
-  ctx.fillStyle = "#b07a10"; font(12, true); ctx.fillText("★ " + tot + " / " + ADV_N * 3 + (adv.king ? "  ·  The Gloom King is your friend ♥" : "  ·  Bring the colors home"), W / 2, 53);
+  ctx.fillStyle = "#b07a10"; font(12, true);
+  const sub = "★ " + tot + " / " + ADV_N * 3 + (kind.challenge ? "  ·  Star Challenge" : adv.king ? "  ·  The Gloom King is your friend ♥" : "  ·  Bring the colors home");
+  fitFont(sub, W - 36, 12, true, 9); ctx.fillText(sub, W / 2, 53);
   if (T(5)) { ctx.strokeStyle = "#e8b830"; ctx.lineWidth = 4; roundRect(3, 3, W - 6, H - 6, 16); ctx.stroke(); for (const [x, y] of [[10, 10], [W - 10, 10], [10, H - 10], [W - 10, H - 10]]) drawSparkle(x, y, 4 + Math.sin(time * 4) * 1, "#ffe070"); }
   // bottom bar
-  uiButtons.push(btn(16, H - 62, 100, 48, "◂ Back", { id: "adv_back", size: 14, bg: "#f5e6ee", border: "#d0b0c0" }));
-  uiButtons.push(btn(124, H - 62, W - 140, 48, "Treasures ✦ " + advTreasures(adv) + "/" + ADV_TREASURES.length, { id: "adv_treas", size: 14, bg: "#fff4c8", border: "#e0b040" }));
+  const chal = !!adv.king;
+  uiButtons.push(btn(10, H - 62, chal ? 70 : 100, 48, "◂ Back", { id: "adv_back", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
+  let bx = chal ? 86 : 116;
+  if (chal) { uiButtons.push(btn(bx, H - 62, 124, 48, kind.challenge ? "★ Challenge on" : "★ Challenge", { id: "adv_chal", size: 12, bg: kind.challenge ? "#ffe0a0" : "#fff", border: "#e0a040" })); bx += 130; }
+  uiButtons.push(btn(bx, H - 62, W - 10 - bx, 48, "Treasures " + advTreasures(adv) + "/" + ADV_TREASURES.length, { id: "adv_treas", size: 13, bg: "#fff4c8", border: "#e0b040" }));
   if (advSel != null) drawAdvNodeCard(advSel);
   else if (advTreasOpen) drawAdvTreasures();
   updateParticles(frameDt); drawParticles();
@@ -11512,7 +11568,7 @@ const CREDIT_LINES = [
   ["sub", "Made for anyone that needs a hug"], ["sub", "and encouragement to keep moving"], ["sub", "and working towards"], ["sub", "your dreams and happiness."], ["gap"], ["big", "Thank you for playing!"],
 ];
 function startCredits() {
-  credits = { y: 0, t: 0, fast: false, cast: unlockedList().map(a => a.name) };
+  credits = { y: 0, t: 0, fast: false, cast: unlockedList().map(a => palName(a)) };
   scene = "advcredits";
   setMusicMode("adv_end");
 }
@@ -11645,6 +11701,645 @@ function drawAdvSparkle() {
   }
 }
 
+// ===================== v9 LITTLE COMFORTS =====================
+// Backup codes, relaxed adventure, dream jar, nicknames, postcards,
+// gentler motion / bigger text / patterned Joy, weekly challenge, star challenge.
+// The gloom stays storybook-only: no lectures, just small warm moments.
+
+function newKind() {
+  return {
+    relaxed: false, motion: false, big: false, meter: true,
+    dream: "", dreamDay: "",
+    names: {},
+    weekKey: "", weekSeen: "",
+    week: { hugs: 0, shoo: 0, garden: 0, arcade: 0, album: 0, dream: 0, claimed: false },
+    weeks: 0, challenge: false, chalTries: 0, postcards: 0,
+    draft: "", pending: null, renameId: null, backupMode: "export",
+  };
+}
+let kind = newKind();
+function normalizeKind(d) {
+  const o = newKind();
+  if (!isObj(d)) return o;
+  o.relaxed = !!d.relaxed; o.motion = !!d.motion; o.big = !!d.big;
+  o.meter = d.meter == null ? true : !!d.meter;
+  o.dream = cleanDream(d.dream);
+  o.dreamDay = typeof d.dreamDay === "string" ? d.dreamDay.slice(0, 12) : "";
+  if (isObj(d.names)) for (const id in d.names) {
+    const n = cleanName(d.names[id]);
+    if (n && ANIMALS.some(a => a.id === id)) o.names[id] = n;
+  }
+  o.weekKey = typeof d.weekKey === "string" ? d.weekKey.slice(0, 12) : "";
+  o.weekSeen = typeof d.weekSeen === "string" ? d.weekSeen.slice(0, 12) : "";
+  if (isObj(d.week)) {
+    for (const k of ["hugs", "shoo", "garden", "arcade", "album", "dream"]) o.week[k] = Math.floor(numOr0(d.week[k]));
+    o.week.claimed = !!d.week.claimed;
+  }
+  o.weeks = Math.floor(numOr0(d.weeks));
+  o.challenge = !!d.challenge;
+  o.chalTries = Math.floor(numOr0(d.chalTries));
+  o.postcards = Math.floor(numOr0(d.postcards));
+  return o;
+}
+function kindSnapshot() {
+  return {
+    relaxed: !!kind.relaxed, motion: !!kind.motion, big: !!kind.big, meter: !!kind.meter,
+    dream: kind.dream, dreamDay: kind.dreamDay, names: kind.names,
+    weekKey: kind.weekKey, weekSeen: kind.weekSeen, week: kind.week, weeks: kind.weeks,
+    challenge: !!kind.challenge, chalTries: kind.chalTries, postcards: kind.postcards,
+  };
+}
+const textScale = () => (kind && kind.big ? 1.25 : 1);
+function cleanDream(s) {
+  s = String(s == null ? "" : s).replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim();
+  return s.slice(0, 80);
+}
+function cleanName(s) {
+  s = String(s == null ? "" : s).replace(/[\u0000-\u001f]/g, "").trim();
+  return s.slice(0, 12);
+}
+function palName(a) {
+  if (!a) return "";
+  const n = kind && kind.names && kind.names[a.id];
+  return n || a.name;
+}
+
+// ---------- save backup codes (HC1. + base64 of the save JSON) ----------
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function bytesToB64(bytes) {
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b0 = bytes[i], b1 = i + 1 < bytes.length ? bytes[i + 1] : 0, b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    const n = (b0 << 16) | (b1 << 8) | b2;
+    out += B64[(n >> 18) & 63] + B64[(n >> 12) & 63];
+    out += i + 1 < bytes.length ? B64[(n >> 6) & 63] : "=";
+    out += i + 2 < bytes.length ? B64[n & 63] : "=";
+  }
+  return out;
+}
+function b64ToBytes(s) {
+  s = String(s).replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, "");
+  if (!s || /[^A-Za-z0-9+/=]/.test(s)) throw new Error("bad");
+  if (s.length % 4) s += "====".slice(0, 4 - (s.length % 4));
+  const out = [];
+  for (let i = 0; i < s.length; i += 4) {
+    const a = B64.indexOf(s[i]), b = B64.indexOf(s[i + 1]);
+    const c = s[i + 2] === "=" ? 0 : B64.indexOf(s[i + 2]);
+    const d = s[i + 3] === "=" ? 0 : B64.indexOf(s[i + 3]);
+    if (a < 0 || b < 0 || c < 0 || d < 0) throw new Error("bad");
+    const n = (a << 18) | (b << 12) | (c << 6) | d;
+    out.push((n >> 16) & 255);
+    if (s[i + 2] !== "=") out.push((n >> 8) & 255);
+    if (s[i + 3] !== "=") out.push(n & 255);
+  }
+  return out;
+}
+function utf8Bytes(str) {
+  const out = [];
+  for (let i = 0; i < str.length; i++) {
+    let c = str.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF && i + 1 < str.length) {
+      const c2 = str.charCodeAt(i + 1);
+      if (c2 >= 0xDC00 && c2 <= 0xDFFF) { c = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00); i++; }
+    }
+    if (c < 0x80) out.push(c);
+    else if (c < 0x800) out.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+    else if (c < 0x10000) out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    else out.push(0xF0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+  }
+  return out;
+}
+function bytesToUtf8(b) {
+  let out = "", i = 0;
+  while (i < b.length) {
+    const c = b[i];
+    if (c < 0x80) { out += String.fromCharCode(c); i++; }
+    else if (c < 0xE0) { out += String.fromCharCode(((c & 31) << 6) | (b[i + 1] & 63)); i += 2; }
+    else if (c < 0xF0) { out += String.fromCharCode(((c & 15) << 12) | ((b[i + 1] & 63) << 6) | (b[i + 2] & 63)); i += 3; }
+    else {
+      const u = ((c & 7) << 18) | ((b[i + 1] & 63) << 12) | ((b[i + 2] & 63) << 6) | (b[i + 3] & 63);
+      const cp = u - 0x10000;
+      out += String.fromCharCode(0xD800 + (cp >> 10), 0xDC00 + (cp & 1023));
+      i += 4;
+    }
+  }
+  return out;
+}
+function encodeSaveCode(obj) { return "HC1." + bytesToB64(utf8Bytes(JSON.stringify(obj))); }
+function decodeSaveCode(code) {
+  const raw = String(code == null ? "" : code).trim().replace(/\s+/g, "");
+  if (!raw) return { ok: false, error: "Paste a code first." };
+  if (raw.slice(0, 4) !== "HC1.") return { ok: false, error: "That doesn't look like a Happy Critters code." };
+  let text;
+  try { text = bytesToUtf8(b64ToBytes(raw.slice(4))); } catch (e) { return { ok: false, error: "That code is incomplete or mistyped." }; }
+  let d;
+  try { d = JSON.parse(text); } catch (e) { return { ok: false, error: "That code is incomplete or mistyped." }; }
+  if (!isObj(d) || typeof d.ver !== "number" || typeof d.joy !== "number" || !isFinite(d.joy)) return { ok: false, error: "That code is missing a meadow." };
+  if (d.ver < 1 || d.ver > SAVE_VER) return { ok: false, error: "That code is from a newer version of the game." };
+  return { ok: true, data: d };
+}
+function mySaveCode() { save(); return encodeSaveCode(JSON.parse(localStorage.getItem(SAVE_KEY))); }
+
+// ---------- relaxed stars + star challenge ----------
+// bit1 (the old "finish quickly" star) becomes a cozy hug goal when Relaxed is on, so 3★ stays reachable with no timer
+const ADV_COZY = [
+  { k: "hug", n: 16 }, { k: "hug", n: 18 }, { k: "hug", n: 18 },
+  { k: "hug", n: 16 }, { k: "hug", n: 18 }, { k: "hug", n: 20 },
+  { k: "hug", n: 16 }, { k: "hug", n: 18 }, { k: "hug", n: 20 },
+  { k: "hug", n: 16 }, { k: "hug", n: 18 }, { k: "hug", n: 20 },
+  { k: "hug", n: 18 }, { k: "hug", n: 20 }, { k: "allhi" },
+];
+function advCozyOf(def) { return ADV_COZY[ADV_STAGES.indexOf(def)] || ADV_COZY[0]; }
+function advCozyMet(def, res) {
+  const c = advCozyOf(def);
+  if (c.k === "allhi") return !!res.allHi;
+  return (res.hugs || 0) >= c.n;
+}
+function advSecondStar(def, res) {
+  if (kind.relaxed) return advCozyMet(def, res);
+  const par = kind.challenge && !def.finale ? Math.max(20, Math.round(def.par * 0.75)) : def.par;
+  return res.time <= par;
+}
+function advThirdStar(def, res) {
+  const x = def.x;
+  let n = x.n;
+  if (kind.challenge) {
+    if (x.k === "nosplit") return res.splits === 0 && res.shoo >= 8;
+    if (x.k === "waves") return res.missed <= 0;
+    n = Math.ceil(n * 1.5);
+  }
+  return x.k === "combo" ? res.bestCombo >= n : x.k === "shoo" ? res.shoo >= n : x.k === "cheer" ? res.cheer >= n
+    : x.k === "fog" ? res.fog >= n : x.k === "lily" ? res.lily >= n : x.k === "gust" ? res.gust >= n
+    : x.k === "nosplit" ? res.splits === 0 : x.k === "waves" ? res.missed <= n : false;
+}
+function advSecondText(def) {
+  if (kind.relaxed) {
+    const c = advCozyOf(def);
+    return c.k === "allhi" ? "Every friend says hello" : "Share " + c.n + " hugs (no timer)";
+  }
+  const par = kind.challenge && !def.finale ? Math.max(20, Math.round(def.par * 0.75)) : def.par;
+  return (kind.challenge && !def.finale ? "Star Challenge: finish within " : "Finish within ") + fmtClock(par);
+}
+function advThirdText(def) {
+  const x = def.x;
+  if (!kind.challenge) return x.text;
+  if (x.k === "nosplit") return "Star Challenge: no splits, and shoo 8";
+  if (x.k === "waves") return "Star Challenge: hug every gloomling";
+  const n = Math.ceil(x.n * 1.5);
+  const word = x.k === "combo" ? "Reach a " + n + "× combo" : x.k === "shoo" ? "Shoo " + n + " gloomlings"
+    : x.k === "cheer" ? "Cheer up " + n + " sad pals" : x.k === "fog" ? "Clear " + n + " fog puffs"
+    : x.k === "lily" ? "Make " + n + " lily pads" : x.k === "gust" ? "Hug " + n + " pals mid-gust" : x.text;
+  return "Star Challenge: " + word;
+}
+
+// ---------- weekly cozy challenge (deterministic from the calendar week) ----------
+const WEEKLY = [
+  { id: "hug30", label: "Hug 30 critters", reward: 80, field: "hugs", need: 30 },
+  { id: "garden", label: "Visit the garden", reward: 60, field: "garden", need: 1 },
+  { id: "arcade", label: "Play one arcade game", reward: 70, field: "arcade", need: 1 },
+  { id: "shoo15", label: "Shoo 15 gloom clouds", reward: 70, field: "shoo", need: 15 },
+  { id: "album", label: "Peek at your album", reward: 50, field: "album", need: 1 },
+  { id: "dream", label: "Share a dream with your critters", reward: 60, field: "dream", need: 1 },
+];
+function isoWeek(d) {
+  d = d || new Date();
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = (x.getUTCDay() + 6) % 7;
+  x.setUTCDate(x.getUTCDate() - day + 3);
+  const y = x.getUTCFullYear();
+  const w = 1 + Math.round((x.getTime() - Date.UTC(y, 0, 4)) / 604800000);
+  return { y, w, key: y + "-W" + (w < 10 ? "0" : "") + w };
+}
+function weeklyChallenge(d) {
+  const iw = isoWeek(d);
+  const idx = ((iw.y * 53 + iw.w) % WEEKLY.length + WEEKLY.length) % WEEKLY.length;
+  return { key: iw.key, idx, def: WEEKLY[idx] };
+}
+function weekNow() {
+  try { if (typeof window !== "undefined" && window.__HC_TEST) return new Date(2026, 0, 15); } catch (e) {}
+  return new Date();
+}
+function rollWeek(d) {
+  const c = weeklyChallenge(d || weekNow());
+  if (kind.weekKey !== c.key) {
+    kind.weekKey = c.key;
+    kind.week = { hugs: 0, shoo: 0, garden: 0, arcade: 0, album: 0, dream: 0, claimed: false };
+  }
+  return c;
+}
+function weekBump(field, n, d) {
+  const c = rollWeek(d);
+  if (kind.week.claimed) return;
+  kind.week[field] = Math.min(9999, (kind.week[field] || 0) + (n || 1));
+  if ((kind.week[c.def.field] || 0) >= c.def.need) {
+    kind.week.claimed = true;
+    kind.weeks++;
+    joy += c.def.reward;
+    showBanner("Weekly challenge complete!", c.def.label + "  ·  +" + c.def.reward + " ♥", 3.6);
+    checkAchievements();
+    save();
+  } else saveSoon();
+}
+function weekHello() {
+  const c = rollWeek();
+  if (kind.week.claimed || kind.weekSeen === c.key) return;
+  kind.weekSeen = c.key;
+  showBanner("This week ✿", c.def.label + "  ·  +" + c.def.reward + " ♥", 3.4);
+  saveSoon();
+}
+
+// ---------- encouragement ----------
+const KIND_LINES = [
+  "You make this meadow brighter.",
+  "That hug was just right.",
+  "I'm glad you stopped by.",
+  "Your hugs are my favorite weather.",
+  "Soft and steady, that's plenty.",
+  "I saved you a smile.",
+  "The flowers noticed you today.",
+  "One more hug, just because.",
+  "You showed up. That's the cozy part.",
+  "Keep going. You're doing lovely.",
+  "This meadow fits you.",
+  "Come back whenever you like.",
+];
+let kindTalk = null, kindTalkAt = -100;
+function maybeEncourage(c) {
+  if (!c || (kindTalk && kindTalk.life > 0)) return;
+  if (totalHugs % 7 !== 0) return;
+  if (time - kindTalkAt < 18) return;
+  kindTalkAt = time;
+  kindTalk = { x: c.x, y: c.y - 36, text: KIND_LINES[(totalHugs / 7 | 0) % KIND_LINES.length], life: 2.6, max: 2.6 };
+}
+function updateKindTalk(dt) { if (kindTalk) { kindTalk.life -= dt; if (kindTalk.life <= 0) kindTalk = null; } }
+function drawKindTalk() {
+  if (!kindTalk) return;
+  const t = kindTalk, a = Math.min(1, t.life * 2, (t.max - t.life) * 4);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, a);
+  font(12, true);
+  const w = Math.min(W - 24, ctx.measureText(t.text).width + 22), h = 28;
+  const x = clamp(t.x - w / 2, 8, W - 8 - w), y = Math.max(78, t.y - h);
+  ctx.fillStyle = "#fffaf5";
+  roundRect(x, y, w, h, 12); ctx.fill();
+  ctx.strokeStyle = "#ffb0d0"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = C.text; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(t.text, x + w / 2, y + h / 2 + 1);
+  ctx.restore();
+}
+
+// ---------- dream jar ----------
+function jarRect() { return { x: 10, y: H - 176, w: 52, h: 56 }; }
+function drawDreamJar() {
+  if (scene !== "play" || tut) return;
+  const r = jarRect(), bob = Math.sin(time * 2) * 2;
+  ctx.save();
+  ctx.translate(r.x + 26, r.y + 30 + bob);
+  ctx.fillStyle = "rgba(60,40,70,0.18)";
+  ctx.beginPath(); ctx.ellipse(0, 22, 16, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#d8c4f4";
+  roundRect(-14, -6, 28, 26, 6); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.fillRect(-10, -2, 6, 16);
+  ctx.fillStyle = "#b898e0";
+  roundRect(-8, -14, 16, 8, 3); ctx.fill();
+  ctx.fillStyle = kind.dream ? "#fff4c0" : "#f4eaff";
+  roundRect(-8, 0, 16, 12, 2); ctx.fill();
+  if (kind.dream) {
+    ctx.fillStyle = "#e090b0"; ctx.fillRect(-5, 3, 10, 2); ctx.fillRect(-5, 7, 7, 2);
+    if (kind.dreamDay !== todayKey()) drawSparkle(16, -16, 3 + Math.sin(time * 4), "#ffd84a");
+  } else {
+    ctx.fillStyle = "#c8b0e0"; font(14, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("+", 0, 6);
+  }
+  ctx.restore();
+}
+function tapDreamJar(p) {
+  if (scene !== "play" || tut) return false;
+  const r = jarRect();
+  if (pointIn(p.x, p.y, r.x, r.y, r.w, r.h)) { openDreamJar(); return true; }
+  return false;
+}
+function openDreamJar() {
+  kind.pending = null; kind.draft = kind.dream;
+  kind.back = scene;
+  if (scene !== "settings") prevScene = scene;
+  scene = "jar"; listMax = 0;
+  noteSet(kind.dream);
+}
+function setDream(text) {
+  kind.dream = cleanDream(text);
+  if (kind.dream && kind.dreamDay !== todayKey()) {
+    kind.dreamDay = todayKey();
+    const who = palName(unlockedList()[0] || ANIMALS[0]);
+    showBanner(who + " cheers your dream", "“" + kind.dream + "”", 3.8);
+    weekBump("dream");
+  }
+  checkAchievements();
+  save();
+  return kind.dream;
+}
+function maybeCheerDream() {
+  if (!kind.dream || kind.dreamDay === todayKey()) return;
+  kind.dreamDay = todayKey();
+  const who = palName(unlockedList()[0] || ANIMALS[0]);
+  showBanner(who + " cheers your dream", "“" + kind.dream + "”", 3.8);
+  weekBump("dream");
+  saveSoon();
+}
+
+// ---------- nicknames ----------
+function setCritterName(id, text) {
+  const n = cleanName(text);
+  if (!ANIMALS.some(a => a.id === id)) return "";
+  if (n) kind.names[id] = n; else delete kind.names[id];
+  checkAchievements();
+  save();
+  return kind.names[id] || "";
+}
+function openRename(id) {
+  if (!unlocked[id]) return;
+  kind.renameId = id;
+  kind.draft = kind.names[id] || "";
+  scene = "rename";
+  noteSet(kind.draft);
+}
+
+// ---------- postcard ----------
+let postcardArm = false;
+function armPostcard() {
+  postcardArm = true;
+  toast("Making a postcard…", C.textSoft);
+}
+function postcardStamp() {
+  ctx.save();
+  ctx.strokeStyle = "#fffaf5"; ctx.lineWidth = 12;
+  ctx.strokeRect(6, 6, W - 12, H - 12);
+  ctx.strokeStyle = "#e8a0c0"; ctx.lineWidth = 3;
+  ctx.strokeRect(14, 14, W - 28, H - 28);
+  for (const [x, y] of [[20, 20], [W - 20, 20], [20, H - 20], [W - 20, H - 20]]) drawPixelHeart(x, y, 4, "#ff8ab8");
+  ctx.fillStyle = "rgba(255,250,245,0.94)";
+  roundRect(W / 2 - 110, 22, 220, 40, 12); ctx.fill();
+  ctx.strokeStyle = "#ffb8d0"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = C.text; font(16, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Happy Critters", W / 2, 36);
+  ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText("a cozy postcard  ♥", W / 2, 52);
+  ctx.restore();
+}
+function finishPostcard() {
+  if (!postcardArm) return;
+  postcardArm = false;
+  try { postcardStamp(); } catch (e) { return; }
+  kind.postcards++;
+  checkAchievements();
+  saveSoon();
+  const deliver = (blob) => {
+    try {
+      const url = blob ? URL.createObjectURL(blob) : (canvas.toDataURL ? canvas.toDataURL("image/png") : "");
+      kind.lastCard = url;
+      if (!url || typeof document === "undefined" || !document.createElement) return;
+      const a = document.createElement("a");
+      if (!a || !a.style) return;
+      a.href = url; a.download = "happy-critters-postcard.png";
+      if (a.click) a.click();
+      const nav = typeof navigator !== "undefined" ? navigator : null;
+      if (blob && nav && nav.share && nav.canShare) {
+        const file = new File([blob], "happy-critters-postcard.png", { type: "image/png" });
+        if (nav.canShare({ files: [file] })) nav.share({ files: [file], title: "Happy Critters", text: "A cozy postcard ♥" }).catch(() => {});
+      }
+    } catch (e) {}
+  };
+  try {
+    if (canvas.toBlob) canvas.toBlob(deliver, "image/png");
+    else deliver(null);
+  } catch (e) { deliver(null); }
+}
+
+// ---------- the little text box (real HTML, so the code / dream / name can be selected and copied) ----------
+function noteEls() {
+  if (typeof document === "undefined" || !document.getElementById) return null;
+  const el = document.getElementById("hcnote"), ta = document.getElementById("hcnote-text");
+  if (!el || el.id !== "hcnote" || !ta || ta.id !== "hcnote-text") return null;
+  return { el, ta };
+}
+function noteSet(v) {
+  kind.draft = v == null ? "" : String(v);
+  const n = noteEls();
+  if (n) n.ta.value = kind.draft;
+}
+function noteValue() {
+  const n = noteEls();
+  return n ? n.ta.value : (kind.draft || "");
+}
+function syncNote() {
+  const n = noteEls();
+  if (!n) return;
+  const show = (scene === "backup" && !kind.pending) || scene === "jar" || scene === "rename";
+  n.el.hidden = !show;
+  if (!show) return;
+  const max = scene === "jar" ? 80 : scene === "rename" ? 12 : 200000;
+  n.ta.maxLength = max;
+  let box;
+  if (scene === "backup") box = { x: 36, y: 168, w: W - 72, h: Math.max(90, Math.min(200, H - 360)) };
+  else if (scene === "jar") box = { x: 40, y: 250, w: W - 80, h: 84 };
+  else box = { x: 48, y: Math.round(H / 2 - 150) + 150, w: W - 96, h: 44 };
+  const r = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: W, height: H };
+  const sx = r.width / W, sy = r.height / H;
+  n.el.style.left = (r.left + box.x * sx) + "px";
+  n.el.style.top = (r.top + box.y * sy) + "px";
+  n.el.style.width = (box.w * sx) + "px";
+  n.el.style.height = (box.h * sy) + "px";
+}
+function copyNote() {
+  const t = noteValue();
+  const n = noteEls();
+  if (n && n.ta.select) { try { n.ta.focus(); n.ta.select(); } catch (e) {} }
+  const done = () => toast("Copied ♥", C.heart);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(done).catch(() => { try { document.execCommand("copy"); } catch (e) {} done(); }); return; }
+  } catch (e) {}
+  try { document.execCommand("copy"); } catch (e) {}
+  done();
+}
+
+// ---------- screens ----------
+function drawKindSettings() {
+  panelHeader("Settings", "Happy Critters " + APP_LABEL);
+  const top = 78, bottom = H - 74, rowH = 50;
+  const rows = [
+    ["tog_music", "♪  Music: " + (musicOn ? "On" : "Off"), musicOn ? "#d0ffd8" : "#eee4ea", musicOn ? "#70c080" : "#c8b8c8"],
+    ["tog_sfx", "✦  Sounds: " + (sfxOn ? "On" : "Off"), sfxOn ? "#d0e8ff" : "#eee4ea", sfxOn ? "#80b0e0" : "#c8b8c8"],
+    ["tog_haptics", "♡  Haptics: " + (hapticsOn ? "On" : "Off"), hapticsOn ? "#ffe0ee" : "#eee4ea", hapticsOn ? "#ff90b8" : "#c8b8c8"],
+    ["tog_relaxed", "☁  Relaxed stages: " + (kind.relaxed ? "On" : "Off"), kind.relaxed ? "#e4f8d8" : "#f5e6ee", kind.relaxed ? "#70c080" : "#d0b0c0"],
+    ["tog_motion", "✿  Gentler motion: " + (kind.motion ? "On" : "Off"), kind.motion ? "#e6f0ff" : "#f5e6ee", kind.motion ? "#80b0e0" : "#d0b0c0"],
+    ["tog_big", "Aa  Bigger text: " + (kind.big ? "On" : "Off"), kind.big ? "#fff0d8" : "#f5e6ee", kind.big ? "#e0b060" : "#d0b0c0"],
+    ["tog_meter", "◕  Joy shapes: " + (kind.meter ? "On" : "Off"), kind.meter ? "#ffe6f2" : "#f5e6ee", kind.meter ? "#ff90b8" : "#d0b0c0"],
+    ["kind_jar", "Dream Jar" + (kind.dream ? "  ♥" : ""), "#fff4c8", "#e0b040"],
+    ["kind_backup", "Save backup code", "#e8d0ff", "#c090e0"],
+    ["seasons", (SEASON_INFO[currentSeason()] || SEASON_INFO.spring).icon + "  Time & Seasons", "#f8e4f2", "#e0a0c0"],
+    ["tut_replay", "Replay the tutorial", "#f5e6ee", "#d0b0c0"],
+    ["whatsnew", "What's new", "#fff0b0", "#e0c060"],
+  ];
+  if (updateReady) rows.push(["sw_refresh", "Update ready ✨", "#d0ffd8", "#70c080"]);
+  setListExtent(top, bottom, rows.length * rowH + 8);
+  listClip(top, bottom);
+  rows.forEach((r, i) => {
+    const y = top + 4 + i * rowH - listScroll;
+    if (y > bottom || y + rowH < top) return;
+    listBtn(28, y, W - 56, 46, r[1], { id: r[0], size: 14, bg: r[2], border: r[3] }, top, bottom);
+  });
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+function drawBackup() {
+  panelHeader("Save code", "A copy you can keep, in case this phone forgets");
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.textSoft; font(12, false);
+  const lines = wrapText("Copy this code somewhere safe (a note, a message to yourself). Paste a code to bring a meadow back. You'll be asked before anything is replaced.", W - 64);
+  lines.slice(0, 4).forEach((l, i) => ctx.fillText(l, W / 2, 100 + i * 16));
+  if (kind.pending) {
+    const d = kind.pending, pals = d.unlocked ? Object.keys(d.unlocked).length : 0;
+    const top = 200;
+    solidPanel(28, top, W - 56, 210);
+    ctx.fillStyle = C.text; font(16, true);
+    ctx.fillText("Replace your meadow?", W / 2, top + 36);
+    ctx.fillStyle = C.textSoft; font(13, false);
+    ctx.fillText("This code is from v" + d.ver + ".", W / 2, top + 70);
+    ctx.fillText((d.joy | 0) + " hearts  ·  " + pals + " friends saved", W / 2, top + 92);
+    ctx.fillStyle = "#c06080"; font(12, true);
+    ctx.fillText("Your meadow here will be replaced.", W / 2, top + 122);
+    uiButtons = [];
+    uiButtons.push(btn(44, top + 146, (W - 100) / 2, 46, "Cancel", { id: "kind_no", size: 14, bg: "#f5e6ee", border: "#d0b0c0" }));
+    uiButtons.push(btn(56 + (W - 100) / 2, top + 146, (W - 100) / 2, 46, "Replace", { id: "kind_yes", size: 14, bg: "#ffd0e0", border: "#e07098" }));
+  } else {
+    ctx.fillStyle = "#fff";
+    roundRect(36, 168, W - 72, Math.max(90, Math.min(200, H - 360)), 12); ctx.fill();
+    ctx.strokeStyle = "#e0c8d8"; ctx.lineWidth = 2; ctx.stroke();
+    uiButtons = [];
+    const y = H - 196;
+    uiButtons.push(btn(28, y, (W - 68) / 2, 46, "Copy", { id: "kind_copy", size: 15 }));
+    uiButtons.push(btn(40 + (W - 68) / 2, y, (W - 68) / 2, 46, kind.backupMode === "export" ? "Use a code" : "Check code", { id: kind.backupMode === "export" ? "kind_import" : "kind_check", size: 14, bg: "#e8d0ff", border: "#c090e0" }));
+    if (kind.backupMode === "import") uiButtons.push(btn(28, y + 54, W - 56, 40, "Show my code instead", { id: "kind_export", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
+  }
+  panelFooter();
+}
+function drawDreamScreen() {
+  panelHeader("Dream Jar", kind.dream ? "Your critters cheer this once a day" : "The jar is empty");
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const who = palName(ANIMALS[0]);
+  drawSprite(ANIMALS[0], W / 2, 130, 2, false, Math.sin(time * 3) * 3, false, 1, { heartEyes: !!kind.dream, acc: equippedFor("cat") });
+  ctx.fillStyle = C.textSoft; font(13, false);
+  const msg = kind.dream ? who + " is keeping it safe." : "Write one small dream. Your critters will cheer it.";
+  wrapText(msg, W - 70).slice(0, 2).forEach((l, i) => ctx.fillText(l, W / 2, 190 + i * 18));
+  ctx.fillStyle = "#fff";
+  roundRect(40, 250, W - 80, 84, 12); ctx.fill();
+  ctx.strokeStyle = "#e0c060"; ctx.lineWidth = 2; ctx.stroke();
+  if (!noteEls() && !kind.draft && !kind.dream) {
+    ctx.fillStyle = "#c8b8c0"; font(12, false); ctx.fillText("one short dream…", W / 2, 292);
+  }
+  ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText((cleanDream(noteValue()).length) + " / 80", W / 2, 348);
+  uiButtons = [];
+  uiButtons.push(btn(36, 366, (W - 84) / 2, 46, "Save dream", { id: "kind_dream_save", size: 14, bg: "#fff4c8", border: "#e0b040" }));
+  uiButtons.push(btn(48 + (W - 84) / 2, 366, (W - 84) / 2, 46, "Clear", { id: "kind_dream_clear", size: 14, bg: "#f5e6ee", border: "#d0b0c0" }));
+  panelFooter();
+}
+function drawRename() {
+  const a = ANIMALS.find(x => x.id === kind.renameId) || ANIMALS[0];
+  ctx.fillStyle = "rgba(40,20,50,0.45)"; ctx.fillRect(0, 0, W, H);
+  const top = Math.round(H / 2 - 150);
+  solidPanel(28, top, W - 56, 300);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  drawSprite(a, W / 2, top + 58, 2, false, 0, false, 3, { acc: equippedFor(a.id), heartEyes: true });
+  ctx.fillStyle = C.text; font(16, true);
+  ctx.fillText("A name just for them", W / 2, top + 110);
+  ctx.fillStyle = C.textSoft; font(12, false);
+  ctx.fillText(a.name + "  ·  up to 12 letters", W / 2, top + 132);
+  const boxY = top + 150;
+  ctx.fillStyle = "#fff";
+  roundRect(48, boxY, W - 96, 44, 10); ctx.fill();
+  ctx.strokeStyle = "#ffb8d0"; ctx.lineWidth = 2; ctx.stroke();
+  uiButtons = [];
+  uiButtons.push(btn(44, top + 196, (W - 104) / 2, 44, "Save", { id: "kind_name_save", size: 14 }));
+  uiButtons.push(btn(52 + (W - 104) / 2, top + 196, (W - 104) / 2, 44, "Reset", { id: "kind_name_reset", size: 14, bg: "#f5e6ee", border: "#d0b0c0" }));
+  uiButtons.push(btn(W / 2 - 50, top + 248, 100, 40, "Close", { id: "kind_name_close", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
+}
+function drawKindScene() {
+  if (scene === "backup") drawBackup();
+  else if (scene === "jar") drawDreamScreen();
+  else if (scene === "rename") drawRename();
+}
+const isKindScene = s => s === "backup" || s === "jar" || s === "rename";
+
+function openBackup() {
+  kind.pending = null; kind.backupMode = "export";
+  kind.back = scene;
+  if (scene !== "settings") prevScene = scene;
+  scene = "backup"; listMax = 0;
+  try { noteSet(mySaveCode()); } catch (e) { noteSet(""); }
+}
+function applyImportedSave() {
+  const d = kind.pending;
+  if (!d) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { toast("Couldn't store that code", C.textSoft); return; }
+  saveDirty = false;
+  try { location.reload(); } catch (e) {}
+  try { load(); scene = "title"; kind.pending = null; toast("Meadow restored ♥", C.heart); } catch (e2) {}
+}
+function kindAction(id) {
+  if (id === "tog_relaxed") { kind.relaxed = !kind.relaxed; save(); toast(kind.relaxed ? "Relaxed stages: no timer, cozy stars" : "Stages have a timer again", C.textSoft); return true; }
+  if (id === "tog_motion") { kind.motion = !kind.motion; save(); return true; }
+  if (id === "tog_big") { kind.big = !kind.big; save(); return true; }
+  if (id === "tog_meter") { kind.meter = !kind.meter; meterGrads.clear(); save(); return true; }
+  if (id === "kind_jar") { openDreamJar(); return true; }
+  if (id === "kind_backup") { openBackup(); return true; }
+  if (id === "kind_copy") { copyNote(); return true; }
+  if (id === "kind_import") { kind.backupMode = "import"; noteSet(""); return true; }
+  if (id === "kind_export") { kind.backupMode = "export"; kind.pending = null; try { noteSet(mySaveCode()); } catch (e) { noteSet(""); } return true; }
+  if (id === "kind_check") {
+    const r = decodeSaveCode(noteValue());
+    if (!r.ok) { toast(r.error, C.textSoft); sfxNope(); return true; }
+    kind.pending = r.data; return true;
+  }
+  if (id === "kind_no") { kind.pending = null; return true; }
+  if (id === "kind_yes") { applyImportedSave(); return true; }
+  if (id === "close" && (scene === "jar" || scene === "backup")) { scene = kind.back || prevScene || "title"; hideNote(); return true; }
+  if (id === "kind_dream_save") { setDream(noteValue()); if (scene === "jar") scene = kind.back || prevScene || "play"; hideNote(); return true; }
+  if (id === "kind_dream_clear") { kind.dream = ""; kind.dreamDay = ""; noteSet(""); save(); toast("The jar is empty again", C.textSoft); return true; }
+  if (id === "kind_name_save") { setCritterName(kind.renameId, noteValue()); scene = "album"; hideNote(); return true; }
+  if (id === "kind_name_reset") { setCritterName(kind.renameId, ""); noteSet(""); scene = "album"; hideNote(); return true; }
+  if (id === "kind_name_close") { scene = "album"; hideNote(); return true; }
+  if (id === "postcard") { armPostcard(); return true; }
+  if (id === "adv_chal") {
+    if (!adv.king) { toast("Befriend the Gloom King first", C.textSoft); return true; }
+    kind.challenge = !kind.challenge; save();
+    toast(kind.challenge ? "Star Challenge on: tougher stars, same stages" : "Star Challenge off: cozy goals again", C.textSoft);
+    return true;
+  }
+  if (id && id.startsWith("name_")) { openRename(id.slice(5)); return true; }
+  return false;
+}
+function hideNote() { const n = noteEls(); if (n) n.el.hidden = true; }
+
+// patterned Joy meter: hatch + five pips, so the gray-to-color fill isn't the only clue
+function drawMeterPattern(x, y, w, h, t) {
+  if (!kind.meter) return;
+  const fw = Math.max(4, w * t);
+  ctx.save();
+  ctx.beginPath(); roundRect(x, y, fw, h, h / 2); ctx.clip();
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.5;
+  for (let i = -h; i < fw + h; i += 7) { ctx.beginPath(); ctx.moveTo(x + i, y + h); ctx.lineTo(x + i + h, y); ctx.stroke(); }
+  ctx.restore();
+}
+function meterLabel() {
+  const pips = Math.round(moodT() * 5);
+  const base = "Joy " + Math.floor(mood) + "%";
+  if (!kind.meter) return base;
+  return base + "  " + "●".repeat(pips) + "○".repeat(5 - pips);
+}
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -11662,7 +12357,6 @@ resize();
 for (let i = 0; i < 3; i++) spawnCritter();
 requestAnimationFrame(frame);
 setupPWA();
-
 if (window.__HC_TEST || window.__HC_DEBUG) {
   window.__HC = {
     get s() {
@@ -11672,7 +12366,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time,
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
-        adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId };
+        adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -11685,6 +12379,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
       else if (k === "arcade") arcade = normalizeArcade(v);
       else if (k === "seasons") { seasons = normalizeSeasons(v); lightCache.k = -1; }
       else if (k === "adv") adv = normalizeAdv(v);
+      else if (k === "kind") kind = normalizeKind(v);
       else if (k === "stMeter") { if (st) st.meter = v; }
       else if (k === "unlocked") unlocked = v;
       else if (k === "achievements") achievements = v;
@@ -11704,6 +12399,10 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     ADV_GAIN, ADV_REGIONS, ADV_STAGES, ADV_N, ADV_TREASURES, ADV_CUTS, KING_WAVES, newAdv, normalizeAdv, advGoalsMet, advReward, advTotalStars,
     advRegionDone, advRegionOpen, advStageOpen, advStartStage, advTap, advHug, advShoo, advFinish, advAction, advPointer, advNodePos, lingCX,
     openAdvMap, closeAdvMap, startCutscene, cutAdvance, cutSkip, startCredits, creditsEnd, finishAdventure, kingPos, advFinaleTap, scheduleStep,
+    kind, newKind, normalizeKind, kindSnapshot, encodeSaveCode, decodeSaveCode, mySaveCode, applyImportedSave,
+    advSecondStar, advThirdStar, advSecondText, advThirdText, advCozyMet, ADV_COZY, WEEKLY, isoWeek, weeklyChallenge, rollWeek, weekBump, weekHello,
+    KIND_LINES, maybeEncourage, setDream, maybeCheerDream, setCritterName, palName, cleanDream, cleanName, textScale,
+    jarRect, tapDreamJar, armPostcard, postcardStamp, finishPostcard, openBackup, openDreamJar, openRename, kindAction,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
