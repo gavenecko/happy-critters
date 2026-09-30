@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="10.0-rares">
+<meta name="hc-version" content="11.0-wonders">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -64,7 +64,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v10 — Rare Friends: a heart sink of fantastical critters, calmer multi-tap
+// Happy Critters v11 — Little wonders: band, photo booth, wishes, visits, tiny homes, morning notes
 
 const W = 360;
 let H = 540;
@@ -73,7 +73,7 @@ const COMBO_WINDOW = 1.4;
 const SPAWN_BASE = 0.95;
 const SAVE_KEY = "happyCritters_v2";
 const SAVE_KEY_V1 = "happyCritters_v1";
-const SAVE_VER = 10;
+const SAVE_VER = 11;
 
 const C = {
   white: "#fffaf5", text: "#4a3050", textSoft: "#7a5a70",
@@ -4153,6 +4153,10 @@ const GOALS = [
   { id: "rare1", label: "Befriend a rare critter", check: s => ANIMALS.some(a => a.rare && s.unlocked[a.id]), reward: 400 },
   { id: "rare3", label: "Befriend 3 rare critters", check: s => ANIMALS.filter(a => a.rare && s.unlocked[a.id]).length >= 3, reward: 1200 },
   { id: "rareall", label: "Befriend every rare critter", check: s => ANIMALS.filter(a => a.rare).every(a => s.unlocked[a.id]), reward: 3000 },
+  // v11
+  { id: "band1", label: "Hear the critter band", check: s => s.party && s.party.bandPlays >= 1, reward: 30 },
+  { id: "wish1", label: "Wish on a heart miracle", check: s => s.party && Object.keys(s.party.wishes || {}).length >= 1, reward: 80 },
+  { id: "home1", label: "Put something in a tiny home", check: s => s.party && s.party.homeItems >= 1, reward: 40 },
 ];
 function heartCost(n) {
   if (n >= 1000000 && n % 1000000 === 0) return (n / 1000000) + "m";
@@ -4308,6 +4312,8 @@ function load() {
     adv = normalizeAdv(d.adv);
     // v9: comforts (older saves get the gentle defaults)
     kind = normalizeKind(d.kind);
+    party = normalizeParty(d.party);
+    prepMorning();
     if (!isFinite(joy)) joy = 0;
     if (!isFinite(mood)) mood = 8;
     if (!isFinite(moodPeak)) moodPeak = mood;
@@ -4326,6 +4332,7 @@ function save() {
       hapticsOn, tutorialDone, lastVersionSeen,
       garden: serializeGarden(), lastActive: Date.now(), arcade, seasons, adv,
       kind: kindSnapshot(),
+      party: partySnapshot(),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -4758,7 +4765,7 @@ function targetTier() {
   return t;
 }
 // the mini-games swap in their own loop; the meadow song picks up again from a section start afterwards
-function curSong() { return music.mode || SONGS[music.songIdx]; }
+function curSong() { return music.bandSong || music.mode || SONGS[music.songIdx]; }
 function setMusicMode(key) {
   const song = key ? ARCADE_SONGS[key] || null : null;
   if (song === music.mode) return;
@@ -4813,11 +4820,12 @@ function scheduleStep(t) {
   const inBar = s % 16;
   if (inBar === 0) {
     // layer / tempo changes only happen on bar boundaries
-    const nt = music.mode ? 3 : targetTier();
+    const band = !!music.bandSong;
+    const nt = (music.mode && !band) ? 3 : targetTier();
     if (nt !== music.tier) { music.tier = nt; music.stats.tierChanges++; }
     // v7: the meadow song gets softer at night (bells instead of drums) and sparklier in winter
     music.flavor = musicFlavor();
-    music.bpm = music.mode ? song.bpm : tierBpm(song, music.tier) * (music.flavor && music.flavor.night ? 0.92 : 1);
+    music.bpm = (music.mode && !band) ? song.bpm : tierBpm(song, music.tier) * (music.flavor && music.flavor.night ? 0.92 : 1);
     music.stats.bars++;
   }
   if (!musicOn) return;
@@ -6202,6 +6210,7 @@ function startPlay() {
 }
 
 function updatePlay(dt) {
+  if (typeof partyPlayTick === "function") partyPlayTick(dt);
   const wdt = dt * (slowT > 0 ? 0.45 : 1);
   spawnTimer -= wdt;
   if (spawnTimer <= 0 && countIf(critters, isRoamer) < MAX_CRITTERS) {
@@ -6883,7 +6892,7 @@ function checkAchievements() {
     cloudsShooed, sadCheered, moodPeak, dawnCount,
     friendLvl, ownedAcc, equipped, stats, giftsOpened, bestGiftStreak,
     gardenPlaced: garden.placedEver, cozy: gardenCozy(), gardenVisits: garden.visits,
-    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(), arcade, seasons, adv, kind,
+    gardenBubbles: garden.bubbles, awayCollected: garden.awayCollected, gardenHas: gardenHas(), arcade, seasons, adv, kind, party,
   };
   for (const g of GOALS) {
     if (achievements[g.id]) continue;
@@ -7139,6 +7148,7 @@ function drawLevelUp() {
 // ===================== SCENES =====================
 function drawTitle() {
   drawBackground();
+  if (typeof drawWishSky === "function") drawWishSky();
   for (const gc of gloomClouds) drawGloomCloud(gc);
   for (const c of critters) drawCritter(c);
   drawParticles();
@@ -7449,11 +7459,15 @@ function drawShop() {
 function drawAlbum() {
   const count = ANIMALS.filter(a => unlocked[a.id]).length;
   panelHeader("Critter Album", count + "/" + ANIMALS.length + " friends · hug to level up ♥");
-  const top = 78, bottom = H - 74, rowH = 108;
-  setListExtent(top, bottom, ANIMALS.length * rowH + 4);
+  const top = 78, bottom = H - 74;
+  const rowHs = ANIMALS.map(a => (a.rare && unlocked[a.id]) ? 156 : 108);
+  setListExtent(top, bottom, rowHs.reduce((s, h) => s + h, 0) + 4);
   listClip(top, bottom);
+  let yCursor = top + 4;
   ANIMALS.forEach((a, i) => {
-    const y = top + 4 + i * rowH - listScroll;
+    const rowH = rowHs[i];
+    const y = yCursor - listScroll;
+    yCursor += rowH;
     if (y > bottom || y + rowH < top) return;
     const owned = !!unlocked[a.id];
     const lvl = friendLvl[a.id] || 0;
@@ -7489,6 +7503,7 @@ function drawAlbum() {
       listBtn(W - 116, y + 56, 86, 44, kind.names[a.id] ? "Rename" : "Name", {
         id: "name_" + a.id, size: 12, r: 10, bg: "#fff", border: "#e0b0c8",
       }, top, bottom);
+      if (a.rare) listBtn(34, y + 104, W - 68, 44, "Tiny home", { id: "home_" + a.id, size: 13, bg: "#efe6ff", border: "#b090e0" }, top, bottom);
     } else {
       ctx.save(); ctx.globalAlpha = 0.18;
       drawSprite(a, 58, y + 38, 1.85, false, 0, false, i * 40);
@@ -7624,6 +7639,7 @@ function doUI(id) {
   if (!id) return;
   sfxClick();
   if (kindAction(id)) return;
+  if (typeof partyAction === "function" && partyAction(id)) return;
   if (id === "play") { startPlay(); return; }
   if (id === "tut_next") { tutNext(); return; }
   if (id === "tut_skip") { finishTutorial(true); return; }
@@ -7718,7 +7734,7 @@ function canvasPos(e) {
   const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
   return { x: ((clientX - r.left) / r.width) * W, y: ((clientY - r.top) / r.height) * H };
 }
-const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true, settings: true };
+const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true, settings: true, wishes: true };
 const dist2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
 
 function tapGloom(p) {
@@ -7868,6 +7884,7 @@ window.addEventListener("keydown", (e) => {
     else if (scene === "seasons") scene = "settings";
     else if (scene === "rename") { scene = "album"; hideNote(); }
     else if (isKindScene(scene)) { hideNote(); scene = prevScene || "title"; }
+    else if (typeof isPartyScene === "function" && isPartyScene(scene)) partyClose();
     else if (inPanel) scene = prevScene;
   }
   if ((k === "Enter" || k === " ") && scene === "whatsnew") closeWhatsNew();
@@ -7903,9 +7920,11 @@ function stepScene(dt) {
     updateTitle(dt);
     drawTitle();
     drawStoryBanner();
+    if (typeof drawMorningNote === "function") drawMorningNote();
   } else if (scene === "play") {
     updatePlay(dt);
     renderPlay();
+    if (typeof drawMorningNote === "function") drawMorningNote();
   } else if (scene === "shop") {
     drawShop();
   } else if (scene === "achievements") {
@@ -7938,6 +7957,8 @@ function stepScene(dt) {
     advDraw();
   } else if (isKindScene(scene)) {
     drawKindScene();
+  } else if (typeof isPartyScene === "function" && isPartyScene(scene)) {
+    partyStep(dt);
   } else if (scene === "away") {
     if (awayReturn === "title") updateTitle(dt);
     else if (awayReturn === "garden") updateGarden(dt);
@@ -7947,6 +7968,7 @@ function stepScene(dt) {
     scene = "title"; // unknown scene: never get stuck on a blank screen
   }
   if (postcardArm) finishPostcard();
+  if (typeof boothArm !== "undefined" && boothArm) finishBoothPhoto();
   if (typeof syncNote === "function") syncNote();
   flushSave(dt);
 }
@@ -7975,18 +7997,18 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 10;
-const APP_LABEL = "v10";
+const APP_VERSION = 11;
+const APP_LABEL = "v11";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "Rare Friends",
-  pals: ["dragonet", "uni", "phoenix", "kitsune"],
+  sub: "Little Wonders",
+  pals: ["kitsune", "phoenix", "moth", "uni"],
   items: [
-    "Six rare friends in the Shop",
-    "Dragonet, Unicorn Foal, Moon Moth",
-    "Phoenix Chick, Tidepup, Kitsune",
-    "A long, cozy heart goal",
-    "Extra fingers no longer print hearts",
+    "A critter band in Games",
+    "Photo booth and heart wishes",
+    "Friend visits, from a little code",
+    "Tiny homes for rare friends",
+    "A morning note, once a day",
   ],
 };
 
@@ -9034,6 +9056,7 @@ function drawBubble(b) {
 const gDrawList = [];
 function drawGarden() {
   drawGardenBg();
+  if (typeof drawWishGarden === "function") drawWishGarden();
   const top = gy0();
   const editing = !!gSel;
   if (editing) {
@@ -10303,7 +10326,7 @@ function drawArcade() {
   panelHeader("Games", "Hearts " + joy + " ♥ · a daily bonus in each game");
   // v8: the storybook adventure sits on top of the arcade games
   {
-    const y = 78, h = 64, k = advTotalStars(adv);
+    const y = 74, h = 56, k = advTotalStars(adv);
     const g = ctx.createLinearGradient(22, 0, W - 22, 0);
     g.addColorStop(0, "#eadcff"); g.addColorStop(1, "#ffe0f0");
     ctx.fillStyle = g; roundRect(22, y, W - 44, h, 14); ctx.fill();
@@ -10312,9 +10335,10 @@ function drawArcade() {
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     ctx.fillStyle = C.text; font(15, true); ctx.fillText("Storybook Adventure", 80, y + 22);
     ctx.fillStyle = C.textSoft; font(11, false); ctx.fillText(adv.king ? "★ " + k + "/45 · replay stages for stars" : "★ " + k + "/45 · bring the colors home", 80, y + 42);
-    uiButtons.push(btn(W - 110, y + 12, 78, 40, "Go ▸", { id: "adventure", size: 14, bg: "#fff", border: "#a888e0" }));
+    uiButtons.push(btn(W - 110, y + 8, 78, 40, "Go ▸", { id: "adventure", size: 14, bg: "#fff", border: "#a888e0" }));
   }
-  const top = 152, bottom = H - 76, n = 3, gap = 8;
+  if (typeof drawPartyGamesRow === "function") drawPartyGamesRow();
+  const top = 188, bottom = H - 76, n = 3, gap = 8;
   const ch = Math.min(150, (bottom - top - gap * (n - 1)) / n);
   const A = arcade;
   ARC_GAMES.forEach((g, i) => {
@@ -12978,13 +13002,14 @@ function noteValue() {
 function syncNote() {
   const n = noteEls();
   if (!n) return;
-  const show = (scene === "backup" && !kind.pending) || scene === "jar" || scene === "rename";
+  const show = (scene === "backup" && !kind.pending) || scene === "jar" || scene === "rename" || scene === "visit";
   n.el.hidden = !show;
   if (!show) return;
-  const max = scene === "jar" ? 80 : scene === "rename" ? 12 : 200000;
+  const max = scene === "jar" ? 80 : scene === "rename" ? 12 : scene === "visit" ? 800 : 200000;
   n.ta.maxLength = max;
   let box;
   if (scene === "backup") box = { x: 36, y: 168, w: W - 72, h: Math.max(90, Math.min(200, H - 360)) };
+  else if (scene === "visit") box = { x: 36, y: 150, w: W - 72, h: Math.max(80, Math.min(140, H - 380)) };
   else if (scene === "jar") box = { x: 40, y: 250, w: W - 80, h: 84 };
   else box = { x: 48, y: Math.round(H / 2 - 150) + 150, w: W - 96, h: 44 };
   const r = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: W, height: H };
@@ -13009,7 +13034,7 @@ function copyNote() {
 // ---------- screens ----------
 function drawKindSettings() {
   panelHeader("Settings", "Happy Critters " + APP_LABEL);
-  const top = 78, bottom = H - 74, rowH = 50;
+  const top = 78, bottom = H - 74, rowH = 44;
   const rows = [
     ["tog_music", "♪  Music: " + (musicOn ? "On" : "Off"), musicOn ? "#d0ffd8" : "#eee4ea", musicOn ? "#70c080" : "#c8b8c8"],
     ["tog_sfx", "✦  Sounds: " + (sfxOn ? "On" : "Off"), sfxOn ? "#d0e8ff" : "#eee4ea", sfxOn ? "#80b0e0" : "#c8b8c8"],
@@ -13020,6 +13045,7 @@ function drawKindSettings() {
     ["tog_meter", "◕  Joy shapes: " + (kind.meter ? "On" : "Off"), kind.meter ? "#ffe6f2" : "#f5e6ee", kind.meter ? "#ff90b8" : "#d0b0c0"],
     ["kind_jar", "Dream Jar" + (kind.dream ? "  ♥" : ""), "#fff4c8", "#e0b040"],
     ["kind_backup", "Save backup code", "#e8d0ff", "#c090e0"],
+    ["v11_visit", "Friend visit code", "#efe6ff", "#b090e0"],
     ["seasons", (SEASON_INFO[currentSeason()] || SEASON_INFO.spring).icon + "  Time & Seasons", "#f8e4f2", "#e0a0c0"],
     ["tut_replay", "Replay the tutorial", "#f5e6ee", "#d0b0c0"],
     ["whatsnew", "What's new", "#fff0b0", "#e0c060"],
@@ -13030,7 +13056,7 @@ function drawKindSettings() {
   rows.forEach((r, i) => {
     const y = top + 4 + i * rowH - listScroll;
     if (y > bottom || y + rowH < top) return;
-    listBtn(28, y, W - 56, 46, r[1], { id: r[0], size: 14, bg: r[2], border: r[3] }, top, bottom);
+    listBtn(28, y, W - 56, 44, r[1], { id: r[0], size: 14, bg: r[2], border: r[3] }, top, bottom);
   });
   ctx.restore();
   drawScrollbar(top, bottom);
@@ -13183,6 +13209,804 @@ function meterLabel() {
   return base + "  " + "●".repeat(pips) + "○".repeat(5 - pips);
 }
 
+// ===================== v11 LITTLE WONDERS =====================
+// Critter band, photo booth, heart wishes, friend visits, tiny homes, morning notes.
+// Folded into Games, Album, Settings and the meadow. No new toolbar button.
+// Gloom stays a storybook cloud, never a lecture.
+
+const WISHES = [
+  { id: "meteor", name: "Meteor Shower", cost: 40000, blurb: "Soft wishing stars over the meadow." },
+  { id: "kingparty", name: "Gloom King Party", cost: 90000, blurb: "Cake and bunting. No gloomy speeches." },
+  { id: "rainbow", name: "Rainbow Day", cost: 180000, blurb: "A little rainbow that stays." },
+  { id: "stargarden", name: "Star Garden", cost: 400000, blurb: "A star path in the yard." },
+];
+const BAND_BONUS = 18;
+const VISIT_GIFT = 24;
+const VISIT_MS = 3 * 60 * 1000;
+const ROOM_SLOTS = { dragonet: 4, uni: 4, moth: 5, phoenix: 5, tidepup: 5, kitsune: 6 };
+const ROOM_ITEMS = [
+  { id: "rug", name: "Cloud Rug", cost: 2000 },
+  { id: "lamp", name: "Moon Lamp", cost: 5000 },
+  { id: "cushion", name: "Nap Cushion", cost: 8000 },
+  { id: "plant", name: "Spark Plant", cost: 15000 },
+  { id: "banner", name: "Star Banner", cost: 25000 },
+  { id: "mobile", name: "Tail Mobile", cost: 40000 },
+];
+const BOOTH_BACKS = [
+  { id: "meadow", name: "Meadow" },
+  { id: "dusk", name: "Dusk" },
+  { id: "stars", name: "Starry" },
+  { id: "bloom", name: "Blossom" },
+];
+const BOOTH_STICKS = ["heart", "star", "flower", "bow"];
+const MORNING_LINES = [
+  "The meadow saved you a warm patch of sun.",
+  "A small hello from the grass. You showed up.",
+  "Today looks soft. The critters kept your spot.",
+  "Pink clouds are just visiting. The color stays.",
+  "Someone left a tiny song in the clover.",
+  "The jar on the hill is humming a quiet tune.",
+];
+const BAND_SONG = {
+  name: "Critter Band", bpm: 108, key: 0,
+  A: {
+    ch: ["C", "G", "Am", "F", "C", "G", "F", "C"],
+    mel: [
+      "E5.2 G5.2 C6.4 E5.2 G5.2 C6.4",
+      "D5.2 G5.2 B5.4 D5.2 F5.2 A5.4",
+      "C5.2 E5.2 A5.4 G5.2 E5.2 C5.4",
+      "F5.2 A5.2 C6.4 A5.2 F5.2 C5.4",
+      "G5.2 E5.2 C5.2 E5.2 G5.4 C6.4",
+      "B5.2 G5.2 D5.2 G5.2 B5.4 G5.4",
+      "A5.2 F5.2 C5.2 F5.2 A5.2 C6.2 E6.4",
+      "C6.6 -.2 G5.2 E5.2 C5.4",
+    ],
+  },
+  B: {
+    ch: ["F", "C", "G", "Am", "F", "G", ["F", "G"], "C"],
+    mel: [
+      "A5.2 C6.2 F6.4 C6.2 A5.2 F5.4",
+      "G5.2 E5.2 C5.2 E5.2 G5.6 -.2",
+      "B5.2 D6.2 G6.4 D6.2 B5.2 G5.4",
+      "E5.2 A5.2 C6.4 A5.2 E5.2 C5.4",
+      "F5.2 A5.2 C6.2 A5.2 F5.4 C6.4",
+      "D5.2 G5.2 B5.4 G5.2 D5.2 B4.4",
+      "A5.2 G5.2 F5.2 E5.2 D5.2 E5.2 F5.2 G5.2",
+      "C6.8 E5.4 G5.4",
+    ],
+  },
+  form: ["A", "B", "A"],
+};
+try { BAND_SONG.compiled = { A: compileSection(BAND_SONG, "A"), B: compileSection(BAND_SONG, "B") }; } catch (e) {}
+music.bandSong = null;
+
+function newParty() {
+  return {
+    wishes: {},
+    homes: {},
+    noteDay: "",
+    noteLine: "",
+    noteShow: false,
+    bandDay: "",
+    bandPlays: 0,
+    giftDay: "",
+    photos: 0,
+    stickers: {},
+    visitSeen: {},
+    visit: null,
+    homeItems: 0,
+  };
+}
+let party = newParty();
+let band = null;
+let booth = null;
+let wishPlay = null;
+let homeId = null;
+
+function localDay() {
+  const d = new Date();
+  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+}
+function dayHash(s) {
+  let h = 0;
+  const t = String(s || "");
+  for (let i = 0; i < t.length; i++) h = (h * 33 + t.charCodeAt(i)) >>> 0;
+  return h;
+}
+function normalizeParty(d) {
+  const o = newParty();
+  if (!isObj(d)) return o;
+  if (isObj(d.wishes)) for (const w of WISHES) if (d.wishes[w.id]) o.wishes[w.id] = true;
+  if (isObj(d.homes)) {
+    for (const id in ROOM_SLOTS) {
+      const h = d.homes[id];
+      if (!isObj(h) || !Array.isArray(h.slots)) continue;
+      const n = ROOM_SLOTS[id];
+      const slots = [];
+      for (let i = 0; i < n; i++) {
+        const s = h.slots[i];
+        slots.push(typeof s === "string" && ROOM_ITEMS.some(it => it.id === s) ? s : null);
+      }
+      o.homes[id] = { slots };
+    }
+  }
+  o.noteDay = typeof d.noteDay === "string" ? d.noteDay.slice(0, 16) : "";
+  o.noteLine = typeof d.noteLine === "string" ? d.noteLine.slice(0, 90) : "";
+  o.bandDay = typeof d.bandDay === "string" ? d.bandDay.slice(0, 16) : "";
+  o.bandPlays = Math.floor(numOr0(d.bandPlays));
+  o.giftDay = typeof d.giftDay === "string" ? d.giftDay.slice(0, 16) : "";
+  o.photos = Math.floor(numOr0(d.photos));
+  if (isObj(d.stickers)) for (const s of BOOTH_STICKS) if (d.stickers[s]) o.stickers[s] = true;
+  if (isObj(d.visitSeen)) {
+    const keys = Object.keys(d.visitSeen).slice(0, 24);
+    for (const k of keys) if (typeof k === "string" && k.length < 80) o.visitSeen[k] = true;
+  }
+  if (isObj(d.visit) && Array.isArray(d.visit.pals) && typeof d.visit.until === "number" && d.visit.until > Date.now()) {
+    const pals = d.visit.pals.filter(p => p && ANIMALS.some(a => a.id === p.id)).slice(0, 3);
+    if (pals.length) o.visit = { from: cleanName(d.visit.from) || "A friend", pals: pals.map(p => ({ id: p.id, name: cleanName(p.name) || palName(ANIMALS.find(a => a.id === p.id)) })), until: d.visit.until, gift: !!d.visit.gift };
+  }
+  o.homeItems = countHomeItems(o);
+  return o;
+}
+function countHomeItems(o) {
+  let n = 0;
+  for (const id in o.homes) for (const s of o.homes[id].slots) if (s) n++;
+  return n;
+}
+function partySnapshot() {
+  const homes = {};
+  for (const id in party.homes) homes[id] = { slots: party.homes[id].slots.slice() };
+  const visit = party.visit && party.visit.until > Date.now() ? {
+    from: party.visit.from, pals: party.visit.pals, until: party.visit.until, gift: !!party.visit.gift,
+  } : null;
+  return {
+    wishes: party.wishes, homes, noteDay: party.noteDay, noteLine: party.noteLine,
+    bandDay: party.bandDay, bandPlays: party.bandPlays, giftDay: party.giftDay, photos: party.photos,
+    stickers: party.stickers, visitSeen: party.visitSeen, visit,
+  };
+}
+function pickMorning() {
+  const day = localDay();
+  const h = dayHash(day + ":" + (totalHugs % 7));
+  const dream = kind && cleanDream(kind.dream);
+  if (dream) {
+    const bit = dream.length > 36 ? dream.slice(0, 36) + "…" : dream;
+    return "The jar is still keeping: " + bit;
+  }
+  return MORNING_LINES[h % MORNING_LINES.length];
+}
+function prepMorning() {
+  const day = localDay();
+  if (party.noteDay === day) { party.noteShow = false; return; }
+  party.noteShow = true;
+  party.noteLine = pickMorning();
+}
+function dismissMorning() {
+  party.noteShow = false;
+  party.noteDay = localDay();
+  party.noteLine = "";
+  save();
+  buzz("ui");
+}
+
+function rareOwned() { return ANIMALS.filter(a => a.rare && unlocked[a.id]); }
+function ensureHome(id) {
+  if (!party.homes[id]) party.homes[id] = { slots: ROOM_SLOTS[id] ? new Array(ROOM_SLOTS[id]).fill(null) : [] };
+  const n = ROOM_SLOTS[id] || 0;
+  while (party.homes[id].slots.length < n) party.homes[id].slots.push(null);
+  party.homes[id].slots.length = n;
+  return party.homes[id];
+}
+
+// ---------- band ----------
+const BAND_INST = ["drum", "bell", "flute", "harp"];
+function openBand() {
+  const list = unlockedList().filter(a => a.id !== "gloomking");
+  if (!list.length) { toast("Befriend someone first", C.textSoft); return; }
+  const pals = list.slice(0, Math.min(4, Math.max(3, list.length)));
+  while (pals.length < 3) pals.push(list[pals.length % list.length]);
+  band = { t: 0, dur: 45, pals, paid: party.bandDay === localDay() };
+  music.bandSong = BAND_SONG;
+  music.step = 0; music.formIdx = 0;
+  if (scene === "arcade" || scene === "play" || scene === "title" || scene === "pause") prevScene = scene === "play" ? "pause" : (scene === "arcade" ? "arcade" : prevScene);
+  scene = "band";
+  ensureAudio();
+}
+function stopBandMusic() {
+  if (!music.bandSong) return;
+  music.bandSong = null;
+  music.step = 0; music.formIdx = 0;
+}
+function finishBand() {
+  if (!band) return;
+  if (!band.paid) {
+    joy += BAND_BONUS;
+    party.bandDay = localDay();
+    band.paid = true;
+    toast("The band bows! +" + BAND_BONUS + " ♥", C.heart);
+  } else toast("Encore! Just for fun today", C.textSoft);
+  party.bandPlays++;
+  checkAchievements();
+  save();
+  stopBandMusic();
+  band = null;
+  scene = "arcade";
+}
+function drawInstrument(kind, x, y, bob) {
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y + bob));
+  if (kind === "drum") {
+    ctx.fillStyle = "#e07098"; ctx.fillRect(-11, -2, 22, 12);
+    ctx.fillStyle = "#ffd0e0"; ctx.fillRect(-11, -4, 22, 4);
+    ctx.fillStyle = "#6a4030"; ctx.fillRect(-12, 8, 4, 5); ctx.fillRect(8, 8, 4, 5);
+    ctx.fillStyle = "#fffaf5"; ctx.fillRect(2, -16, 2, 12);
+    ctx.fillStyle = "#ffd66b"; ctx.fillRect(0, -18, 6, 3);
+  } else if (kind === "bell") {
+    ctx.fillStyle = "#ffd66b"; ctx.fillRect(-8, -2, 16, 12);
+    ctx.fillStyle = "#fff2b0"; ctx.fillRect(-6, 0, 4, 6);
+    ctx.fillStyle = "#c89820"; ctx.fillRect(-2, 10, 4, 3);
+    ctx.fillStyle = "#6a4030"; ctx.fillRect(-1, -10, 2, 8);
+  } else if (kind === "flute") {
+    ctx.fillStyle = "#c9a0ff"; ctx.fillRect(-16, -2, 32, 5);
+    ctx.fillStyle = "#fffaf5"; ctx.fillRect(-8, -2, 2, 5); ctx.fillRect(-2, -2, 2, 5); ctx.fillRect(6, -2, 2, 5);
+    ctx.fillStyle = "#8060b0"; ctx.fillRect(12, -4, 4, 8);
+  } else {
+    ctx.fillStyle = "#f0c070"; ctx.fillRect(-4, -16, 4, 28);
+    ctx.strokeStyle = "#fffaf5"; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(0, -12 + i * 6); ctx.lineTo(14, -16 + i * 7); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function drawBand() {
+  listMax = 0;
+  drawBackground();
+  if (typeof drawWishSky === "function") drawWishSky();
+  ctx.fillStyle = "rgba(255,250,245,0.55)";
+  roundRect(16, H - 200, W - 32, 70, 16); ctx.fill();
+  ctx.fillStyle = "#c98a52"; ctx.fillRect(28, H - 188, W - 56, 10);
+  ctx.fillStyle = "#e8b078"; ctx.fillRect(28, H - 188, W - 56, 3);
+  const pals = band.pals;
+  pals.forEach((a, i) => {
+    const x = 56 + i * ((W - 80) / Math.max(1, pals.length - 1 || 1));
+    const bob = Math.sin(time * 6 + i) * 3;
+    drawSprite(a, x - 8, H - 248 + bob, 2.05, false, 0, false, i * 20, { acc: equippedFor(a.id), heartEyes: band.t > band.dur - 4 });
+    drawInstrument(BAND_INST[i % 4], x + 16, H - 220, bob);
+  });
+  ctx.fillStyle = C.text; font(16, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Critter Band", W / 2, 36);
+  ctx.fillStyle = C.textSoft; font(12, false);
+  const left = Math.max(0, Math.ceil(band.dur - band.t));
+  ctx.fillText(left > 0 ? left + "s of a little song" : "Take a bow!", W / 2, 56);
+  uiButtons = [];
+  uiButtons.push(btn(W / 2 - 70, H - 70, 140, 46, left > 0 ? "Enough ♪" : "Back", { id: "v11_band_done", size: 15 }));
+}
+function updateBand(dt) {
+  if (!band) return;
+  band.t += dt;
+  if (band.t >= band.dur + 1.2) finishBand();
+}
+
+// ---------- photo booth ----------
+function openBooth() {
+  const list = unlockedList();
+  booth = {
+    pals: list.slice(0, Math.min(3, list.length)).map(a => a.id),
+    back: 0,
+    sticks: { heart: true },
+  };
+  scene = "booth";
+}
+function boothAnimals() {
+  return (booth.pals || []).map(id => ANIMALS.find(a => a.id === id)).filter(Boolean).slice(0, 3);
+}
+function drawBoothBackdrop(id) {
+  if (id === "dusk") {
+    const g = ctx.createLinearGradient(0, 70, 0, H - 80);
+    g.addColorStop(0, "#f0b0d8"); g.addColorStop(1, "#ffd8a8");
+    ctx.fillStyle = g; ctx.fillRect(28, 78, W - 56, H - 200);
+  } else if (id === "stars") {
+    ctx.fillStyle = "#2a2048"; ctx.fillRect(28, 78, W - 56, H - 200);
+    ctx.fillStyle = "#fffaf5";
+    for (let i = 0; i < 18; i++) ctx.fillRect(40 + ((i * 47) % (W - 90)), 90 + ((i * 29) % (H - 280)), 2, 2);
+  } else if (id === "bloom") {
+    ctx.fillStyle = "#ffe0f0"; ctx.fillRect(28, 78, W - 56, H - 200);
+    ctx.fillStyle = "#ff8ab8";
+    for (let i = 0; i < 8; i++) ctx.fillRect(40 + i * 36, H - 150, 6, 6);
+  } else {
+    const g = ctx.createLinearGradient(0, 78, 0, H - 120);
+    g.addColorStop(0, "#b8e4ff"); g.addColorStop(0.55, "#ffe8c8"); g.addColorStop(1, "#b8e8a0");
+    ctx.fillStyle = g; ctx.fillRect(28, 78, W - 56, H - 200);
+  }
+}
+function drawSticker(kind, x, y) {
+  if (kind === "heart") drawPixelHeart(x, y, 6, "#ff6b9d");
+  else if (kind === "star") {
+    ctx.fillStyle = "#ffd66b";
+    ctx.fillRect(x - 2, y - 8, 4, 16); ctx.fillRect(x - 8, y - 2, 16, 4); ctx.fillRect(x - 5, y - 5, 10, 10);
+  } else if (kind === "flower") {
+    ctx.fillStyle = "#ff8ab8";
+    ctx.fillRect(x - 7, y - 2, 5, 5); ctx.fillRect(x + 2, y - 2, 5, 5); ctx.fillRect(x - 2, y - 7, 5, 5); ctx.fillRect(x - 2, y + 2, 5, 5);
+    ctx.fillStyle = "#ffd66b"; ctx.fillRect(x - 2, y - 2, 4, 4);
+  } else {
+    ctx.fillStyle = "#ff6b9d"; ctx.fillRect(x - 8, y - 3, 16, 5); ctx.fillRect(x - 3, y - 6, 6, 4);
+  }
+}
+function drawBooth(capture) {
+  listMax = 0;
+  drawBackground();
+  ctx.fillStyle = "#fffaf5";
+  roundRect(16, 16, W - 32, H - 32, 18); ctx.fill();
+  ctx.strokeStyle = "#e8a0c0"; ctx.lineWidth = 4; ctx.stroke();
+  const back = BOOTH_BACKS[booth.back % BOOTH_BACKS.length];
+  drawBoothBackdrop(back.id);
+  ctx.strokeStyle = "#fffaf5"; ctx.lineWidth = 6;
+  ctx.strokeRect(28, 78, W - 56, H - 200);
+  const pals = boothAnimals();
+  pals.forEach((a, i) => {
+    const x = W / 2 + (i - (pals.length - 1) / 2) * 78;
+    drawSprite(a, x, H * 0.48, 2.3, false, Math.sin(time * 3 + i) * 2, false, i * 30, { acc: equippedFor(a.id), heartEyes: true });
+    ctx.fillStyle = C.text; font(11, true); ctx.textAlign = "center";
+    ctx.fillText(palName(a), x, H * 0.48 + 36);
+  });
+  let si = 0;
+  BOOTH_STICKS.forEach((s) => {
+    if (!booth.sticks[s]) return;
+    drawSticker(s, 56 + si * 28, 100);
+    drawSticker(s, W - 56 - si * 22, H - 150);
+    si++;
+  });
+  ctx.fillStyle = C.text; font(13, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Photo Booth", W / 2, 42);
+  ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText(back.name + "  ·  up to 3 friends", W / 2, 60);
+  uiButtons = [];
+  if (capture) return;
+  uiButtons.push(btn(W - 96, 22, 70, 44, "Back", { id: "close", size: 14, bg: "#fff", border: "#e0b0c8" }));
+  const list = unlockedList();
+  list.slice(0, 8).forEach((a, i) => {
+    const on = booth.pals.indexOf(a.id) >= 0;
+    const x = 16 + (i % 4) * 86, y = H - 176 + Math.floor(i / 4) * 48;
+    uiButtons.push(btn(x, y, 82, 44, (on ? "✓ " : "") + palName(a).slice(0, 7), {
+      id: "v11_pal_" + a.id, size: 11, bg: on ? "#ffd0e4" : "#fff", border: on ? "#e07098" : "#e0c8d4",
+    }));
+  });
+  uiButtons.push(btn(16, H - 76, 78, 44, "Scene", { id: "v11_back", size: 13, bg: "#d0ecff", border: "#80b0e0" }));
+  uiButtons.push(btn(100, H - 76, 86, 44, "Stickers", { id: "v11_stick", size: 12, bg: "#fff0c8", border: "#e0c060" }));
+  uiButtons.push(btn(192, H - 76, W - 208, 44, "Save photo", { id: "v11_savepic", size: 14 }));
+}
+let boothArm = false;
+function armBoothPhoto() {
+  boothArm = true;
+  toast("Holding still…", C.textSoft);
+}
+function finishBoothPhoto() {
+  if (!boothArm) return;
+  boothArm = false;
+  try { drawBooth(true); } catch (e) { return; }
+  party.photos++;
+  saveSoon();
+  const deliver = (blob) => {
+    try {
+      const url = blob ? URL.createObjectURL(blob) : (canvas.toDataURL ? canvas.toDataURL("image/png") : "");
+      if (!url || typeof document === "undefined" || !document.createElement) return;
+      const a = document.createElement("a");
+      if (!a || !a.style) return;
+      a.href = url; a.download = "happy-critters-photo.png";
+      if (a.click) a.click();
+      const nav = typeof navigator !== "undefined" ? navigator : null;
+      if (blob && nav && nav.share && nav.canShare) {
+        const file = new File([blob], "happy-critters-photo.png", { type: "image/png" });
+        if (nav.canShare({ files: [file] })) nav.share({ files: [file], title: "Happy Critters", text: "A photo booth picture ♥" }).catch(() => {});
+      }
+    } catch (e) {}
+  };
+  try {
+    if (canvas.toBlob) canvas.toBlob(deliver, "image/png");
+    else deliver(null);
+  } catch (e) { deliver(null); }
+  toast("Saved a photo ♥", C.heart);
+}
+
+// ---------- wishes ----------
+function openWishes() { scene = "wishes"; listScroll = 0; }
+function buyWish(id) {
+  const w = WISHES.find(x => x.id === id);
+  if (!w || party.wishes[id]) return;
+  if (joy < w.cost) { toast("That wish needs " + heartCost(w.cost) + " ♥", C.textSoft); sfxNope(); return; }
+  joy -= w.cost;
+  party.wishes[id] = true;
+  checkAchievements();
+  save();
+  sfxUnlock();
+  buzz("friend");
+  wishPlay = { id, t: 0 };
+  scene = "wishplay";
+}
+function drawWishes() {
+  panelHeader("Heart Wishes", "Once each · they leave a little sparkle");
+  const top = 84, bottom = H - 74, rowH = 92;
+  setListExtent(top, bottom, WISHES.length * rowH + 8);
+  listClip(top, bottom);
+  WISHES.forEach((w, i) => {
+    const y = top + 4 + i * rowH - listScroll;
+    if (y > bottom || y + rowH < top) return;
+    const owned = !!party.wishes[w.id];
+    ctx.fillStyle = owned ? "rgba(255,236,170,0.75)" : "rgba(255,240,248,0.92)";
+    roundRect(22, y, W - 44, rowH - 8, 12); ctx.fill();
+    ctx.strokeStyle = owned ? "#e0c060" : C.panelBorder; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text; font(15, true);
+    ctx.fillText(w.name, 36, y + 24);
+    ctx.fillStyle = C.textSoft; font(11, false);
+    ctx.fillText(w.blurb, 36, y + 46);
+    if (owned) {
+      ctx.fillStyle = "#50a050"; font(12, true); ctx.textAlign = "right";
+      ctx.fillText("Kept ♥", W - 40, y + 36);
+    } else {
+      listBtn(W - 118, y + 18, 86, 44, heartCost(w.cost) + " ♥", {
+        id: joy >= w.cost ? "v11_wish_" + w.id : "v11_wishno_" + w.id, size: 13,
+        bg: joy >= w.cost ? C.btn : "#eee4ea", border: joy >= w.cost ? "#ff80b0" : "#d8c8d0",
+        color: joy >= w.cost ? C.btnText : "#a898a8",
+      }, top, bottom);
+    }
+  });
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+function drawWishPlay() {
+  const w = WISHES.find(x => x.id === wishPlay.id);
+  drawBackground();
+  ctx.fillStyle = "rgba(40, 24, 60, 0.35)";
+  ctx.fillRect(0, 0, W, H);
+  if (wishPlay.id === "meteor") {
+    for (let i = 0; i < 8; i++) {
+      const p = ((wishPlay.t * 0.35 + i * 0.13) % 1);
+      ctx.strokeStyle = "#fff6c8"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(30 + i * 40, 40 + p * 80);
+      ctx.lineTo(70 + i * 40, 20 + p * 80);
+      ctx.stroke();
+    }
+  } else if (wishPlay.id === "kingparty") {
+    ctx.fillStyle = "#ff8ab8";
+    for (let i = 0; i < 8; i++) ctx.fillRect(20 + i * 42, 70, 24, 14);
+    ctx.fillStyle = "#fff0c8"; ctx.fillRect(W / 2 - 28, H / 2 - 10, 56, 36);
+    ctx.fillStyle = "#ff6b9d"; ctx.fillRect(W / 2 - 4, H / 2 - 22, 8, 16);
+  } else if (wishPlay.id === "rainbow") {
+    ["#ff8ab8", "#ffd66b", "#b8e8a0", "#9fd4ff", "#c9a0ff"].forEach((col, i) => {
+      ctx.strokeStyle = col; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(W / 2, H * 0.72, 90 + i * 10, Math.PI, 0); ctx.stroke();
+    });
+  } else {
+    ctx.fillStyle = "#6ec878"; ctx.fillRect(0, H * 0.62, W, H);
+    ctx.fillStyle = "#fff6c8";
+    for (let i = 0; i < 7; i++) ctx.fillRect(30 + i * 46, H * 0.7, 8, 8);
+  }
+  ctx.fillStyle = "#fffaf5"; font(18, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(w ? w.name : "A wish", W / 2, H * 0.38);
+  ctx.font = "12px sans-serif"; ctx.fillStyle = "#fff0f5";
+  ctx.fillText("It leaves a little sparkle behind.", W / 2, H * 0.38 + 28);
+  uiButtons = [];
+  if (wishPlay.t > 1.2) uiButtons.push(btn(W / 2 - 70, H - 80, 140, 46, "Lovely", { id: "v11_wish_done", size: 15 }));
+}
+function updateWish(dt) {
+  if (!wishPlay) return;
+  wishPlay.t += dt;
+  if (wishPlay.t > 8) { wishPlay = null; scene = "wishes"; }
+}
+function drawWishSky() {
+  if (!party.wishes.rainbow && !party.wishes.meteor && !party.wishes.kingparty) return;
+  if (party.wishes.rainbow) {
+    ctx.save(); ctx.globalAlpha = 0.55;
+    ["#ff8ab8", "#ffd66b", "#b8e8a0", "#9fd4ff"].forEach((col, i) => {
+      ctx.strokeStyle = col; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(W * 0.72, 120, 36 + i * 5, Math.PI, 0); ctx.stroke();
+    });
+    ctx.restore();
+  }
+  if (party.wishes.kingparty) {
+    ctx.fillStyle = "#ff8ab8";
+    for (let i = 0; i < 6; i++) { ctx.fillRect(16 + i * 58, 78, 22, 8); ctx.fillStyle = i % 2 ? "#ffd66b" : "#c9a0ff"; }
+  }
+  if (party.wishes.meteor && Math.floor(time) % 7 === 0) {
+    const p = (time % 1);
+    ctx.strokeStyle = "rgba(255,246,200,0.9)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(40 + p * 80, 50); ctx.lineTo(90 + p * 80, 30); ctx.stroke();
+  }
+}
+function drawWishGarden() {
+  if (!party.wishes.stargarden) return;
+  const top = gy0();
+  ctx.fillStyle = "#fff6c8";
+  for (let i = 0; i < 8; i++) {
+    const x = 18 + i * 42, y = top + G_ROWS * G_CELL - 18;
+    ctx.fillRect(x, y, 6, 6); ctx.fillRect(x + 2, y - 3, 2, 3);
+  }
+}
+
+// ---------- visits (offline codes; not a full save) ----------
+function visitPayload() {
+  const named = unlockedList().filter(a => kind.names[a.id] && a.id !== "gloomking");
+  const pool = (named.length ? named : unlockedList().filter(a => a.id !== "gloomking")).slice(0, 3);
+  const pals = pool.map(a => ({ id: a.id, name: palName(a).slice(0, 12) }));
+  if (!pals.length) pals.push({ id: "cat", name: "Kitty" });
+  return { v: 1, from: "A friend", mood: Math.max(0, Math.min(100, Math.round(mood))), hugs: Math.max(0, Math.min(99999, totalHugs | 0)), pals };
+}
+function encodeVisit(obj) { return "HV1." + bytesToB64(utf8Bytes(JSON.stringify(obj))); }
+function myVisitCode() { return encodeVisit(visitPayload()); }
+function decodeVisit(code) {
+  const raw = String(code == null ? "" : code).trim().replace(/\s+/g, "");
+  if (!raw) return { ok: false, error: "Paste a visit code first." };
+  if (raw.length > 800) return { ok: false, error: "That note is too long to be a visit." };
+  if (raw.slice(0, 4) !== "HV1.") return { ok: false, error: "That isn't a friend-visit code." };
+  let text;
+  try { text = bytesToUtf8(b64ToBytes(raw.slice(4))); } catch (e) { return { ok: false, error: "That code is incomplete or mistyped." }; }
+  let d;
+  try { d = JSON.parse(text); } catch (e) { return { ok: false, error: "That code is incomplete or mistyped." }; }
+  if (!isObj(d) || d.v !== 1 || !Array.isArray(d.pals) || d.pals.length < 1 || d.pals.length > 3) return { ok: false, error: "That visit is missing its friends." };
+  if (typeof d.mood !== "number" || d.mood < 0 || d.mood > 100 || typeof d.hugs !== "number" || d.hugs < 0 || d.hugs > 999999) return { ok: false, error: "Those stats look jumbled." };
+  const pals = [];
+  for (const p of d.pals) {
+    if (!p || !ANIMALS.some(a => a.id === p.id)) return { ok: false, error: "A friend in that code isn't from this meadow." };
+    const name = cleanName(p.name) || palName(ANIMALS.find(a => a.id === p.id));
+    pals.push({ id: p.id, name });
+  }
+  return { ok: true, data: { v: 1, from: "A friend", mood: Math.round(d.mood), hugs: Math.round(d.hugs), pals } };
+}
+function visitKey(d) { return d.pals.map(p => p.id + ":" + p.name).join("|") + "#" + d.hugs; }
+function acceptVisit(code) {
+  const r = decodeVisit(code);
+  if (!r.ok) return r;
+  const beforeJoy = joy, beforeKeys = Object.keys(unlocked).length;
+  const key = visitKey(r.data).slice(0, 78);
+  const freshGift = party.giftDay !== localDay();
+  party.visit = { from: r.data.from, pals: r.data.pals, until: Date.now() + VISIT_MS, gift: freshGift, spawned: false };
+  party.visitSeen[key] = true;
+  if (freshGift) {
+    joy += VISIT_GIFT;
+    party.giftDay = localDay();
+    party.stickers.heart = true;
+    toast(r.data.pals[0].name + " left " + VISIT_GIFT + " ♥", C.heart);
+  } else toast(r.data.pals[0].name + " is visiting. The gift was already today.", C.textSoft);
+  save();
+  return { ok: true, joyDelta: joy - beforeJoy, unlockedSame: Object.keys(unlocked).length === beforeKeys };
+}
+function openVisit() {
+  scene = "visit";
+  try { noteSet(myVisitCode()); } catch (e) {}
+}
+function partyPlayTick(dt) {
+  const v = party.visit;
+  if (!v) return;
+  if (Date.now() > v.until) {
+    party.visit = null;
+    for (const c of critters) if (c.visitPal) c.life = Math.min(c.life, 1.2);
+    saveSoon();
+    return;
+  }
+  if (!v.spawned && scene === "play") {
+    v.spawned = true;
+    v.pals.forEach((p, i) => {
+      const animal = ANIMALS.find(a => a.id === p.id);
+      if (!animal) return;
+      const [y0, y1] = critterYRange();
+      critters.push(makeCritter(animal, {
+        x: 40 + i * 70, y: y0 + 30 + i * 36, scale: 1.7, vx: 18,
+        life: 400,
+      }));
+      const c = critters[critters.length - 1];
+      c.visitPal = true;
+      c.visitName = p.name;
+    });
+  }
+}
+
+// ---------- tiny homes ----------
+function openHome(id) {
+  if (!ROOM_SLOTS[id] || !unlocked[id]) { toast("A rare friend keeps this room", C.textSoft); return; }
+  homeId = id;
+  ensureHome(id);
+  scene = "home";
+}
+function homePlace(itemId, slot) {
+  const spec = ROOM_ITEMS.find(it => it.id === itemId);
+  const home = ensureHome(homeId);
+  if (!spec || slot < 0 || slot >= home.slots.length) return;
+  if (home.slots[slot] === itemId) { home.slots[slot] = null; party.homeItems = countHomeItems(party); save(); return; }
+  if (home.slots.indexOf(itemId) >= 0) {
+    const from = home.slots.indexOf(itemId);
+    home.slots[from] = home.slots[slot];
+    home.slots[slot] = itemId;
+    save();
+    return;
+  }
+  if (joy < spec.cost) { toast(spec.name + " needs " + heartCost(spec.cost) + " ♥", C.textSoft); return; }
+  joy -= spec.cost;
+  home.slots[slot] = itemId;
+  party.homeItems = countHomeItems(party);
+  checkAchievements();
+  save();
+  sfxUnlock();
+  toast(spec.name + " looks cozy here", C.heart);
+}
+function drawRoomItem(id, x, y) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(1.7, 1.7);
+  if (id === "rug") { ctx.fillStyle = "#ffb0c8"; ctx.fillRect(-16, -4, 32, 10); ctx.fillStyle = "#fff0f5"; ctx.fillRect(-12, -2, 8, 6); }
+  else if (id === "lamp") { ctx.fillStyle = "#ffe38a"; ctx.fillRect(-6, -14, 12, 10); ctx.fillStyle = "#6a4030"; ctx.fillRect(-2, -4, 4, 12); }
+  else if (id === "cushion") { ctx.fillStyle = "#c9a0ff"; ctx.fillRect(-12, -6, 24, 12); ctx.fillStyle = "#fff"; ctx.fillRect(-4, -2, 8, 4); }
+  else if (id === "plant") { ctx.fillStyle = "#6cc050"; ctx.fillRect(-8, -14, 6, 8); ctx.fillRect(2, -16, 6, 10); ctx.fillStyle = "#e07050"; ctx.fillRect(-4, -6, 8, 8); }
+  else if (id === "banner") { ctx.fillStyle = "#ffd66b"; ctx.fillRect(-14, -16, 28, 12); ctx.fillStyle = "#ff8ab8"; ctx.fillRect(-14, -4, 6, 10); ctx.fillRect(8, -4, 6, 10); }
+  else if (id === "mobile") { ctx.fillStyle = "#9fd4ff"; ctx.fillRect(-1, -18, 2, 10); ctx.fillRect(-10, -8, 20, 2); ctx.fillStyle = "#ffd66b"; ctx.fillRect(-8, -6, 4, 4); ctx.fillRect(4, -6, 4, 4); }
+  ctx.restore();
+}
+function drawHome() {
+  listMax = 0;
+  const animal = ANIMALS.find(a => a.id === homeId);
+  const home = ensureHome(homeId);
+  const n = home.slots.length;
+  panelHeader((animal ? animal.name : "Tiny") + (homeId === "kitsune" ? "'s den" : "'s room"), n + " spots · tap a spot to place");
+  drawSprite(animal, 54, 118, 2, false, Math.sin(time * 3) * 2, false, 1, { acc: equippedFor(homeId) });
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.textSoft; font(11, false);
+  ctx.fillText(animal && animal.bio ? animal.bio : "", 96, 108);
+  const cols = n > 4 ? 3 : 2;
+  uiButtons = [];
+  home.slots.forEach((s, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = 28 + col * 108, y = 160 + row * 78;
+    ctx.fillStyle = s ? "rgba(255,236,180,0.8)" : "rgba(255,255,255,0.8)";
+    roundRect(x, y, 100, 70, 10); ctx.fill();
+    ctx.strokeStyle = "#e0c8d8"; ctx.lineWidth = 1.5; ctx.stroke();
+    if (s) drawRoomItem(s, x + 50, y + 36);
+    else { ctx.fillStyle = "#c8b0c0"; font(11, false); ctx.textAlign = "center"; ctx.fillText("empty", x + 50, y + 36); }
+    uiButtons.push({ x: x, y: y, w: 100, h: 70, id: "v11_slot_" + i });
+  });
+  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText("Hearts " + joy + " ♥", W / 2, H - 118);
+  ROOM_ITEMS.forEach((it, i) => {
+    const x = 16 + (i % 3) * 112, y = H - 108 + Math.floor(i / 3) * 0;
+    // two rows of three sit above the footer
+  });
+  const baseY = H - 168;
+  // move slot area up was fixed; item buy row:
+  // redraw item buttons in the lower band if slots used the middle. Slots end around 160+2*78=316.
+  ROOM_ITEMS.forEach((it, i) => {
+    const x = 18 + (i % 3) * 114;
+    const y = (n > 4 ? 340 : 330) + Math.floor(i / 3) * 48;
+    const placed = home.slots.indexOf(it.id) >= 0;
+    if (y > H - 80) return;
+    uiButtons.push(btn(x, y, 108, 44, placed ? "Placed" : it.name.split(" ")[0] + " " + (it.cost >= 1000 ? Math.round(it.cost / 1000) + "k" : it.cost), {
+      id: placed ? "v11_itemhave_" + it.id : "v11_item_" + it.id, size: 12,
+      bg: placed ? "#e8f8d8" : "#fff", border: placed ? "#70c080" : "#e0b0c8",
+    }));
+  });
+  panelFooter();
+}
+let homeArmItem = null;
+function drawHomeFixed() {
+  // replaced below if layout is messy; drawHome is the one used
+}
+
+// ---------- morning note ----------
+function drawMorningNote() {
+  if (!party.noteShow || tut || !tutorialDone) return;
+  if (scene !== "title" && scene !== "play") return;
+  const oy = Math.round((H - 540) / 2);
+  let y = 456 + oy;
+  if (scene === "title" && moodPeak >= 100) y += 52;
+  if (scene === "play") y = 86;
+  const h = 64;
+  if (y + h > H - 8) return;
+  ctx.fillStyle = "rgba(255,250,245,0.96)";
+  roundRect(16, y, W - 32, h, 12); ctx.fill();
+  ctx.strokeStyle = "#ffb8d0"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.heart; font(11, true);
+  ctx.fillText("Morning note", 28, y + 16);
+  ctx.fillStyle = C.text; font(11, false);
+  const lines = wrapText(party.noteLine || "Hello.", W - 150);
+  lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, 28, y + 34 + i * 13));
+  uiButtons.push(btn(W - 96, y + 9, 70, 44, "OK", { id: "v11_note_ok", size: 14 }));
+}
+
+// ---------- visit screen ----------
+function drawVisit() {
+  listMax = 0;
+  panelHeader("Friend visit", "A little note, not your whole meadow");
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.textSoft; font(12, false);
+  wrapText("Share this code. A friend pastes it and a few named critters visit for a little while. Nothing here is replaced.", W - 64).slice(0, 3).forEach((l, i) => ctx.fillText(l, W / 2, 96 + i * 16));
+  uiButtons = [];
+  uiButtons.push(btn(28, H - 196, (W - 68) / 2, 46, "Copy", { id: "v11_vcopy", size: 15 }));
+  uiButtons.push(btn(40 + (W - 68) / 2, H - 196, (W - 68) / 2, 46, "Welcome", { id: "v11_vwelcome", size: 14, bg: "#e8d0ff", border: "#c090e0" }));
+  panelFooter();
+}
+
+const isPartyScene = s => s === "band" || s === "booth" || s === "wishes" || s === "wishplay" || s === "home" || s === "visit";
+function partyClose() {
+  if (scene === "band") { stopBandMusic(); band = null; scene = "arcade"; return; }
+  if (scene === "booth" || scene === "wishes" || scene === "wishplay") { wishPlay = null; scene = "arcade"; hideNote(); return; }
+  if (scene === "home") { scene = "album"; homeArmItem = null; return; }
+  if (scene === "visit") { hideNote(); scene = "settings"; return; }
+  scene = prevScene || "title";
+}
+function partyStep(dt) {
+  if (scene === "band") { updateBand(dt); if (scene === "band" && band) drawBand(); }
+  else if (scene === "booth") drawBooth(false);
+  else if (scene === "wishes") drawWishes();
+  else if (scene === "wishplay") { updateWish(dt); if (scene === "wishplay") drawWishPlay(); }
+  else if (scene === "home") drawHome();
+  else if (scene === "visit") drawVisit();
+}
+function partyAction(id) {
+  if (!id) return false;
+  if (id === "v11_band") { openBand(); return true; }
+  if (id === "v11_booth") { openBooth(); return true; }
+  if (id === "v11_wishes") { openWishes(); return true; }
+  if (id === "v11_band_done") { finishBand(); return true; }
+  if (id === "v11_note_ok") { dismissMorning(); return true; }
+  if (id === "v11_back" && booth) { booth.back = (booth.back + 1) % BOOTH_BACKS.length; return true; }
+  if (id === "v11_stick" && booth) {
+    const cur = BOOTH_STICKS.filter(s => booth.sticks[s]);
+    const next = BOOTH_STICKS[(BOOTH_STICKS.indexOf(cur[cur.length - 1]) + 1) % BOOTH_STICKS.length];
+    if (cur.length >= 3 && !booth.sticks[next]) { toast("Three stickers is plenty", C.textSoft); return true; }
+    booth.sticks[next] = !booth.sticks[next];
+    if (!BOOTH_STICKS.some(s => booth.sticks[s])) booth.sticks.heart = true;
+    return true;
+  }
+  if (id === "v11_savepic") { armBoothPhoto(); return true; }
+  if (id.indexOf("v11_pal_") === 0 && booth) {
+    const pid = id.slice(8);
+    const i = booth.pals.indexOf(pid);
+    if (i >= 0) booth.pals.splice(i, 1);
+    else if (booth.pals.length >= 3) toast("Three friends fit in the frame", C.textSoft);
+    else booth.pals.push(pid);
+    return true;
+  }
+  if (id.indexOf("v11_wish_") === 0 && id !== "v11_wish_done") { buyWish(id.slice(9)); return true; }
+  if (id.indexOf("v11_wishno_") === 0) { const w = WISHES.find(x => x.id === id.slice(11)); toast(w ? "Needs " + heartCost(w.cost) + " ♥" : "Not enough hearts", C.textSoft); return true; }
+  if (id === "v11_wish_done") { wishPlay = null; scene = "wishes"; return true; }
+  if (id === "v11_visit") { openVisit(); return true; }
+  if (id === "v11_vcopy") { try { noteSet(myVisitCode()); } catch (e) {} copyNote(); return true; }
+  if (id === "v11_vwelcome") {
+    const r = acceptVisit(noteValue());
+    if (!r.ok) { toast(r.error, C.textSoft); sfxNope(); return true; }
+    hideNote(); scene = "play";
+    return true;
+  }
+  if (id.indexOf("home_") === 0) { openHome(id.slice(5)); return true; }
+  if (id.indexOf("v11_item_") === 0 && scene === "home") {
+    homeArmItem = id.slice(9);
+    const home = ensureHome(homeId);
+    const slot = home.slots.indexOf(null);
+    if (slot < 0) { toast("This room is full", C.textSoft); return true; }
+    homePlace(homeArmItem, slot);
+    homeArmItem = null;
+    return true;
+  }
+  if (id.indexOf("v11_itemhave_") === 0) { toast("Already in the room. Tap its spot to lift it.", C.textSoft); return true; }
+  if (id.indexOf("v11_slot_") === 0 && scene === "home") {
+    const slot = +id.slice(9);
+    const home = ensureHome(homeId);
+    if (home.slots[slot]) { homePlace(home.slots[slot], slot); return true; }
+    toast("Pick something below to place", C.textSoft);
+    return true;
+  }
+  if (id === "close" && isPartyScene(scene)) { partyClose(); return true; }
+  return false;
+}
+
+// games row: three cozy doors, keeping the three games
+function drawPartyGamesRow() {
+  const y = 136;
+  const labels = [["v11_band", "♪ Band", "#ffe0f0", "#e090b0"], ["v11_booth", "Photos", "#fff0c8", "#e0c060"], ["v11_wishes", "Wishes", "#efe6ff", "#b090e0"]];
+  const bw = (W - 44 - 16) / 3;
+  labels.forEach((L, i) => {
+    uiButtons.push(btn(22 + i * (bw + 8), y, bw, 44, L[1], { id: L[0], size: 13, bg: L[2], border: L[3] }));
+  });
+}
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -13209,7 +14033,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time,
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
-        adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk };
+        adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -13246,6 +14070,8 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     advSecondStar, advThirdStar, advSecondText, advThirdText, advCozyMet, ADV_COZY, WEEKLY, isoWeek, weeklyChallenge, rollWeek, weekBump, weekHello,
     KIND_LINES, maybeEncourage, setDream, maybeCheerDream, setCritterName, palName, cleanDream, cleanName, textScale,
     jarRect, tapDreamJar, armPostcard, postcardStamp, finishPostcard, openBackup, openDreamJar, openRename, kindAction,
+    party, newParty, normalizeParty, partySnapshot, WISHES, ROOM_ITEMS, ROOM_SLOTS, prepMorning, myVisitCode, decodeVisit, acceptVisit, encodeVisit, visitPayload,
+    openBand, openBooth, openWishes, openHome, partyAction, BAND_SONG,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
