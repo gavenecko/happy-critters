@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="11.0-wonders">
+<meta name="hc-version" content="11.0-wonders-close">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -13408,7 +13408,9 @@ function openBand() {
   band = { t: 0, dur: 45, pals, paid: party.bandDay === localDay() };
   music.bandSong = BAND_SONG;
   music.step = 0; music.formIdx = 0;
-  if (scene === "arcade" || scene === "play" || scene === "title" || scene === "pause") prevScene = scene === "play" ? "pause" : (scene === "arcade" ? "arcade" : prevScene);
+  // Games Close uses prevScene (title or a paused meadow). finishBand already
+  // returns to the arcade, so opening the band must not replace that with "arcade".
+  if (scene === "play") prevScene = "pause";
   scene = "band";
   ensureAudio();
 }
