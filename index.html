@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="9.0-comforts">
+<meta name="hc-version" content="10.0-rares">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -64,7 +64,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v9 — Little Comforts: backup codes, relaxed stages, dream jar, nicknames, postcards
+// Happy Critters v10 — Rare Friends: a heart sink of fantastical critters, calmer multi-tap
 
 const W = 360;
 let H = 540;
@@ -73,7 +73,7 @@ const COMBO_WINDOW = 1.4;
 const SPAWN_BASE = 0.95;
 const SAVE_KEY = "happyCritters_v2";
 const SAVE_KEY_V1 = "happyCritters_v1";
-const SAVE_VER = 9;
+const SAVE_VER = 10;
 
 const C = {
   white: "#fffaf5", text: "#4a3050", textSoft: "#7a5a70",
@@ -125,6 +125,16 @@ const PAL = [
   "#9a82cc",
   "#c6cadf",
   "#9ca2be",
+  "#7ddea0",
+  "#2f8a5a",
+  "#ff5a32",
+  "#ffd08a",
+  "#f6f2ff",
+  "#c2a8ff",
+  "#6a4ec0",
+  "#5fd0d4",
+  "#1f7f8c",
+  "#fff3c4",
 ];
 const SPRITE_ALPH = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 function parseGrid(rows) {
@@ -3167,6 +3177,798 @@ const SPRITE_FRAMES = {
       "00000001DD1111DD10000000"
     ]),
   },
+  "dragonet": {
+    idle: parseGrid([
+      "000000000000000000000000",
+      "000000001000000100000000",
+      "00000001H100001H10000000",
+      "00000001H100001H10000000",
+      "000000001H1111H100000000",
+      "0000000011EEEE1100000000",
+      "00000001EEEEEEEE10000000",
+      "0000001EhhEEEEhhE1000000",
+      "000001EhhhhEEhhhhE100000",
+      "000001hhhh2hhhhh2h100000",
+      "000111hhhiihhhhiih111000",
+      "001FF1Ehhih22hhihE1FF100",
+      "01FFEFEEhh2jj2hhEEFEFF10",
+      "1FFEEEggE22jE22EEggEEFF1",
+      "1FFEEEFEEEE11EEEEFEEEFF1",
+      "1FFFEEFEEEEEEEEEEFEEFFF1",
+      "01FFFF1EEE2222EEE1FFFFF1",
+      "001FF1EEE222222EEE1EFF10",
+      "000111EEE222222EEEEEE100",
+      "0000001EE222222EE1EEE100",
+      "0000001EEE2222EEE11EE100",
+      "0000001FFFEEEEFFF1011000",
+      "0000001FFF1111FFF1000000",
+      "000000011100001110000000"
+    ]),
+    blink: parseGrid([
+      "000000000000000000000000",
+      "000000001000000100000000",
+      "00000001H100001H10000000",
+      "00000001H100001H10000000",
+      "000000001H1111H100000000",
+      "0000000011EEEE1100000000",
+      "00000001EEEEEEEE10000000",
+      "0000001EEEEEEEEEE1000000",
+      "000001EEEEEEEEEEEE100000",
+      "000001EEEEEEEEEEEE100000",
+      "000111E11111E11111111000",
+      "001FF1EEEE2222EEEE1FF100",
+      "01FFEFEEE22jj22EEEFEFF10",
+      "1FFEEEFEE22jE22EEFEEEFF1",
+      "1FFEEEFEEEEEEEEEEFEEEFF1",
+      "1FFFEEFEEEEEEEEEEFEEFFF1",
+      "01FFFF1EEE2222EEE1FFFFF1",
+      "001FF1EEE222222EEE1EFF10",
+      "000111EEE222222EEEEEE100",
+      "0000001EE222222EE1EEE100",
+      "0000001EEE2222EEE11EE100",
+      "0000001FFFEEEEFFF1011000",
+      "0000001FFF1111FFF1000000",
+      "000000011100001110000000"
+    ]),
+    ear: parseGrid([
+      "000000001000000100000000",
+      "00000001H100001H10000000",
+      "00000001H100001H10000000",
+      "000000001H1001H100000000",
+      "000000000111111000000000",
+      "0000000011EEEE1100000000",
+      "00000001EEEEEEEE10000000",
+      "0000001EhhEEEEhhE1000000",
+      "000001EhhhhEEhhhhE100000",
+      "000001hhhh2hhhhh2h100000",
+      "000111hhhiihhhhiih111000",
+      "001FF1Ehhih22hhihE1FF100",
+      "01FFEFEEhh2jj2hhEEFEFF10",
+      "1FFEEEggE22jE22EEggEEFF1",
+      "1FFEEEFEEEE11EEEEFEEEFF1",
+      "1FFFEEFEEEEEEEEEEFEEFFF1",
+      "01FFFF1EEE2222EEE1FFFFF1",
+      "001FF1EEE222222EEE1EFF10",
+      "000111EEE222222EEEEEE100",
+      "0000001EE222222EE1EEE100",
+      "0000001EEE2222EEE11EE100",
+      "0000001FFFEEEEFFF1011000",
+      "0000001FFF1111FFF1000000",
+      "000000011100001110000000"
+    ]),
+    sad: parseGrid([
+      "000000000000000000000000",
+      "000000001000000100000000",
+      "00000001H100001H10000000",
+      "00000001H100001H10000000",
+      "000000001H1111H100000000",
+      "0000000011EEEE1100000000",
+      "00000001EEEEEEEE10000000",
+      "0000001EEEEEEEEEE1000000",
+      "000001EEEEEEEEEEEE100000",
+      "000001E11111E11111100000",
+      "000111EhhhhEEhhhhE111000",
+      "001FF1Ehhii22hhiiE1FF100",
+      "01FFEFEEE22jj22EEEFEFF10",
+      "1FFEEEFkE22jE22EEFEEEFF1",
+      "1FFEEEFkEEE1EEEEEFEEEFF1",
+      "1FFFEEFEkEEEEEEEEFEEFFF1",
+      "01FFFF1EEE2222EEE1FFFFF1",
+      "001FF1EEE222222EEE1EFF10",
+      "000111EEE222222EEEEEE100",
+      "0000001EE222222EE1EEE100",
+      "0000001EEE2222EEE11EE100",
+      "0000001FFFEEEEFFF1011000",
+      "0000001FFF1111FFF1000000",
+      "000000011100001110000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000000000000000000",
+      "000000001000000100000000",
+      "00000001H100001H10000000",
+      "00000001H100001H10000000",
+      "000000001H1111H100000000",
+      "0000000011EEEE1100000000",
+      "00000001EEEEEEEE10000000",
+      "0000001EEEEEEEEEE1000000",
+      "000001EEEEEEEEEEEE100000",
+      "000001EEEEEEEEEEEE100000",
+      "000111E11111E11111111000",
+      "001FF1EEEE2222EEEE1FF100",
+      "01FFEFEEE22jj22EEEFEFF10",
+      "1FFEEEFEE22jE22EEFEEEFF1",
+      "1FFEEEFEEEE1EEEEEFEEEFF1",
+      "1FFFEEFEEEEEEEEEEFEEFFF1",
+      "01FFFF1EEE2222EEE1FFFFF1",
+      "001FF1EEE222222EEE1EFF10",
+      "000111EEE222222EEEEEE100",
+      "0000001EE222222EE1EEE100",
+      "0000001EEE2222EEE11EE100",
+      "0000001FFFEEEEFFF1011000",
+      "0000001FFF1111FFF1000000",
+      "000000011100001110000000"
+    ]),
+  },
+  "uni": {
+    idle: parseGrid([
+      "000000000001100000000000",
+      "00000000001ll10000000000",
+      "00000000001mm10000000000",
+      "0000000001llll1000000000",
+      "000000000011110000000000",
+      "000000111122221111000000",
+      "000001442222222244100000",
+      "000014422222222224410000",
+      "0000142hhhh22hhhh2410000",
+      "000014hhhh2hhhhh2h410000",
+      "000014hhhiihhhhiih410000",
+      "0000012hhih22hhih2100000",
+      "0000012hhhhjjhhhh2100000",
+      "000001gg222j22222gg00000",
+      "000000122221122221011000",
+      "000000122222222221144100",
+      "000001222233332222444100",
+      "000001222333333222444100",
+      "000001222333333222144100",
+      "000001222333333222111000",
+      "000000122333333221000000",
+      "0000001ggg2332ggg1000000",
+      "0000001ggg1221ggg1000000",
+      "000000011101101110000000"
+    ]),
+    blink: parseGrid([
+      "000000000001100000000000",
+      "00000000001ll10000000000",
+      "00000000001mm10000000000",
+      "0000000001llll1000000000",
+      "000000000011110000000000",
+      "000000111122221111000000",
+      "000001442222222244100000",
+      "000014422222222224410000",
+      "000014222222222222410000",
+      "000014222222222222410000",
+      "000014211111211111410000",
+      "000001222222222222100000",
+      "00000122222jj22222100000",
+      "00000122222j222222100000",
+      "000000122222222221011000",
+      "000000122222222221144100",
+      "000001222233332222444100",
+      "000001222333333222444100",
+      "000001222333333222144100",
+      "000001222333333222111000",
+      "000000122333333221000000",
+      "0000001ggg2332ggg1000000",
+      "0000001ggg1221ggg1000000",
+      "000000011101101110000000"
+    ]),
+    ear: parseGrid([
+      "00000000001ll10000000000",
+      "00000000001mm10000000000",
+      "0000000001llll1000000000",
+      "000000000011110000000000",
+      "000000000011110000000000",
+      "000000111122221111000000",
+      "000001442222222244100000",
+      "000014422222222224410000",
+      "0000142hhhh22hhhh2410000",
+      "000014hhhh2hhhhh2h410000",
+      "000014hhhiihhhhiih410000",
+      "0000012hhih22hhih2100000",
+      "0000012hhhhjjhhhh2100000",
+      "000001gg222j22222gg00000",
+      "000000122221122221011000",
+      "000000122222222221144100",
+      "000001222233332222444100",
+      "000001222333333222444100",
+      "000001222333333222144100",
+      "000001222333333222111000",
+      "000000122333333221000000",
+      "0000001ggg2332ggg1000000",
+      "0000001ggg1221ggg1000000",
+      "000000011101101110000000"
+    ]),
+    sad: parseGrid([
+      "000000000001100000000000",
+      "00000000001ll10000000000",
+      "00000000001mm10000000000",
+      "0000000001llll1000000000",
+      "000000000011110000000000",
+      "000000111122221111000000",
+      "000001442222222244100000",
+      "000014422222222224410000",
+      "000014222222222222410000",
+      "000014211111211111410000",
+      "0000142hhhh22hhhh2410000",
+      "0000012hhii22hhii2100000",
+      "00000122hh2jj2hh22100000",
+      "0000012k222j222222100000",
+      "0000001k2221222221011000",
+      "00000012k222222221144100",
+      "000001222233332222444100",
+      "000001222333333222444100",
+      "000001222333333222144100",
+      "000001222333333222111000",
+      "000000122333333221000000",
+      "0000001ggg2332ggg1000000",
+      "0000001ggg1221ggg1000000",
+      "000000011101101110000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000001100000000000",
+      "00000000001ll10000000000",
+      "00000000001mm10000000000",
+      "0000000001llll1000000000",
+      "000000000011110000000000",
+      "000000111122221111000000",
+      "000001442222222244100000",
+      "000014422222222224410000",
+      "000014222222222222410000",
+      "000014222222222222410000",
+      "000014211111211111410000",
+      "000001222222222222100000",
+      "00000122222jj22222100000",
+      "00000122222j222222100000",
+      "000000122221222221011000",
+      "000000122222222221144100",
+      "000001222233332222444100",
+      "000001222333333222444100",
+      "000001222333333222144100",
+      "000001222333333222111000",
+      "000000122333333221000000",
+      "0000001ggg2332ggg1000000",
+      "0000001ggg1221ggg1000000",
+      "000000011101101110000000"
+    ]),
+  },
+  "moth": {
+    idle: parseGrid([
+      "000000001000000100000000",
+      "00000001m100001m10000000",
+      "00000001K100001K10000000",
+      "000001001K1001K100100000",
+      "00011J110100001011J11000",
+      "001JJJJJ10000001JJJJJ100",
+      "01JJJJJJJ101101JJJJJJJ10",
+      "01JJJJJJJJ1KK1JJJJJJJJJ1",
+      "1JJJJmmJJhhhhhhJJmmJJJJ1",
+      "1JJJmmmJhhh2hh2hJmmmJJJ1",
+      "1JJJmmmJhhiihiihJmmmJJJ1",
+      "01JJJmJJhhihhihhJJmJJJJ1",
+      "01JJJJJJJhhhhhhJJJJJJJ10",
+      "001JIIIgg1hjjh1ggIIIJJ10",
+      "001IIIIII1KKKK1IIIIII100",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "01IIIlllIIKKKKIIlllIII10",
+      "01IIIIllIIKKKKIIllIIII10",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "001IIIIIIIKKKK1IIIIIII10",
+      "001IIIIII11KK11IIIIII100",
+      "00011II1100110011II11000",
+      "000001100000000001100000",
+      "000000000000000000000000"
+    ]),
+    blink: parseGrid([
+      "000000001000000100000000",
+      "00000001m100001m10000000",
+      "00000001K100001K10000000",
+      "000001001K1001K100100000",
+      "00011J110100001011J11000",
+      "001JJJJJ10000001JJJJJ100",
+      "01JJJJJJJ101101JJJJJJJ10",
+      "01JJJJJJJJ1KK1JJJJJJJJJ1",
+      "1JJJJmmJJJKKKKJJJmmJJJJ1",
+      "1JJJmmmJJJKKKKJJJmmmJJJ1",
+      "1JJJmmmJ11111111JmmmJJJ1",
+      "01JJJmJJJKKKKKKJJJmJJJJ1",
+      "01JJJJJJJKKKKKKJJJJJJJ10",
+      "001JIIIIJ1KKKK1JIIIIJJ10",
+      "001IIIIII1KKKK1IIIIII100",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "01IIIlllIIKKKKIIlllIII10",
+      "01IIIIllIIKKKKIIllIIII10",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "001IIIIIIIKKKK1IIIIIII10",
+      "001IIIIII11KK11IIIIII100",
+      "00011II1100110011II11000",
+      "000001100000000001100000",
+      "000000000000000000000000"
+    ]),
+    ear: parseGrid([
+      "00000001m100001m10000000",
+      "00000001K100001K10000000",
+      "000000001K1001K100000000",
+      "000001000100001000100000",
+      "00011J110000000011J11000",
+      "001JJJJJ10000001JJJJJ100",
+      "01JJJJJJJ101101JJJJJJJ10",
+      "01JJJJJJJJ1KK1JJJJJJJJJ1",
+      "1JJJJmmJJhhhhhhJJmmJJJJ1",
+      "1JJJmmmJhhh2hh2hJmmmJJJ1",
+      "1JJJmmmJhhiihiihJmmmJJJ1",
+      "01JJJmJJhhihhihhJJmJJJJ1",
+      "01JJJJJJJhhhhhhJJJJJJJ10",
+      "001JIIIgg1hjjh1ggIIIJJ10",
+      "001IIIIII1KKKK1IIIIII100",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "01IIIlllIIKKKKIIlllIII10",
+      "01IIIIllIIKKKKIIllIIII10",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "001IIIIIIIKKKK1IIIIIII10",
+      "001IIIIII11KK11IIIIII100",
+      "00011II1100110011II11000",
+      "000001100000000001100000",
+      "000000000000000000000000"
+    ]),
+    sad: parseGrid([
+      "000000001000000100000000",
+      "00000001m100001m10000000",
+      "00000001K100001K10000000",
+      "000001001K1001K100100000",
+      "00011J110100001011J11000",
+      "001JJJJJ10000001JJJJJ100",
+      "01JJJJJJJ101101JJJJJJJ10",
+      "01JJJJJJJJ1KK1JJJJJJJJJ1",
+      "1JJJJmmJJJKKKKJJJmmJJJJ1",
+      "1JJJmmmJ11111111JmmmJJJ1",
+      "1JJJmmmJhhhhhhhhJmmmJJJ1",
+      "01JJJmJJhhiihiihJJmJJJJ1",
+      "01JJJJJJJhhhhhhJJJJJJJ10",
+      "001JIIIIk1KKKK1JIIIIJJ10",
+      "001IIIIIk1KKKK1IIIIII100",
+      "01IIIIIIIkKKKKIIIIIIII10",
+      "01IIIlllIIKKKKIIlllIII10",
+      "01IIIIllIIKKKKIIllIIII10",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "001IIIIIIIKKKK1IIIIIII10",
+      "001IIIIII11KK11IIIIII100",
+      "00011II1100110011II11000",
+      "000001100000000001100000",
+      "000000000000000000000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000001000000100000000",
+      "00000001m100001m10000000",
+      "00000001K100001K10000000",
+      "000001001K1001K100100000",
+      "00011J110100001011J11000",
+      "001JJJJJ10000001JJJJJ100",
+      "01JJJJJJJ101101JJJJJJJ10",
+      "01JJJJJJJJ1KK1JJJJJJJJJ1",
+      "1JJJJmmJJJKKKKJJJmmJJJJ1",
+      "1JJJmmmJJJKKKKJJJmmmJJJ1",
+      "1JJJmmmJ11111111JmmmJJJ1",
+      "01JJJmJJJKKKKKKJJJmJJJJ1",
+      "01JJJJJJJKKKKKKJJJJJJJ10",
+      "001JIIIIJ1KKKK1JIIIIJJ10",
+      "001IIIIII1KKKK1IIIIII100",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "01IIIlllIIKKKKIIlllIII10",
+      "01IIIIllIIKKKKIIllIIII10",
+      "01IIIIIIIIKKKKIIIIIIII10",
+      "001IIIIIIIKKKK1IIIIIII10",
+      "001IIIIII11KK11IIIIII100",
+      "00011II1100110011II11000",
+      "000001100000000001100000",
+      "000000000000000000000000"
+    ]),
+  },
+  "phoenix": {
+    idle: parseGrid([
+      "000000000001100000000000",
+      "00000000001GH10000000000",
+      "0000000001GHGH1000000000",
+      "000000001H1111G100000000",
+      "000000000100001000000000",
+      "000000000111111000000000",
+      "000000011GGGGGG110000000",
+      "0000001GGGGGGGGGG1000000",
+      "0000001hhhhGGhhhh1000000",
+      "000001hhhh2hhhhh2h100000",
+      "000001hhhiihhhhiih100000",
+      "000001GhhihHHhhihG100100",
+      "000001GhhhhGGhhhhG111l10",
+      "000000ggGHGGGGHGGggGH100",
+      "00000001GGG11GGG11GGG100",
+      "0000001GGGGGGGGGG1GGG100",
+      "0000001GGGmmmmGGG1GGG100",
+      "0000001GGmmmmmmGG1GGG100",
+      "0000001GGmmmmmmGG11GG100",
+      "0000001GGmmmmmmGG1011000",
+      "00000001GGmmmmGG10000000",
+      "0000001HHHGGGGHHH1000000",
+      "0000001HHH1111HHH1000000",
+      "000000011100001110000000"
+    ]),
+    blink: parseGrid([
+      "000000000001100000000000",
+      "00000000001GH10000000000",
+      "0000000001GHGH1000000000",
+      "000000001H1111G100000000",
+      "000000000100001000000000",
+      "000000000111111000000000",
+      "000000011GGGGGG110000000",
+      "0000001GGGGGGGGGG1000000",
+      "0000001GGGGGGGGGG1000000",
+      "000001GGGGGGGGGGGG100000",
+      "000001G11111G11111100000",
+      "000001GGGGHHHHGGGG100100",
+      "000001GGGHHGGHHGGG111l10",
+      "0000001GGHGGGGHGG11GH100",
+      "00000001GGGGGGGG11GGG100",
+      "0000001GGGGGGGGGG1GGG100",
+      "0000001GGGmmmmGGG1GGG100",
+      "0000001GGmmmmmmGG1GGG100",
+      "0000001GGmmmmmmGG11GG100",
+      "0000001GGmmmmmmGG1011000",
+      "00000001GGmmmmGG10000000",
+      "0000001HHHGGGGHHH1000000",
+      "0000001HHH1111HHH1000000",
+      "000000011100001110000000"
+    ]),
+    ear: parseGrid([
+      "00000000001GH10000000000",
+      "0000000001GHGH1000000000",
+      "000000001H1111G100000000",
+      "000000000100001000000000",
+      "000000000000000000000000",
+      "000000000111111000000000",
+      "000000011GGGGGG110000000",
+      "0000001GGGGGGGGGG1000000",
+      "0000001hhhhGGhhhh1000000",
+      "000001hhhh2hhhhh2h100000",
+      "000001hhhiihhhhiih100000",
+      "000001GhhihHHhhihG100100",
+      "000001GhhhhGGhhhhG111l10",
+      "000000ggGHGGGGHGGggGH100",
+      "00000001GGG11GGG11GGG100",
+      "0000001GGGGGGGGGG1GGG100",
+      "0000001GGGmmmmGGG1GGG100",
+      "0000001GGmmmmmmGG1GGG100",
+      "0000001GGmmmmmmGG11GG100",
+      "0000001GGmmmmmmGG1011000",
+      "00000001GGmmmmGG10000000",
+      "0000001HHHGGGGHHH1000000",
+      "0000001HHH1111HHH1000000",
+      "000000011100001110000000"
+    ]),
+    sad: parseGrid([
+      "000000000001100000000000",
+      "00000000001GH10000000000",
+      "0000000001GHGH1000000000",
+      "000000001H1111G100000000",
+      "000000000100001000000000",
+      "000000000111111000000000",
+      "000000011GGGGGG110000000",
+      "0000001GGGGGGGGGG1000000",
+      "0000001GGGGGGGGGG1000000",
+      "000001G11111G11111100000",
+      "000001GhhhhGGhhhhG100000",
+      "000001GhhiiHHhhiiG100100",
+      "000001GGhhHGGHhhGG111l10",
+      "0000001kGHGGGGHGG11GH100",
+      "0000000kGGG1GGGG11GGG100",
+      "0000001GkGGGGGGGG1GGG100",
+      "0000001GGGmmmmGGG1GGG100",
+      "0000001GGmmmmmmGG1GGG100",
+      "0000001GGmmmmmmGG11GG100",
+      "0000001GGmmmmmmGG1011000",
+      "00000001GGmmmmGG10000000",
+      "0000001HHHGGGGHHH1000000",
+      "0000001HHH1111HHH1000000",
+      "000000011100001110000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000001100000000000",
+      "00000000001GH10000000000",
+      "0000000001GHGH1000000000",
+      "000000001H1111G100000000",
+      "000000000100001000000000",
+      "000000000111111000000000",
+      "000000011GGGGGG110000000",
+      "0000001GGGGGGGGGG1000000",
+      "0000001GGGGGGGGGG1000000",
+      "000001GGGGGGGGGGGG100000",
+      "000001G11111G11111100000",
+      "000001GGGGHHHHGGGG100100",
+      "000001GGGHHGGHHGGG111l10",
+      "0000001GGHGGGGHGG11GH100",
+      "00000001GGG1GGGG11GGG100",
+      "0000001GGGGGGGGGG1GGG100",
+      "0000001GGGmmmmGGG1GGG100",
+      "0000001GGmmmmmmGG1GGG100",
+      "0000001GGmmmmmmGG11GG100",
+      "0000001GGmmmmmmGG1011000",
+      "00000001GGmmmmGG10000000",
+      "0000001HHHGGGGHHH1000000",
+      "0000001HHH1111HHH1000000",
+      "000000011100001110000000"
+    ]),
+  },
+  "tidepup": {
+    idle: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000011110000000000",
+      "0000000011LLLL1100000000",
+      "00000001LLLLLLLL10000000",
+      "0000001LhhhLLhhhL1000000",
+      "0000001hhh2hhhh2h1000000",
+      "0000001hhiihhhiih1000000",
+      "0000001hhihhhhihh1000000",
+      "0001111hhhhhhhhhh1111000",
+      "001qqqggLhqMMqhLggqqq100",
+      "001qqqq1LLLMqLLLLLqqq100",
+      "0001111111L11LLLLLLLL100",
+      "000001MMMMMLLLLLLLLLLL10",
+      "00001MMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLMML10",
+      "00001MMMMMMMMLLLLLMMMM10",
+      "000001MMMMMMLLLLLLMMMM10",
+      "000000111111111LL1111100",
+      "000000000000000110000000",
+      "000000000000000000000000"
+    ]),
+    blink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000011110000000000",
+      "0000000011LLLL1100000000",
+      "00000001LLLLLLLL10000000",
+      "0000001LLLLLLLLLL1000000",
+      "0000001LLLLLLLLLL1000000",
+      "000000111111111111000000",
+      "0000001LLLqqqqLLL1000000",
+      "0001111LLqqqqqqLL1111000",
+      "001qqqqLLqqMMqqLLqqqq100",
+      "001qqqq1LLLMqLLLLLqqq100",
+      "0001111111LLLLLLLLLLL100",
+      "000001MMMMMLLLLLLLLLLL10",
+      "00001MMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLMML10",
+      "00001MMMMMMMMLLLLLMMMM10",
+      "000001MMMMMMLLLLLLMMMM10",
+      "000000111111111LL1111100",
+      "000000000000000110000000",
+      "000000000000000000000000"
+    ]),
+    ear: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000111111000000000",
+      "000000001LLLLLL100000000",
+      "00000001LLLLLLLL10000000",
+      "0000001LhhhLLhhhL1000000",
+      "0000001hhh2hhhh2h1000000",
+      "0000001hhiihhhiih1000000",
+      "0000001hhihhhhihh1000000",
+      "0001111hhhhhhhhhh1111000",
+      "001qqqggLhqMMqhLggqqq100",
+      "001qqqq11LLMqLLLLLqqq100",
+      "0001111111111LLLLLLLL100",
+      "000001MMMMMLLLLLLLLLLL10",
+      "00001MMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLMML10",
+      "00001MMMMMMMMLLLLLMMMM10",
+      "000001MMMMMMLLLLLLMMMM10",
+      "000000111111111LL1111100",
+      "000000000000000110000000",
+      "000000000000000000000000"
+    ]),
+    sad: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000011110000000000",
+      "0000000011LLLL1100000000",
+      "00000001LLLLLLLL10000000",
+      "0000001LLLLLLLLLL1000000",
+      "000000111111111111000000",
+      "0000001hhhhhhhhhh1000000",
+      "0000001hhiihhhiih1000000",
+      "0001111LhhhqqhhhL1111000",
+      "001qqqqkLqqMMqqLLqqqq100",
+      "001qqqqkLLLMqLLLLLqqq100",
+      "00011111k1L1LLLLLLLLL100",
+      "000001MMMMMLLLLLLLLLLL10",
+      "00001MMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLMML10",
+      "00001MMMMMMMMLLLLLMMMM10",
+      "000001MMMMMMLLLLLLMMMM10",
+      "000000111111111LL1111100",
+      "000000000000000110000000",
+      "000000000000000000000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000011110000000000",
+      "0000000011LLLL1100000000",
+      "00000001LLLLLLLL10000000",
+      "0000001LLLLLLLLLL1000000",
+      "0000001LLLLLLLLLL1000000",
+      "000000111111111111000000",
+      "0000001LLLqqqqLLL1000000",
+      "0001111LLqqqqqqLL1111000",
+      "001qqqqLLqqMMqqLLqqqq100",
+      "001qqqq1LLLMqLLLLLqqq100",
+      "0001111111L1LLLLLLLLL100",
+      "000001MMMMMLLLLLLLLLLL10",
+      "00001MMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLLLL10",
+      "0001MMMMMMMMMLLLLLLMML10",
+      "00001MMMMMMMMLLLLLMMMM10",
+      "000001MMMMMMLLLLLLMMMM10",
+      "000000111111111LL1111100",
+      "000000000000000110000000",
+      "000000000000000000000000"
+    ]),
+  },
+  "kitsune": {
+    idle: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000111000000111000000",
+      "000001222100001222100000",
+      "0000122N21111112N2210000",
+      "000012222122222222210000",
+      "000012222222222222210000",
+      "00001222hh2222hh22100000",
+      "0000012hhhh22hhhh2100000",
+      "000001hhhh2hhhhh2h110000",
+      "000012hhhiihhhhiih221000",
+      "0000122hhihNNhhih22l2100",
+      "00000122hhNjjNhh22222210",
+      "000001gg2N2j22N22gg22210",
+      "000000122221122222222l10",
+      "00000012222222222222NNN1",
+      "0000001222NNNN222122NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000000122NNNNNN22112NNN1",
+      "000000122NNNNNN221011N10",
+      "0000001nnn2NNnnn10000100",
+      "0000001nnn122nnn10000000",
+      "000000011101111100000000"
+    ]),
+    blink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000111000000111000000",
+      "000001222100001222100000",
+      "0000122N21111112N2210000",
+      "000012222122222222210000",
+      "000012222222222222210000",
+      "000012222222222222100000",
+      "000001222222222222100000",
+      "000001222222222222110000",
+      "000012211111211111221000",
+      "00001222222NN222222l2100",
+      "000001222NNjjNN222222210",
+      "000001222N2j22N222222210",
+      "000000122222222222222l10",
+      "00000012222222222222NNN1",
+      "0000001222NNNN222122NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000000122NNNNNN22112NNN1",
+      "000000122NNNNNN221011N10",
+      "0000001nnn2NNnnn10000100",
+      "0000001nnn122nnn10000000",
+      "000000011101111100000000"
+    ]),
+    ear: parseGrid([
+      "000000111000000111000000",
+      "000001222100001222100000",
+      "0000122N21000012N2210000",
+      "000012222100012222210000",
+      "000012222111111222210000",
+      "000012222122221222100000",
+      "000001112222222221000000",
+      "00000012hh2222hh21000000",
+      "0000012hhhh22hhhh2100000",
+      "000001hhhh2hhhhh2h110000",
+      "000012hhhiihhhhiih221000",
+      "0000122hhihNNhhih22l2100",
+      "00000122hhNjjNhh22222210",
+      "000001gg2N2j22N22gg22210",
+      "000000122221122222222l10",
+      "00000012222222222222NNN1",
+      "0000001222NNNN222122NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000000122NNNNNN22112NNN1",
+      "000000122NNNNNN221011N10",
+      "0000001nnn2NNnnn10000100",
+      "0000001nnn122nnn10000000",
+      "000000011101111100000000"
+    ]),
+    sad: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000111000000111000000",
+      "000001222100001222100000",
+      "0000122N21111112N2210000",
+      "000012222122222222210000",
+      "000012222222222222210000",
+      "000012222222222222100000",
+      "000001222222222222100000",
+      "000001211111211111110000",
+      "0000122hhhh22hhhh2221000",
+      "0000122hhiiNNhhii22l2100",
+      "000001222NNjjNN222222210",
+      "0000012k2N2j22N222222210",
+      "0000001k2221222222222l10",
+      "00000012k22222222222NNN1",
+      "0000001222NNNN222122NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000000122NNNNNN22112NNN1",
+      "000000122NNNNNN221011N10",
+      "0000001nnn2NNnnn10000100",
+      "0000001nnn122nnn10000000",
+      "000000011101111100000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000111000000111000000",
+      "000001222100001222100000",
+      "0000122N21111112N2210000",
+      "000012222122222222210000",
+      "000012222222222222210000",
+      "000012222222222222100000",
+      "000001222222222222100000",
+      "000001222222222222110000",
+      "000012211111211111221000",
+      "00001222222NN222222l2100",
+      "000001222NNjjNN222222210",
+      "000001222N2j22N222222210",
+      "000000122221222222222l10",
+      "00000012222222222222NNN1",
+      "0000001222NNNN222122NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000001222NNNNNN22222NNN1",
+      "000000122NNNNNN22112NNN1",
+      "000000122NNNNNN221011N10",
+      "0000001nnn2NNnnn10000100",
+      "0000001nnn122nnn10000000",
+      "000000011101111100000000"
+    ]),
+  },
 };
 
 const ANIMALS = [
@@ -3195,6 +3997,13 @@ const ANIMALS = [
   { id: "bat", name: "Bat", cost: 0, adv: 4, bio: "Hangs upside down to see the world smile." },
   { id: "rainbow", name: "Rainbow", cost: 0, special: true, bio: "Born the day the gloom lifted." },
   { id: "gloomking", name: "Gloom King", cost: 0, adv: 5, bio: "Grumbly no more. Hosts tea every Tuesday." },
+  // v10 rare friends: a long heart sink. Not required for "every friend".
+  { id: "dragonet", name: "Dragonet", cost: 25000, rare: "rare", bio: "Tiny wings, warm snout. Sneezes sparkles." },
+  { id: "uni", name: "Unicorn Foal", cost: 60000, rare: "rare", bio: "A wobbly horn and a pocket of glitter." },
+  { id: "moth", name: "Moon Moth", cost: 120000, rare: "rare", bio: "Soft wings that remember the night sky." },
+  { id: "phoenix", name: "Phoenix Chick", cost: 250000, rare: "rare", bio: "A little flame that only wants a hug." },
+  { id: "tidepup", name: "Tidepup", cost: 500000, rare: "rare", bio: "A sea-serpent baby. Blows bubble hearts." },
+  { id: "kitsune", name: "Kitsune", cost: 1000000, rare: "legend", bio: "Two tails, and one very polite bow." },
 ];
 
 // Sprite anchor points (in 24px sprite units): [headCenterX, headTopY, eyeY, eyeHalfSpacing, neckY]
@@ -3207,6 +4016,8 @@ const ANCHOR = {
   lamb: [11.5, 3, 9.5, 3, 15], firefly: [11.5, 4.5, 10, 3, 15], fawn: [11.5, 4.5, 9, 3, 14.5], seal: [11.5, 5, 10.5, 3, 16],
   squirrel: [11.5, 4.5, 9.5, 3, 15], owl: [11.5, 4, 9.5, 3, 15], turtle: [11.5, 3.5, 8, 2.5, 13.5],
   leopard: [11.5, 5, 9.5, 3, 15.5], bat: [11.5, 5.5, 10, 2.5, 15], gloomking: [11.5, 4.5, 11, 3, 16],
+  dragonet: [11.5, 5, 9.6, 3, 15], uni: [11.5, 4, 9.8, 3, 15], moth: [11.5, 6, 10.2, 1.3, 14],
+  phoenix: [11.5, 3, 9.8, 3, 15], tidepup: [11.5, 5.5, 9.2, 2.5, 14], kitsune: [11.5, 4.5, 9.6, 3, 15],
 };
 
 const ACCESSORIES = [
@@ -3278,7 +4089,7 @@ const GOALS = [
   { id: "rainbow", label: "Meet the Rainbow Critter", check: s => !!s.unlocked.rainbow, reward: 250 },
   { id: "shiny", label: "Hug a shiny critter", check: s => !!s.achievements._shinyHugged, reward: 75 },
   { id: "dawn3", label: "See 3 New Dawns", check: s => s.dawnCount >= 3, reward: 200 },
-  { id: "all_animals", label: "Unlock every friend", check: s => ANIMALS.filter(a => !a.special && !a.season && a.adv == null).every(a => s.unlocked[a.id]), reward: 400 },
+  { id: "all_animals", label: "Unlock every friend", check: s => ANIMALS.filter(a => !a.special && !a.season && a.adv == null && !a.rare).every(a => s.unlocked[a.id]), reward: 400 },
   { id: "all_bgs", label: "Unlock every scene", check: s => BACKGROUNDS.every(b => s.unlockedBgs[b.id]), reward: 350 },
   { id: "friend1", label: "Make a friend (Friendship Lv 1)", check: s => maxFriend(s) >= 1, reward: 60 },
   { id: "friend2", label: "Good pals (Friendship Lv 2)", check: s => maxFriend(s) >= 2, reward: 150 },
@@ -3338,7 +4149,17 @@ const GOALS = [
   { id: "week1", label: "Finish a weekly challenge", check: s => s.kind && s.kind.weeks >= 1, reward: 80 },
   { id: "card1", label: "Make a cozy postcard", check: s => s.kind && s.kind.postcards >= 1, reward: 40 },
   { id: "chal1", label: "Try a Star Challenge stage", check: s => s.kind && s.kind.chalTries >= 1, reward: 60 },
+  // v10: rare friends (a heart sink; not part of "every friend")
+  { id: "rare1", label: "Befriend a rare critter", check: s => ANIMALS.some(a => a.rare && s.unlocked[a.id]), reward: 400 },
+  { id: "rare3", label: "Befriend 3 rare critters", check: s => ANIMALS.filter(a => a.rare && s.unlocked[a.id]).length >= 3, reward: 1200 },
+  { id: "rareall", label: "Befriend every rare critter", check: s => ANIMALS.filter(a => a.rare).every(a => s.unlocked[a.id]), reward: 3000 },
 ];
+function heartCost(n) {
+  if (n >= 1000000 && n % 1000000 === 0) return (n / 1000000) + "m";
+  if (n >= 10000) return Math.round(n / 1000) + "k";
+  return String(n);
+}
+
 
 const POWERUPS = {
   bighug: { name: "Big Hug!", col: "#ff8ab8" },
@@ -4706,7 +5527,8 @@ function checkFriendship(animal) {
 }
 
 const JOY_PACE = 0.84; // global Joy-per-hug pacing (tuned with test/balance.mjs)
-function hugCritter(c, moodScale) {
+function hugCritter(c, moodScale, payScale) {
+  const pay = payScale == null ? 1 : payScale;
   if (c.state !== "float") return;
   const wasSad = c.sad;
   const wasNapping = c.idle === "nap";
@@ -4732,6 +5554,7 @@ function hugCritter(c, moodScale) {
   if (wasSad) pts = Math.floor(pts * 2.2);
   const golden = activeEvent && activeEvent.type === "golden";
   if (golden) pts *= 2;
+  pts = Math.max(1, Math.floor(pts * pay));
   joy += pts;
   scoreSession += pts;
   if (scoreSession > highScore) highScore = scoreSession;
@@ -4744,7 +5567,7 @@ function hugCritter(c, moodScale) {
   if (wasSad) moodGain *= 1.65;
   if (c.animal.id === "rainbow") moodGain *= 1.5;
   moodGain *= Math.max(0.42, 1.08 - mood * 0.0065);
-  addMood(moodGain * JOY_PACE * (moodScale == null ? 1 : moodScale));
+  addMood(moodGain * pay * JOY_PACE * (moodScale == null ? 1 : moodScale));
 
   if (c.parade && activeEvent && activeEvent.type === "parade") activeEvent.hugged++;
 
@@ -6527,6 +7350,10 @@ function drawShop() {
         ctx.fillText(a.name, 82, y + 16);
         font(10, true); ctx.fillStyle = "#c06090";
         ctx.fillText(SEASON_INFO[a.season].icon + " " + SEASON_INFO[a.season].name + " friend", 82, y + 32);
+      } else if (a.rare) {
+        ctx.fillText(a.name, 82, y + 16);
+        font(10, true); ctx.fillStyle = a.rare === "legend" ? "#b08010" : "#7050b0";
+        ctx.fillText(a.rare === "legend" ? "✦ Legendary" : "✦ Rare", 82, y + 32);
       } else ctx.fillText(a.name + (a.special ? " ✦" : ""), 82, y + 23);
       ctx.textAlign = "right";
       if (owned) {
@@ -6543,7 +7370,7 @@ function drawShop() {
         ctx.fillText(seasonLockText(a), W - 38, y + 23);
       } else {
         const can = joy >= a.cost;
-        listBtn(W - 116, y + 2, 86, 42, a.cost + " ♥", {
+        listBtn(W - 116, y + 2, 86, 42, heartCost(a.cost) + " ♥", {
           id: can ? "buy_" + a.id : null, size: 13, r: 10,
           bg: can ? C.btn : "#eee4ea", border: can ? "#ff80b0" : "#d8c8d0", color: can ? C.btnText : "#a898a8",
         }, top, bottom);
@@ -6647,8 +7474,11 @@ function drawAlbum() {
       const next = FRIEND_MILESTONES[lvl];
       ctx.fillText("Hugs " + hugs + (next ? " · next ♥ at " + next : " · best friends!"), 98, y + 52);
       ctx.fillStyle = "#8a6080";
-      fitFont(a.bio, W - 44 - 90, 10, false, 8);
-      ctx.fillText(a.bio, 98, y + 68);
+      const bioW = Math.max(72, (W - 124) - 98);
+      font(10, false);
+      let bioLines = wrapText(a.bio, bioW);
+      if (bioLines.length > 2) { font(9, false); bioLines = wrapText(a.bio, bioW); }
+      bioLines.slice(0, 2).forEach((ln, k) => ctx.fillText(ln, 98, y + 66 + k * 11));
       const cur = equippedFor(a.id);
       const opts = accOptions(a.id);
       const label = cur ? ACCESSORIES.find(x => x.id === cur).short : (opts.length ? "Wear…" : "None");
@@ -6667,7 +7497,7 @@ function drawAlbum() {
       font(14, true);
       ctx.fillText(a.special || a.id === "gloomking" ? "???" : a.name, 98, y + 22);
       font(11, false);
-      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.adv != null ? advRescueText(a) : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + a.cost + " ♥", 98, y + 44);
+      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.adv != null ? advRescueText(a) : a.rare ? (a.rare === "legend" ? "Legendary" : "Rare") + " · Shop · " + heartCost(a.cost) + " ♥" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + heartCost(a.cost) + " ♥", 98, y + 44);
     }
   });
   ctx.restore();
@@ -6900,6 +7730,19 @@ function tapGloom(p) {
   return false;
 }
 
+// One full hug per critter per ~0.42s, and only two pays in the same moment,
+// so a 5-finger tap is not five hugs. A second finger still gets a small share.
+const HUG_CALM = 0.42;
+let hugWaveT = -10, hugWaveN = 0;
+function hugOffer(c) {
+  if (!c || c.state !== "float") return 0;
+  if (c.calmUntil && time < c.calmUntil) return 0;
+  if (time - hugWaveT > 0.5) { hugWaveT = time; hugWaveN = 0; }
+  if (hugWaveN >= 2) return 0;
+  hugWaveN++;
+  c.calmUntil = time + HUG_CALM;
+  return hugWaveN === 1 ? 1 : 0.35;
+}
 function playTap(p) {
   if (gift && dist2(p.x, p.y, gift.x, gift.y) < 36 * 36) { openGift(); return; }
   for (const pu of powerups) {
@@ -6923,7 +7766,8 @@ function playTap(p) {
     for (const gc of gloomClouds) {
       if (dist2(best.x, best.y, gc.x + 16 * gc.s, gc.y) < 55 * 55) shooGloom(gc);
     }
-    hugCritter(best);
+    const pay = hugOffer(best);
+    if (pay) hugCritter(best, 1, pay);
     return;
   }
   for (let i = critters.length - 1; i >= 0; i--) {
@@ -7131,19 +7975,18 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 9;
-const APP_LABEL = "v9";
+const APP_VERSION = 10;
+const APP_LABEL = "v10";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "Little Comforts",
-  pals: ["cat", "bunny", "penguin", "gloomking"],
+  sub: "Rare Friends",
+  pals: ["dragonet", "uni", "phoenix", "kitsune"],
   items: [
-    "Settings: a backup code you can copy",
-    "Relaxed stages, with no timer",
-    "A Dream Jar your critters cheer",
-    "Nicknames, postcards, gentler motion",
-    "A small challenge each week",
-    "Star Challenge, after the King",
+    "Six rare friends in the Shop",
+    "Dragonet, Unicorn Foal, Moon Moth",
+    "Phoenix Chick, Tidepup, Kitsune",
+    "A long, cozy heart goal",
+    "Extra fingers no longer print hearts",
   ],
 };
 
@@ -12386,7 +13229,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     },
     music, SONGS, SONG_ERRORS, frame, ensureAudio, musicTick, startEvent, spawnPowerup, activatePowerup,
     hugCritter, doUI, save, load, openGift, checkDailyGift, setMusicOn, setSfxOn, playTap, targetTier,
-    APP_VERSION, tutBubbleTop, TUT_STEPS, shooGloom, showBanner, perfLog,
+    APP_VERSION, heartCost, tutBubbleTop, TUT_STEPS, shooGloom, showBanner, perfLog,
     DECOR, DECOR_BY_ID, G_CELL, G_COLS, G_ROWS, gy0, itemRect, fits, findFreeSpot, artToScreen, computeAway, mergeAway, grantAway,
     openGarden, leaveGarden, placeFromInv, buyDecor, gardenAction, gardenCozy, normalizeGarden, serializeGarden, spawnVisitor,
     updateGarden, collectBubble, dropBubble, openAway, collectAway, checkAwayOnBoot, decorUnlocked, toolbarRect, AWAY_CAP, AWAY_MIN,
