@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="12.0-soft">
+<meta name="hc-version" content="13.0-look">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -64,7 +64,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v12 — Soft sky: weather, night market, mail, boat, dyes, lullaby
+// Happy Critters v13 — A new look for the title
 
 const W = 360;
 let H = 540;
@@ -7188,6 +7188,83 @@ function drawLevelUp() {
   ctx.restore();
 }
 
+
+// Pixel wordmark. Rounded 7-row glyphs, drawn crisp (no system font).
+const WM_GLYPH = {
+  " ": ["...", "...", "...", "...", "...", "...", "..."],
+  H: ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+  a: [".....", ".##..", "#..#.", "####.", "#..#.", "#..#.", ".##.."],
+  p: [".....", "#....", "###..", "#..#.", "###..", "#....", "#...."],
+  y: ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", ".#..."],
+  C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
+  r: [".....", ".##..", "#..#.", "#....", "#....", "#....", "#...."],
+  i: ["..#..", ".....", "..#..", "..#..", "..#..", "..#..", "..#.."],
+  t: ["..#..", "..#..", "#####", "..#..", "..#..", "..#..", "..##."],
+  e: [".....", ".###.", "#...#", "#####", "#....", "#...#", ".###."],
+  s: [".....", ".###.", "#....", ".###.", "....#", "#...#", ".###."],
+};
+function wmMeasure(text, scale) {
+  const gap = scale;
+  let w = 0;
+  for (let i = 0; i < text.length; i++) {
+    const g = WM_GLYPH[text[i]] || WM_GLYPH[" "];
+    w += g[0].length * scale;
+    if (i < text.length - 1) w += gap;
+  }
+  return w;
+}
+function drawWmLine(text, cx, y, scale, fill, outline) {
+  const gap = scale;
+  const total = wmMeasure(text, scale);
+  let x = Math.round(cx - total / 2);
+  const dots = [];
+  for (const ch of text) {
+    const g = WM_GLYPH[ch] || WM_GLYPH[" "];
+    for (let r = 0; r < g.length; r++) {
+      for (let c = 0; c < g[r].length; c++) {
+        if (g[r][c] === "#") dots.push([x + c * scale, y + r * scale]);
+      }
+    }
+    x += g[0].length * scale + gap;
+  }
+  // one-pixel shadow, not a full outline, so the counters stay open
+  ctx.fillStyle = outline;
+  for (const [px, py] of dots) ctx.fillRect(px + scale, py + scale, scale, scale);
+  ctx.fillStyle = fill;
+  for (const [px, py] of dots) ctx.fillRect(px, py, scale, scale);
+}
+function drawPixelHeart(x, y, s) {
+  const g = [".#.#.", "#####", "#####", ".###.", "..#.."];
+  const x0 = Math.round(x - 2.5 * s), y0 = Math.round(y - 2.5 * s);
+  const dots = [];
+  for (let r = 0; r < g.length; r++) for (let c = 0; c < g[r].length; c++) if (g[r][c] === "#") dots.push([x0 + c * s, y0 + r * s]);
+  ctx.fillStyle = "#c43a68";
+  for (const [px, py] of dots) {
+    ctx.fillRect(px - s, py, s, s); ctx.fillRect(px + s, py, s, s);
+    ctx.fillRect(px, py - s, s, s); ctx.fillRect(px, py + s, s, s);
+  }
+  ctx.fillStyle = "#ff6b9d";
+  for (const [px, py] of dots) ctx.fillRect(px, py, s, s);
+  ctx.fillStyle = "#ffd0e4";
+  ctx.fillRect(x0 + s, y0 + s, s, s);
+}
+function drawTitleBrand(cx, top) {
+  const scale = W < 340 ? 2 : 3;
+  const lineH = 8 * scale;
+  const wordW = Math.max(wmMeasure("Happy", scale), wmMeasure("Critters", scale));
+  const catS = scale === 2 ? 1.15 : 1.45;
+  const catW = 24 * catS;
+  const gap = 10;
+  const total = catW + gap + wordW;
+  const left = cx - total / 2;
+  const cat = ANIMALS.find(a => a.id === "cat");
+  drawSprite(cat, left + catW / 2, top + 20, catS, false, Math.sin(time * 2.4) * 1.2, false, 1, null);
+  drawPixelHeart(left + catW / 2 + 12, top + 4, scale === 2 ? 2 : 2);
+  const tx = left + catW + gap + wordW / 2;
+  drawWmLine("Happy", tx, top, scale, "#5a2848", "#ffd0e4");
+  drawWmLine("Critters", tx, top + lineH, scale, "#5a2848", "#ffd0e4");
+}
+
 // ===================== SCENES =====================
 function drawTitle() {
   drawBackground();
@@ -7199,18 +7276,12 @@ function drawTitle() {
 
   const oy = Math.round((H - 540) / 2);
   panelBox(28, 50 + oy, W - 56, 218);
-  ctx.fillStyle = C.text;
-  font(28, true);
+  drawTitleBrand(W / 2, 62 + oy);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("Happy Critters", W / 2, 84 + oy);
-  font(13, true);
-  ctx.fillStyle = C.heart;
-  ctx.fillText("Hug the gloom away.", W / 2, 112 + oy);
   font(12, false);
   ctx.fillStyle = C.textSoft;
-  ctx.fillText("A tiny game about bringing", W / 2, 134 + oy);
-  ctx.fillText("the color back.", W / 2, 150 + oy);
+  ctx.fillText("A meadow that blooms when you hug it.", W / 2, 146 + oy);
 
   const list = unlockedList().slice(0, 7);
   list.forEach((a, i) => {
@@ -8051,18 +8122,14 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 12;
-const APP_LABEL = "v12";
+const APP_VERSION = 13;
+const APP_LABEL = "v13";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "Soft Sky",
-  pals: ["otter", "seal", "duckling", "tidepup"],
+  sub: "A new look",
+  pals: ["cat", "bunny", "fox", "chick"],
   items: [
-    "Rain, wind, and snow you can play in",
-    "A night market with rare little things",
-    "A letter in the meadow mailbox",
-    "Row a boat to three tiny islands",
-    "Dyes, a lullaby, and softer songs",
+    "A new look for the title.",
   ],
 };
 

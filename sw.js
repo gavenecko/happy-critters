@@ -1,7 +1,7 @@
 // Happy Critters service worker — offline play with painless updates.
 // assemble.py stamps VERSION with a content hash, so every release changes sw.js; browsers then install the new worker,
 // which pre-caches the fresh files and deletes old caches.
-const VERSION = "v12-7dd40a7fc4"; // stamped by assemble.py (content hash)
+const VERSION = "v13-1ee44c1f91"; // stamped by assemble.py (content hash)
 const CACHE = "happy-critters-" + VERSION;
 const CORE = [
   "./",
