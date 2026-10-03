@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="14.0-clear">
+<meta name="hc-version" content="14.1-reply">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -14513,20 +14513,37 @@ function drawMail() {
   wrapText(v12.mail.text || "The box is empty. Come back tomorrow.", W - 130).slice(0, 5).forEach((l, i) => ctx.fillText(l, 110, 100 + i * 16));
   ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(11, false);
   ctx.fillText("A short reply, if you feel like it", W / 2, 210);
+  ctx.fillStyle = "#fff";
+  roundRect(36, 230, W - 72, 72, 12); ctx.fill();
+  ctx.strokeStyle = "#e0b0c8"; ctx.lineWidth = 2; ctx.stroke();
+  if (!cleanDream(noteValue())) {
+    ctx.fillStyle = C.textSoft; font(12, false); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText("Write a short note", 48, 266);
+  }
   uiButtons = [];
-  uiButtons.push(btn(28, H - 150, W - 56, 46, "Leave reply", { id: "v12_reply", size: 15 }));
+  uiButtons.push(btn(28, H - 150, W - 56, 46, "Reply", { id: "v12_reply", size: 15 }));
   panelFooter();
   v12.mail.read = true;
 }
 function saveReply() {
+  // No letter in the box: a friendly note, and stay put. Never bounce to pause.
+  if (!v12.mail.text) {
+    toast("No reply today. That's okay.", C.textSoft);
+    return;
+  }
   const r = cleanDream(noteValue());
+  if (!r) {
+    // A letter is waiting. Reply opens the field; it does not leave or pretend they skipped it.
+    const n = noteEls();
+    if (n && n.ta && n.ta.focus) { try { n.ta.focus(); } catch (e) {} }
+    return;
+  }
   v12.mail.reply = r;
-  if (r) { v12.mail.lastReply = r; v12.mail.lastFrom = v12.mail.from; toast(palName(ANIMALS.find(a => a.id === v12.mail.from)) + " will remember", C.heart); }
-  else toast("No reply today. That's okay.", C.textSoft);
+  v12.mail.lastReply = r;
+  v12.mail.lastFrom = v12.mail.from;
   v12.mail.read = true;
   save();
-  hideNote();
-  scene = v12.from || "pause";
+  toast(palName(ANIMALS.find(a => a.id === v12.mail.from)) + " will remember", C.heart);
 }
 
 // ---------- boat ----------
