@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="13.0-look">
+<meta name="hc-version" content="14.0-clear">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -19,6 +19,13 @@
 <meta name="format-detection" content="telephone=no">
 <title>Happy Critters — Hug the Gloom Away</title>
 <style>
+  @font-face {
+    font-family: "HC Display";
+    src: url(data:font/woff;base64,d09GRgABAAAAAAkwAA8AAAAADBwAAgBCAAAAAAAAAAAAAAAAAAAAAAAAAABHREVGAAAH1AAAABYAAAAWABEAC0dQT1MAAAfsAAAA1wAAAYYlqS25R1NVQgAACMQAAAAvAAAAMBOEKXhPUy8yAAAGGAAAAEYAAABgdnOBB1NUQVQAAAj0AAAAOwAAAED0I98bY21hcAAABmAAAABSAAAAdAHBAmtnYXNwAAAHzAAAAAgAAAAIAAAAEGdseWYAAAFYAAAD+gAABWRfS3vhaGVhZAAABZAAAAA2AAAANh4dQ5doaGVhAAAF+AAAACAAAAAkB6IBr2htdHgAAAXIAAAAMAAAADAWzQD0bG9jYQAABXQAAAAaAAAAGgmvCFltYXhwAAAFVAAAAB0AAAAgABsA425hbWUAAAa0AAABAgAAAegt7U1HcG9zdAAAB7gAAAATAAAAIP+fADJ4nGWUz4/bRBTHZ8aJPXHsJPbY49hOnI29mcRO4o3zs5W6K7pl00pUu4Xlx7JUiCIhVRwQSEXaA4gDXOiZGz2BxBkJuBRx4k9AoEq9cOoJeqAqbSV2w9jZwmp7sWeenvXe+3y/zwCC0uJP9C66DdYB2PJjYTLeEEZDSi1KTUOURDHwWTtGgV9CpuGh0XA6nU2nPOM4oYTgQfutay8myZVrb4ej7UQ0gmLRCDS1qkmUNZz1qR9M121nta4UHVXzSbEYGFK8Tezpqwc7l2+8PLZtN6c2HLVWrjlKMa8WSXhhbbAZkkIFY6VW1+qK7Sm5WhUIoLZ4jN5D3wENBKCddszYRBtnDVFTM0Sx+UyETJom0vsMYxbHLf48mp24eDCH3S5FORq5bmQd/pO+T91h+dYtgEB58QSV4QPgg2FWeTYqcS4x4shQhixg/1dtc1CTMWOBL4qmQSn8vt+FpXx9EPR3zzO2+VLfX6vni7Db7/M2Wr+QBiErhtE0TF/yiGSR8NIbw2T/YmhUsV1zI3r0I42cH4wmMbI0ngyynv5AGB6BFkgy/Xgz6egeF0sMglSvTM6lWCI//tcUXHnh+nPe/KMrG3sz50zv15zNKPVtU8O6p0hicvWL90tq2dGrq8RIdq52dw6e72zMvbPnKpaaxzhfraqW7HVMmCiKqhdInXcTLB6BO+gOV6cJwGvPKCGkkacBfv+4zyTMlgDiE+cCHxfOaZgKkI2NejxihQ5/8hvgPnAWASJcCwJWwRiAd/jks3TSdPASkk6UtjTKPXBajV5yKaYQWvF80NvdZOz87r0ek6RWL4hlVGA3UsJNI6MtdLb2ksH+PIwu7g+Gr19gvzsdihq04xLj8FsaOvBmmpcJw78BAAJv8Qh+Ax+D6DSF9iC1iiek6vjHW5WSOFhO32vhSqXRdQtuw9W6AalIBaVsExmzAvcknHME1ToW9aou4IpDhvN8Pi+VSPHnjArkbrgPb8NDsJnWXXphtrRDJnwstNMFX0a4JZbbfQyFR7K+7ta2zkeFiiIRVff9lkmIanm+bvUCc/DmluYHgd5CVLHVCotMRcNlu0mcWVz7QFdtn8q2p8lymZQxxrIkYlGy2LQ9nq/msIorZ7nJdT1fEIsqFoWctnKm/8oe943MeX2NvgQu6B+7+IRvPPTUL8JodnwK2kFmJRhPtkd2So5hQZSxE1q16MmHN1PvhNYnn/rOSqE6vDyCn1ltO12iz4tlnMN+h/OGf+f5TyBisoA6cbebbpO4MNA5JAAVUE6QsRmZTlNOgijOBMZZUsv6KamYD8zBcKCRh0bSuO/I3bWR+9VvdNJFK2u6QYfR4d018he83pm4dTV8+C8ofNRkAAB4nGNgZGBg4GGoZWBnSGFgYQDxEICZgREAFvQA/wAAAAAAAAAAVwCVAN8BJgFbAaoB5gJCAoYCsgKyAAAAAQAAAAIAQiNr5TZfDzz1AAMD6AAAAADUTdzYAAAAAObmIq3/fP8HBFUD5gAAAAYAAgAAAAAAAAIfADICdwAOAooAHAItAA8CFwAPAPsAIwIdABoBsAAeAckADwGtAAoCQAAGAOsAAHicY2BkYGA+91+EgYGl8H/NP1mWUAagCArgAQCHLQVXeJxjYGGSZdrDwMrAwNTFFMHAwOANoRnjGIwYdRhQASMyp7g4JZXhAIMCQyXzuf8iDAzMzxn+wNQwfgGayQCUYwEA+5QMZwAAeJxjYGBgYmBgYAZiESDJCKZZGBLAtABQhIVBgcGZwYMhkSGVIZOhgKGEofL/f6AsqmgRSPT/6//7/u/6v+j//P9z/k/7P/X/RLB5GAAAel0aHQAAeJx1kElOAlEURc8XJHZhAYwY6kBQYxzoxCZhYIwaYnRsU1KlIKaAgVtwJa7DFbgkTzUKwZhK5Z93/7vv3SpglXcqhOoy8OFbcKBhVfACdT5LrrDFV8nVmZ5FGuHHW5MbBauthd2SAyvhsOQaS+G05Lo9XU4Y8sobKQk9YsY02XHbNnvSlUrk2fE+4sHeZ26tL62HPKnd544jJp6xWsrIej2fNHbyiH3aPj3nZx0T7mjpGjJQjZ32KL94l8jtuU2bXHgXsfEnwdlv3q56z7l99dTsLdNn+Q/cPdIRSfNTp+5r9Sxzkqdozvj/99yoTzmxJ/uyYzv78nn+FwZ6+t/f5UVrAAB4nGNgZgCD/3MYjBiwAAAqgwHRAAABAAH//wAPAAEAAAAMAAAAAAAAAAIAAQABAAoAAQAAeJxdkK0OAjEQhKc/HKUk5BQhCARBoFBoFEEheQEECoIgPALPwSOh0egTBIFdpnu9QGjTyXa+uW57MAAiZljALlfrDXqH7fmIATx9iFCaKiXNfnc6IrCyaUct8KIGrog5nZ7mLfqYKG+TOTh5wHMFqeh25Ely0uQFV2ba0EH6M5hP+v5xqkblJpW868R/Uu6qz7xrvjfsYngXzzsHdHhfwxnp1LR+aYvUZuKzbzWRiNM6vXVMMlXfodTp9OxIWqo/xIiZQnu22Lub/5lj9++pnsx9AKp3MJEAeJxjYGRgYOBi0GHQY2B2cfMJYRDJSE0qYpDLSSzJY5BjYAHKMvz/zwAHAKuNBzUAeJxjYGRgZOBgYGJgYBABkyoMTOXpGSWMQGZ5SkkGI0iehUGAASTAwMjGtAdEASETIx9DCgMDAKLwBQ8A) format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
     width: 100%; height: 100%;
@@ -64,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v13 — A new look for the title
+// Happy Critters v14 — Clearer title
 
 const W = 360;
 let H = 540;
@@ -7189,50 +7196,7 @@ function drawLevelUp() {
 }
 
 
-// Pixel wordmark. Rounded 7-row glyphs, drawn crisp (no system font).
-const WM_GLYPH = {
-  " ": ["...", "...", "...", "...", "...", "...", "..."],
-  H: ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-  a: [".....", ".##..", "#..#.", "####.", "#..#.", "#..#.", ".##.."],
-  p: [".....", "#....", "###..", "#..#.", "###..", "#....", "#...."],
-  y: ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", ".#..."],
-  C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
-  r: [".....", ".##..", "#..#.", "#....", "#....", "#....", "#...."],
-  i: ["..#..", ".....", "..#..", "..#..", "..#..", "..#..", "..#.."],
-  t: ["..#..", "..#..", "#####", "..#..", "..#..", "..#..", "..##."],
-  e: [".....", ".###.", "#...#", "#####", "#....", "#...#", ".###."],
-  s: [".....", ".###.", "#....", ".###.", "....#", "#...#", ".###."],
-};
-function wmMeasure(text, scale) {
-  const gap = scale;
-  let w = 0;
-  for (let i = 0; i < text.length; i++) {
-    const g = WM_GLYPH[text[i]] || WM_GLYPH[" "];
-    w += g[0].length * scale;
-    if (i < text.length - 1) w += gap;
-  }
-  return w;
-}
-function drawWmLine(text, cx, y, scale, fill, outline) {
-  const gap = scale;
-  const total = wmMeasure(text, scale);
-  let x = Math.round(cx - total / 2);
-  const dots = [];
-  for (const ch of text) {
-    const g = WM_GLYPH[ch] || WM_GLYPH[" "];
-    for (let r = 0; r < g.length; r++) {
-      for (let c = 0; c < g[r].length; c++) {
-        if (g[r][c] === "#") dots.push([x + c * scale, y + r * scale]);
-      }
-    }
-    x += g[0].length * scale + gap;
-  }
-  // one-pixel shadow, not a full outline, so the counters stay open
-  ctx.fillStyle = outline;
-  for (const [px, py] of dots) ctx.fillRect(px + scale, py + scale, scale, scale);
-  ctx.fillStyle = fill;
-  for (const [px, py] of dots) ctx.fillRect(px, py, scale, scale);
-}
+// Title wordmark: Fredoka Bold (embedded as HC Display). Even, rounded, high contrast.
 function drawPixelHeart(x, y, s) {
   const g = [".#.#.", "#####", "#####", ".###.", "..#.."];
   const x0 = Math.round(x - 2.5 * s), y0 = Math.round(y - 2.5 * s);
@@ -7249,20 +7213,26 @@ function drawPixelHeart(x, y, s) {
   ctx.fillRect(x0 + s, y0 + s, s, s);
 }
 function drawTitleBrand(cx, top) {
-  const scale = W < 340 ? 2 : 3;
-  const lineH = 8 * scale;
-  const wordW = Math.max(wmMeasure("Happy", scale), wmMeasure("Critters", scale));
-  const catS = scale === 2 ? 1.15 : 1.45;
+  const catS = 1.4;
   const catW = 24 * catS;
-  const gap = 10;
+  ctx.save();
+  ctx.font = '700 32px "HC Display", "Fredoka", "Nunito", system-ui, sans-serif';
+  const wordW = Math.max(ctx.measureText("Happy").width, ctx.measureText("Critters").width);
+  const gap = 8;
   const total = catW + gap + wordW;
-  const left = cx - total / 2;
+  const left = Math.round(cx - total / 2);
   const cat = ANIMALS.find(a => a.id === "cat");
-  drawSprite(cat, left + catW / 2, top + 20, catS, false, Math.sin(time * 2.4) * 1.2, false, 1, null);
-  drawPixelHeart(left + catW / 2 + 12, top + 4, scale === 2 ? 2 : 2);
-  const tx = left + catW + gap + wordW / 2;
-  drawWmLine("Happy", tx, top, scale, "#5a2848", "#ffd0e4");
-  drawWmLine("Critters", tx, top + lineH, scale, "#5a2848", "#ffd0e4");
+  const mid = top + 30;
+  drawSprite(cat, left + catW / 2, mid + 2, catS, false, Math.sin(time * 2.4) * 1.2, false, 1, null);
+  drawPixelHeart(left + catW * 0.78, mid - 16, 2);
+  ctx.imageSmoothingEnabled = true;
+  ctx.fillStyle = "#4a1844";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const lx = left + catW + gap + wordW / 2;
+  ctx.fillText("Happy", lx, mid - 16);
+  ctx.fillText("Critters", lx, mid + 16);
+  ctx.restore();
 }
 
 // ===================== SCENES =====================
@@ -8122,14 +8092,14 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 13;
-const APP_LABEL = "v13";
+const APP_VERSION = 14;
+const APP_LABEL = "v14";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "A new look",
+  sub: "Clearer title",
   pals: ["cat", "bunny", "fox", "chick"],
   items: [
-    "A new look for the title.",
+    "Clearer title.",
   ],
 };
 
