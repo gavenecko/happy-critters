@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="15.3-secret">
+<meta name="hc-version" content="15.4-shore">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v15.3 — four more secret friends
+// Happy Critters v15.4 — shore, stickers, parade
 
 const W = 360;
 let H = 540;
@@ -5032,6 +5032,218 @@ const SPRITE_FRAMES = {
       "000000000000000000000000",
     ]),
   },
+  "hermit": {
+    idle: parseGrid([
+      "000000001100001100000000",
+      "000000001j10001j10000000",
+      "000000001110001110000000",
+      "000000000110001100000000",
+      "000000000014444100000000",
+      "000000000144444410000000",
+      "000000001444ii4441000000",
+      "00000001444i44i444100000",
+      "0000001444i444i444410000",
+      "000001444444444444441000",
+      "000001444411111144441000",
+      "000001444414444414441000",
+      "000000144444444444441000",
+      "000000014444444444410000",
+      "000000001111111111100000",
+      "000000000111111111000000",
+      "000000115500000055110000",
+      "000001555510000155551000",
+      "000001555551001555551000",
+      "000001555551001555551000",
+      "000000155511000155511000",
+      "000000011100000011100000",
+      "000000007700000077000000",
+      "000000001100000011000000",
+    ]),
+    blink: parseGrid([
+      "000000001100001100000000",
+      "000000001110001110000000",
+      "000000001110001110000000",
+      "000000000110001100000000",
+      "000000000014444100000000",
+      "000000000144444410000000",
+      "000000001444ii4441000000",
+      "00000001444i44i444100000",
+      "0000001444i444i444410000",
+      "000001444444444444441000",
+      "000001444411111144441000",
+      "000001444414444414441000",
+      "000000144444444444441000",
+      "000000014444444444410000",
+      "000000001111111111100000",
+      "000000000111111111000000",
+      "000000115500000055110000",
+      "000001555510000155551000",
+      "000001555551001555551000",
+      "000001555551001555551000",
+      "000000155511000155511000",
+      "000000011100000011100000",
+      "000000007700000077000000",
+      "000000001100000011000000",
+    ]),
+    sad: parseGrid([
+      "000000001100001100000000",
+      "000000001110001110000000",
+      "000000001110001110000000",
+      "000000000110001100000000",
+      "000000000014444100000000",
+      "000000000144444410000000",
+      "000000001444ii4441000000",
+      "00000001444i44i444100000",
+      "0000001444i444i444410000",
+      "000001444444444444441000",
+      "000001444411111144441000",
+      "000001444414444414441000",
+      "000000144444444444441000",
+      "000000014444444444410000",
+      "000000001111111111100000",
+      "000000000111111111000000",
+      "000000115500000055110000",
+      "000001555510000155551000",
+      "000001555551001555551000",
+      "000001555551001555551000",
+      "000000155511000155511000",
+      "000000011100000011100000",
+      "000000007700000077000000",
+      "000000001100000011000000",
+    ]),
+    sadBlink: parseGrid([
+      "000000001100001100000000",
+      "000000001110001110000000",
+      "000000001110001110000000",
+      "000000000110001100000000",
+      "000000000014444100000000",
+      "000000000144444410000000",
+      "000000001444ii4441000000",
+      "00000001444i44i444100000",
+      "0000001444i444i444410000",
+      "000001444444444444441000",
+      "000001444411111144441000",
+      "000001444414444414441000",
+      "000000144444444444441000",
+      "000000014444444444410000",
+      "000000001111111111100000",
+      "000000000111111111000000",
+      "000000115500000055110000",
+      "000001555510000155551000",
+      "000001555551001555551000",
+      "000001555551001555551000",
+      "000000155511000155511000",
+      "000000011100000011100000",
+      "000000007700000077000000",
+      "000000001100000011000000",
+    ]),
+  },
+  "piper": {
+    idle: parseGrid([
+      "000000000000000000000000",
+      "000000000001110000000000",
+      "00000000001iii1000000000",
+      "00000000001ijji100000000",
+      "000000000011iii100000000",
+      "000000000001111000000000",
+      "000000000000111111111100",
+      "000000000001999999999960",
+      "000000000019999999999960",
+      "0000000001999ii999999960",
+      "000000001999ijj999999600",
+      "000000001999999999996000",
+      "000000000199999999960000",
+      "000000000019999999100000",
+      "000000000001111111000000",
+      "000000000000110011000000",
+      "000000000000660066000000",
+      "000000000000660066000000",
+      "000000000000110011000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+    blink: parseGrid([
+      "000000000000000000000000",
+      "000000000001110000000000",
+      "00000000001iii1000000000",
+      "00000000001i11i100000000",
+      "000000000011iii100000000",
+      "000000000001111000000000",
+      "000000000000111111111100",
+      "000000000001999999999960",
+      "000000000019999999999960",
+      "0000000001999ii999999960",
+      "000000001999i11999999600",
+      "000000001999999999996000",
+      "000000000199999999960000",
+      "000000000019999999100000",
+      "000000000001111111000000",
+      "000000000000110011000000",
+      "000000000000660066000000",
+      "000000000000660066000000",
+      "000000000000110011000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+    sad: parseGrid([
+      "000000000000000000000000",
+      "000000000001110000000000",
+      "00000000001iii1000000000",
+      "00000000001i11i100000000",
+      "000000000011iii100000000",
+      "000000000001111000000000",
+      "000000000000111111111100",
+      "000000000001999999999960",
+      "000000000019999999999960",
+      "0000000001999ii999999960",
+      "000000001999i11999999600",
+      "000000001999999999996000",
+      "000000000199999999960000",
+      "000000000019999999100000",
+      "000000000001111111000000",
+      "000000000000110011000000",
+      "000000000000660066000000",
+      "000000000000660066000000",
+      "000000000000110011000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+    sadBlink: parseGrid([
+      "000000000000000000000000",
+      "000000000001110000000000",
+      "00000000001iii1000000000",
+      "00000000001i11i100000000",
+      "000000000011iii100000000",
+      "000000000001111000000000",
+      "000000000000111111111100",
+      "000000000001999999999960",
+      "000000000019999999999960",
+      "0000000001999ii999999960",
+      "000000001999i11999999600",
+      "000000001999999999996000",
+      "000000000199999999960000",
+      "000000000019999999100000",
+      "000000000001111111000000",
+      "000000000000110011000000",
+      "000000000000660066000000",
+      "000000000000660066000000",
+      "000000000000110011000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+  },
 };
 
 const ANIMALS = [
@@ -5078,6 +5290,9 @@ const ANIMALS = [
   { id: "teacupmouse", name: "Teacup Mouse", cost: 0, secret: true, lock: "A secret friend in the yard", bio: "A small mouse with a pink teacup." },
   { id: "lanternmoth", name: "Lantern Moth", cost: 0, secret: true, lock: "A secret friend in the mail", bio: "Soft gold wings and a tiny lantern." },
   { id: "starkitten", name: "Star Kitten", cost: 0, secret: true, lock: "A secret friend in a long hug", bio: "A white kitten with a yellow star." },
+  // v15.4 shore friends: they live at the beach, not the shop, not required for every friend
+  { id: "hermit", name: "Hermit Crab", cost: 0, secret: true, beach: true, lock: "Lives at the shore", bio: "A pink shell and two careful claws." },
+  { id: "piper", name: "Sandpiper", cost: 0, secret: true, beach: true, lock: "Lives at the shore", bio: "Little legs, long beak, always near the foam." },
 ];
 
 // Sprite anchor points (in 24px sprite units): [headCenterX, headTopY, eyeY, eyeHalfSpacing, neckY]
@@ -5096,6 +5311,7 @@ const ANCHOR = {
   gavenecko: [11.5, 3, 8.5, 2.5, 16],
   puddleduck: [13.5, 1, 4, 2, 13], teacupmouse: [10, 1, 6.2, 1.7, 13],
   lanternmoth: [12.5, 2, 6.5, 1.5, 12], starkitten: [12.5, 4, 10, 3, 15],
+  hermit: [12, 4, 2, 3.5, 16], piper: [14, 2, 4, 1.2, 12],
 };
 
 const ACCESSORIES = [
@@ -5410,6 +5626,7 @@ function load() {
     party = normalizeParty(d.party);
     v12 = normalizeV12(d.v12);
     if (typeof normalizeHc15 === "function") hc15 = normalizeHc15(d.hc15);
+    if (typeof normalizeHc154 === "function") hc154 = normalizeHc154(d.hc154);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -5433,6 +5650,7 @@ function save() {
       party: partySnapshot(),
       v12: v12Snapshot(),
       hc15,
+      hc154,
     }));
     saveDirty = false;
   } catch (e) {}
@@ -6634,7 +6852,7 @@ function makeCritter(animal, opts) {
 }
 
 function spawnCritter() {
-  const list = unlockedList();
+  const list = unlockedList().filter(a => !a.beach);
   if (!list.length || critters.filter(c => !c.parade).length >= MAX_CRITTERS) return;
   const animal = list[Math.floor(Math.random() * list.length)];
   const shiny = animal.id !== "rainbow" && Math.random() < 0.045;
@@ -8546,6 +8764,7 @@ function drawHUD() {
 function renderPlay() {
   ctx.save();
   drawBackground();
+  if (typeof drawV154Under === "function") drawV154Under();
   for (const gc of gloomClouds) drawGloomCloud(gc);
   for (const c of critters) if (!c.dead) drawCritter(c);
   drawParticles();
@@ -8560,6 +8779,7 @@ function renderPlay() {
   drawKindTalk();
   drawHUD();
   if (typeof drawV12Meadow === "function") drawV12Meadow();
+  if (typeof drawV154Meadow === "function") drawV154Meadow();
   if (tut && scene === "play") drawTutorial();
   drawStoryBanner();
   drawLevelUp();
@@ -8879,6 +9099,7 @@ function openPanel(name) {
 function doUI(id) {
   if (!id) return;
   sfxClick();
+  if (typeof v154Action === "function" && v154Action(id)) return;
   if (typeof v15Action === "function" && v15Action(id)) return;
   if (typeof v12Action === "function" && v12Action(id)) return;
   if (kindAction(id)) return;
@@ -9003,6 +9224,7 @@ function hugOffer(c) {
   return hugWaveN === 1 ? 1 : 0.35;
 }
 function playTap(p) {
+  if (typeof v154PlayTap === "function" && v154PlayTap(p)) return;
   if (typeof tapSky === "function" && tapSky(p)) return;
   if (typeof tapMoon === "function" && tapMoon(p)) return;
   if (gift && dist2(p.x, p.y, gift.x, gift.y) < 36 * 36) { openGift(); return; }
@@ -9058,6 +9280,7 @@ canvas.addEventListener("pointerdown", (e) => {
   if (scene === "boat" && typeof boatTap === "function") { boatTap(p); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (scene === "skip" && typeof skipTap === "function") { skipTap(p); return; }
   if (scene === "farm" && typeof farmTap === "function") { farmTap(p); return; }
+  if (scene === "beach" && typeof beachTap === "function") { beachTap(p); return; }
   if (scene === "mg") { mgDown(p); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (isAdvScene(scene)) { advPointer(p); return; }
   if (scene === "play" && tut && tutBubbleHit(p)) return; // the tutorial card swallows stray taps
@@ -9130,6 +9353,7 @@ window.addEventListener("keydown", (e) => {
     else if (isAdvScene(scene)) advEscape();
     else if (scene === "arcade") scene = prevScene || "title";
     else if (scene === "farm" && typeof leaveFarm === "function") leaveFarm();
+    else if (typeof v154Leave === "function" && v154Leave()) {}
     else if (scene === "garden") { if (gSel) gSel = null; else leaveGarden(); }
     else if (scene === "decor") scene = "garden";
     else if (scene === "seasons") scene = "settings";
@@ -9176,14 +9400,17 @@ function stepScene(dt) {
     if (typeof drawMorningNote === "function") drawMorningNote();
   } else if (scene === "play") {
     updatePlay(dt);
+    if (typeof v154Tick === "function") v154Tick(dt);
     renderPlay();
     if (typeof drawMorningNote === "function") drawMorningNote();
   } else if (scene === "shop") {
     drawShop();
   } else if (scene === "achievements") {
     drawAchievements();
+    if (typeof drawStampButton === "function") drawStampButton();
   } else if (scene === "album") {
     drawAlbum();
+    if (typeof drawStampButton === "function") drawStampButton();
   } else if (scene === "settings") {
     drawSettings();
   } else if (scene === "seasons") {
@@ -9216,6 +9443,8 @@ function stepScene(dt) {
     v12Step(dt);
   } else if ((scene === "skip" || scene === "farm") && typeof v15Step === "function") {
     v15Step(dt);
+  } else if (typeof v154Scene === "function" && v154Scene(scene)) {
+    v154Step(dt);
   } else if (scene === "away") {
     if (awayReturn === "title") updateTitle(dt);
     else if (awayReturn === "garden") updateGarden(dt);
@@ -9257,17 +9486,17 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 15;
-const APP_LABEL = "v15.3";
+const APP_LABEL = "v15.4";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "A fuller meadow",
-  pals: ["raccoon", "bluebird", "dragonfly", "otter"],
+  sub: "A cozier shore",
+  pals: ["hermit", "piper", "raccoon", "bluebird"],
   items: [
-    "Raccoon, bluebird, and a little dragonfly.",
-    "New hats, a birdbath, reeds, a log, and chimes.",
-    "Pebble Skip, on the Games screen.",
-    "Picnics, bubbles, and butterflies.",
-    "The pond, the band, and tiny homes look cozier.",
+    "Hide-and-seek in the meadow grass.",
+    "A picnic blanket friends sit on.",
+    "Little notes when a friend wants a visit.",
+    "A sticker book in Album and Goals.",
+    "A dusk parade, and a beach after the story.",
   ],
 };
 
@@ -16112,6 +16341,7 @@ function shellNote() {
   const bits = [];
   if (v12.shells.spiral) bits.push("spiral shell");
   if (v12.shells.pearl) bits.push("pearl shell");
+  if (typeof hc154 !== "undefined" && hc154 && hc154.shells) bits.push(hc154.shells + " shore");
   return bits.length ? " · " + bits.join(" & ") : "";
 }
 function roomShopItems() {
@@ -16506,6 +16736,656 @@ function noteComboStar(n) {
   if (n >= 5) unlockSecretFriend("starkitten");
 }
 
+// v15.4 — hide-and-seek, beach, friend notes, picnic blanket, sticker book, dusk parade.
+// Meadow controls only. The six toolbar buttons stay as they are.
+
+const STAMPS = [
+  { id: "hug", name: "First Hug", hint: "Hugs", auto: () => totalHugs >= 1 },
+  { id: "hugs", name: "Hug Bunch", hint: "Hugs", auto: () => totalHugs >= 25 },
+  { id: "rain", name: "Rainy Day", hint: "Weather", auto: () => typeof v12 !== "undefined" && v12 && v12.wx === "rain" },
+  { id: "breeze", name: "A Little Wind", hint: "Weather", auto: () => typeof v12 !== "undefined" && v12 && (v12.wx === "wind" || v12.wx === "snow") },
+  { id: "secret", name: "Secret Pal", hint: "Secrets", auto: () => ANIMALS.some(a => a.secret && !a.beach && unlocked[a.id]) },
+  { id: "beach", name: "Beach Day", hint: "Beach", auto: () => false },
+  { id: "parade", name: "Dusk Parade", hint: "Parade", auto: () => (stats && stats.parades >= 1) },
+  { id: "seek", name: "Found You", hint: "Hide & Seek", auto: () => false },
+];
+const STAMP_IDS = STAMPS.map(s => s.id);
+
+let hc154 = null;
+
+function blankHc154() {
+  return { shells: 0, stamps: {}, seekUntil: 0, picnicUntil: 0, paradeUntil: 0, reqUntil: 0, seenBeach: false };
+}
+function normalizeHc154(d) {
+  const o = blankHc154();
+  if (!isObj(d)) return o;
+  o.shells = Math.max(0, Math.min(99, Math.floor(numOr0(d.shells))));
+  if (isObj(d.stamps)) {
+    for (const id of STAMP_IDS) if (d.stamps[id] === true) o.stamps[id] = true;
+  }
+  for (const k of ["seekUntil", "picnicUntil", "paradeUntil", "reqUntil"]) o[k] = Math.max(0, Math.floor(numOr0(d[k])));
+  o.seenBeach = !!d.seenBeach;
+  return o;
+}
+function ensureHc154() {
+  if (!hc154 || !hc154.stamps) hc154 = normalizeHc154(hc154);
+  if (hc154.reqWait == null) hc154.reqWait = 48;
+  if (!("hide" in hc154)) hc154.hide = null;
+  if (!("picnic" in hc154)) hc154.picnic = null;
+  if (!("req" in hc154)) hc154.req = null;
+  if (!("parade" in hc154)) hc154.parade = null;
+  if (hc154.page == null) hc154.page = 0;
+  if (!hc154.stickFrom) hc154.stickFrom = "album";
+  return hc154;
+}
+ensureHc154();
+
+function beachOpen() {
+  // Story-complete flags live on the adventure save. If a save has neither
+  // flag at all, the shore opens once the Joy meter has reached 100.
+  if (typeof adv !== "undefined" && adv && (typeof adv.ended === "boolean" || typeof adv.king === "boolean")) {
+    return !!(adv.ended || adv.king);
+  }
+  return moodPeak >= 100;
+}
+function meadowPals() {
+  return ANIMALS.filter(a => unlocked[a.id] && !a.beach && a.id !== "gloomking");
+}
+function foundFriends() {
+  return ANIMALS.filter(a => unlocked[a.id]);
+}
+
+function earnStamp(id) {
+  ensureHc154();
+  if (!STAMP_IDS.includes(id) || hc154.stamps[id]) return;
+  hc154.stamps[id] = true;
+  const s = STAMPS.find(x => x.id === id);
+  toast("Sticker: " + (s ? s.name : id), "#e0a040");
+  saveSoon();
+}
+function refreshStamps() {
+  ensureHc154();
+  let n = 0;
+  for (const s of STAMPS) {
+    if (!s.auto || hc154.stamps[s.id]) continue;
+    let ok = false;
+    try { ok = !!s.auto(); } catch (e) { ok = false; }
+    if (ok) { hc154.stamps[s.id] = true; n++; }
+  }
+  if (n) saveSoon();
+}
+
+// ---------- hide and seek ----------
+function startSeek() {
+  ensureHc154();
+  if (hc154.hide) { toast("Someone is already hiding.", C.textSoft); return; }
+  if (Date.now() < hc154.seekUntil) { toast("The grass is quiet for a moment.", C.textSoft); return; }
+  const pool = meadowPals();
+  const pal = (pool.length ? pool : foundFriends())[Math.floor(Math.random() * Math.max(1, (pool.length ? pool : foundFriends()).length))];
+  if (!pal) { toast("Make a friend first.", C.textSoft); return; }
+  const x = W - 118 + Math.random() * 20;
+  const y = H - 250;
+  hc154.hide = { id: pal.id, name: pal.name, x: x, y: y, taps: 0, need: 3 };
+  toast(pal.name + " ducked into the grass!", "#3e8a32");
+}
+function findHide() {
+  const h = hc154.hide;
+  if (!h) return;
+  const n = 15 + (h.id.charCodeAt(0) % 11);
+  joy += n;
+  earnStamp("seek");
+  toast("Found " + h.name + "! +" + n + " ♥", C.heart);
+  if (typeof sfxHug === "function") sfxHug(1);
+  if (typeof spawnHearts === "function") spawnHearts(h.x, h.y - 8, 4, true);
+  const a = ANIMALS.find(x => x.id === h.id);
+  if (a && scene === "play") {
+    critters.push(makeCritter(a, { x: h.x, y: h.y - 10, vx: 22, scale: 1.9, life: 14 }));
+  }
+  hc154.hide = null;
+  hc154.seekUntil = Date.now() + 42000;
+  save();
+}
+function drawHideSpot(h) {
+  const bob = Math.sin(time * 6) * 2;
+  ctx.fillStyle = "#3e8a32";
+  ctx.fillRect(h.x - 14, h.y + 8, 5, 16);
+  ctx.fillRect(h.x - 4, h.y + bob, 5, 20);
+  ctx.fillRect(h.x + 8, h.y + 6, 5, 16);
+  ctx.fillStyle = "#b6e07a";
+  ctx.fillRect(h.x - 12, h.y + 6, 4, 6);
+  ctx.fillRect(h.x - 2, h.y + bob, 4, 6);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(h.x - 5, h.y - 2 + bob, 4, 4);
+  ctx.fillRect(h.x + 3, h.y - 2 + bob, 4, 4);
+  ctx.fillStyle = "#1a1520";
+  ctx.fillRect(h.x - 4, h.y - 1 + bob, 2, 2);
+  ctx.fillRect(h.x + 4, h.y - 1 + bob, 2, 2);
+  if (h.taps > 0) {
+    ctx.fillStyle = C.text; font(10, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(h.taps + "/" + h.need, h.x, h.y - 14);
+  }
+}
+
+// ---------- picnic blanket ----------
+function startPicnic() {
+  ensureHc154();
+  if (hc154.picnic) {
+    hc154.picnic = null;
+    toast("Blanket folded.", C.textSoft);
+    return;
+  }
+  if (Date.now() < hc154.picnicUntil) { toast("The crumbs are still settling.", C.textSoft); return; }
+  hc154.picnic = { t: 0, sit: {}, gave: {}, paid: 0 };
+  if (!critters.some(c => !c.dead && c.state === "float" && !c.parade)) {
+    const a = meadowPals()[0] || ANIMALS[0];
+    const [y0, y1] = critterYRange();
+    critters.push(makeCritter(a, { x: 36, y: (y0 + y1) / 2, vx: 18, scale: 1.8, life: 24 }));
+  }
+  toast("Picnic blanket is out.", "#e07040");
+}
+function picnicSpot() { return { x: W / 2, y: H - 248 }; }
+function picnicTick(dt) {
+  const pic = hc154.picnic;
+  if (!pic || scene !== "play") return;
+  pic.t += dt;
+  const spot = picnicSpot();
+  const pals = critters.filter(c => c && !c.dead && c.state === "float" && !c.parade);
+  pals.sort((a, b) => Math.hypot(a.x - spot.x, a.baseY - spot.y) - Math.hypot(b.x - spot.x, b.baseY - spot.y));
+  pals.slice(0, 3).forEach((c, i) => {
+    const key = c.id;
+    const tx = spot.x + (i - 1) * 36;
+    const ty = spot.y + (i === 1 ? 8 : 0);
+    const dx = tx - c.x, dy = ty - c.baseY;
+    const dist = Math.hypot(dx, dy) || 1;
+    if (dist > 16) {
+      c.x += dx / dist * 70 * dt;
+      c.baseY += dy / dist * 54 * dt;
+      c.vx = 0;
+      c.life = Math.max(c.life, 6);
+    } else {
+      c.x = tx; c.baseY = ty; c.vx = 0;
+      c.life = Math.max(c.life, 6);
+      if (!pic.gave[key]) {
+        pic.sit[key] = (pic.sit[key] || 0) + dt;
+        if (pic.sit[key] >= 2.2 && pic.paid < 6) {
+          pic.gave[key] = true;
+          pic.paid += 2;
+          joy += 2;
+          if (typeof spawnHearts === "function") spawnHearts(c.x, c.y - 12, 2, true);
+          addFloat({ x: c.x, y: c.y - 22, text: "+2", life: 0.8, vy: -18, color: C.heart, size: 12 });
+          if (typeof sfxPet === "function") sfxPet();
+        }
+      }
+    }
+  });
+  if (pic.paid >= 6 || pic.t > 16) {
+    hc154.picnic = null;
+    hc154.picnicUntil = Date.now() + 40000;
+    if (pic.paid) saveSoon();
+  }
+}
+function drawBlanket(x, y) {
+  const w = 156, h = 72;
+  const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
+  ctx.fillStyle = "rgba(60,40,20,0.22)";
+  ctx.beginPath(); ctx.ellipse(x, y0 + h + 2, w * 0.42, 8, 0, 0, Math.PI * 2); ctx.fill();
+  const cs = 12;
+  for (let yy = 0; yy < h; yy += cs) {
+    for (let xx = 0; xx < w; xx += cs) {
+      ctx.fillStyle = ((xx / cs + yy / cs) % 2 === 0) ? "#ff8aa8" : "#fff8f2";
+      ctx.fillRect(x0 + xx, y0 + yy, cs, cs);
+    }
+  }
+  ctx.fillStyle = "#e07090";
+  for (let xx = 2; xx < w; xx += 8) ctx.fillRect(x0 + xx, y0 + h, 3, 7);
+  ctx.fillStyle = "#ffb8cc";
+  ctx.beginPath();
+  ctx.moveTo(x0 + w - 26, y0);
+  ctx.lineTo(x0 + w, y0);
+  ctx.lineTo(x0 + w, y0 + 20);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(x0 + w - 18, y0 + 3, 8, 5);
+  ctx.fillStyle = "#c4843c";
+  ctx.fillRect(x0 + 10, y0 + 18, 24, 16);
+  ctx.fillStyle = "#8a5828";
+  ctx.fillRect(x0 + 10, y0 + 14, 24, 5);
+  ctx.fillStyle = "#ffe08a";
+  ctx.fillRect(x0 + 16, y0 + 8, 8, 8);
+  ctx.fillStyle = "#ff6b9d";
+  ctx.fillRect(x0 + 28, y0 + 22, 5, 5);
+}
+
+// ---------- friend requests ----------
+function maybeRequest(dt) {
+  if (scene !== "play" || tut) return;
+  if (hc154.req) {
+    const id = hc154.req.want;
+    if (critters.some(c => c && !c.dead && c.animal && c.animal.id === id && c.state !== "leave")) fulfillRequest();
+    return;
+  }
+  if (Date.now() < (hc154.reqUntil || 0)) return;
+  hc154.reqWait -= dt;
+  if (hc154.reqWait > 0) return;
+  const pool = meadowPals();
+  if (!pool.length) { hc154.reqWait = 40; return; }
+  const want = pool[Math.floor(Math.random() * pool.length)];
+  let ask = pool[Math.floor(Math.random() * pool.length)];
+  if (pool.length > 1) {
+    let guard = 0;
+    while (ask.id === want.id && guard++ < 8) ask = pool[Math.floor(Math.random() * pool.length)];
+  }
+  hc154.req = { ask: ask.id, want: want.id };
+  hc154.reqWait = 50;
+}
+function fulfillRequest() {
+  if (!hc154.req) return;
+  const want = ANIMALS.find(a => a.id === hc154.req.want);
+  joy += 30;
+  toast((want ? want.name : "A friend") + " stopped by! +30 ♥", C.heart);
+  if (typeof sfxChime === "function") sfxChime(2);
+  hc154.req = null;
+  hc154.reqUntil = Date.now() + 60000;
+  hc154.reqWait = 50;
+  saveSoon();
+}
+function bringFriend() {
+  ensureHc154();
+  if (!hc154.req) return;
+  const id = hc154.req.want;
+  if (!unlocked[id]) return;
+  if (critters.some(c => c && !c.dead && c.animal && c.animal.id === id && c.state !== "leave")) return;
+  const a = ANIMALS.find(x => x.id === id);
+  if (!a) return;
+  const [y0, y1] = critterYRange();
+  critters.push(makeCritter(a, { x: -16, y: (y0 + y1) / 2, vx: 42, scale: 1.85, life: 22 }));
+  if (typeof sfxPet === "function") sfxPet();
+}
+function drawRequest() {
+  const r = hc154.req;
+  if (!r || scene !== "play" || tut) return;
+  const ask = ANIMALS.find(a => a.id === r.ask);
+  const want = ANIMALS.find(a => a.id === r.want);
+  if (!ask || !want) return;
+  const x = 8, y = H - 258, w = 200, h = 56;
+  ctx.fillStyle = "rgba(255,250,245,0.94)";
+  roundRect(x, y, w, h, 10); ctx.fill();
+  ctx.strokeStyle = "#e0b0c8"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(11, true);
+  const askN = (typeof palName === "function" ? palName(ask) : ask.name);
+  const wantN = (typeof palName === "function" ? palName(want) : want.name);
+  ctx.fillText(askN + " asks", x + 8, y + 16);
+  ctx.fillStyle = C.textSoft; font(11, false);
+  ctx.fillText("to see " + wantN, x + 8, y + 36);
+  uiButtons.push(btn(x + w - 70, y + 6, 62, 44, "Bring", { id: "v154_bring", size: 12, bg: "#ffe0ee", border: "#ff90b8" }));
+}
+
+// ---------- beach ----------
+function openBeach() {
+  ensureHc154();
+  if (!beachOpen()) {
+    toast("The shore path opens when the story is finished.", C.textSoft);
+    return;
+  }
+  if (scene === "play") prevScene = "pause";
+  scene = "beach";
+  grantBeachPals();
+  beachInit();
+  if (!hc154.seenBeach) { hc154.seenBeach = true; earnStamp("beach"); }
+  else saveSoon();
+}
+function leaveBeach() {
+  hc154.shore = null;
+  scene = "play";
+}
+function grantBeachPals() {
+  let n = 0;
+  for (const a of ANIMALS) if (a.beach && !unlocked[a.id]) { unlocked[a.id] = true; n++; }
+  if (n) { albumNew = true; toast("Shore friends waved hello!", C.heart); save(); }
+}
+function beachInit() {
+  const pals = [];
+  ANIMALS.filter(a => a.beach).forEach((a, i) => {
+    pals.push(makeCritter(a, {
+      x: 110 + i * 120,
+      y: H * 0.64,
+      vx: i % 2 ? -18 : 18,
+      scale: 1.9,
+      life: 30,
+    }));
+  });
+  hc154.shore = {
+    t: 0,
+    pals: pals,
+    shells: [
+      { x: 54, y: H * 0.76, got: false },
+      { x: W - 70, y: H * 0.82, got: false },
+    ],
+  };
+}
+function drawPixelShell(x, y) {
+  ctx.fillStyle = "#fff8f2";
+  ctx.fillRect(x - 6, y - 2, 12, 8);
+  ctx.fillRect(x - 4, y - 6, 8, 4);
+  ctx.fillStyle = "#f0b0c8";
+  ctx.fillRect(x - 2, y - 4, 4, 6);
+  ctx.fillStyle = "#e8a060";
+  ctx.fillRect(x - 7, y + 6, 14, 3);
+}
+function drawStarfish(x, y) {
+  ctx.fillStyle = "#ff9a4a";
+  ctx.fillRect(x - 2, y - 8, 4, 16);
+  ctx.fillRect(x - 8, y - 2, 16, 4);
+  ctx.fillRect(x - 6, y - 6, 4, 4);
+  ctx.fillRect(x + 2, y - 6, 4, 4);
+  ctx.fillRect(x - 6, y + 2, 4, 4);
+  ctx.fillRect(x + 2, y + 2, 4, 4);
+  ctx.fillStyle = "#fff2d0";
+  ctx.fillRect(x - 1, y - 1, 2, 2);
+}
+function beachStep(dt) {
+  const sh = hc154.shore;
+  if (!sh) beachInit();
+  const shore = hc154.shore;
+  shore.t += dt;
+  for (const c of shore.pals) { c.life = 30; updateCritter(c, dt); }
+  const tide = Math.sin(time * 0.65) * 12;
+  const wy = H * 0.40 + tide;
+  const sky = ctx.createLinearGradient(0, 0, 0, wy);
+  sky.addColorStop(0, "#7ec4ff");
+  sky.addColorStop(1, "#e4f6ff");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#fff6c8";
+  ctx.beginPath(); ctx.arc(W - 64, 68, 18, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillRect(36, 48, 28, 8); ctx.fillRect(28, 54, 22, 7);
+  ctx.fillRect(150, 36, 34, 8); ctx.fillRect(158, 42, 20, 6);
+  const sea = ctx.createLinearGradient(0, wy - 8, 0, wy + 86);
+  sea.addColorStop(0, "#6ed4f0");
+  sea.addColorStop(1, "#2f78c4");
+  ctx.fillStyle = sea;
+  ctx.fillRect(0, wy, W, 92);
+  ctx.fillStyle = "#f4fdff";
+  for (let x = 0; x < W; x += 10) {
+    const y = wy + 10 + Math.sin(time * 2.2 + x * 0.09) * 4;
+    ctx.fillRect(x, y, 6, 3);
+  }
+  const sand = ctx.createLinearGradient(0, wy + 70, 0, H);
+  sand.addColorStop(0, "#f3d7a0");
+  sand.addColorStop(1, "#e2b56a");
+  ctx.fillStyle = sand;
+  ctx.fillRect(0, wy + 70, W, H);
+  ctx.fillStyle = "#d2b07a";
+  ctx.fillRect(0, wy + 70, W, 8);
+  drawStarfish(W / 2 + 10, wy + 130);
+  for (const s of shore.shells) if (!s.got) drawPixelShell(s.x, s.y);
+  for (const c of shore.pals) if (!c.dead) drawCritter(c);
+  ctx.fillStyle = "rgba(255,250,245,0.94)";
+  roundRect(12, 12, 156, 48, 12); ctx.fill();
+  ctx.strokeStyle = "#e0b060"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(15, true);
+  ctx.fillText("Beach", 24, 28);
+  ctx.fillStyle = "#a86830"; font(12, true);
+  ctx.fillText("Shells " + (hc154.shells || 0), 24, 46);
+  uiButtons = [];
+  uiButtons.push(btn(W - 108, 14, 94, 44, "Meadow", { id: "v154_beach_back", size: 14, bg: "#fff", border: "#e0b060" }));
+}
+function beachTap(p) {
+  const sh = hc154.shore;
+  if (!sh) return;
+  for (const s of sh.shells) {
+    if (s.got) continue;
+    if (dist2(p.x, p.y, s.x, s.y) < 28 * 28) {
+      s.got = true;
+      hc154.shells = Math.min(99, (hc154.shells || 0) + 1);
+      if (typeof sfxDrop === "function") sfxDrop();
+      addFloat({ x: s.x, y: s.y - 16, text: "Shell " + hc154.shells, life: 0.9, vy: -16, color: "#c4843c", size: 12 });
+      save();
+      return;
+    }
+  }
+  let best = null, bestD = 1e9;
+  for (const c of sh.pals) {
+    if (c.dead || c.state !== "float") continue;
+    const rad = Math.max(24, c.scale * SPRITE_SIZE * 0.5);
+    const d = dist2(p.x, p.y, c.x, c.y);
+    if (d < rad * rad && d < bestD) { best = c; bestD = d; }
+  }
+  if (best) {
+    const pay = hugOffer(best);
+    if (pay) hugCritter(best, 1, pay);
+  }
+}
+
+// ---------- dusk parade ----------
+function paradeReady() {
+  let nightish = false;
+  try {
+    const L = dayLight();
+    nightish = L.phase === "evening" || L.phase === "night" || L.night > 0.35;
+  } catch (e) { nightish = false; }
+  return nightish || mood >= 80 || moodPeak >= 100;
+}
+function startParade() {
+  ensureHc154();
+  if (!paradeReady()) { toast("The parade comes out at dusk, or when Joy is high.", C.textSoft); return; }
+  if (Date.now() < hc154.paradeUntil) { toast("They are resting their little feet.", C.textSoft); return; }
+  if (hc154.parade) return;
+  const pals = foundFriends();
+  if (!pals.length) { toast("Find a friend first.", C.textSoft); return; }
+  hc154.parade = { ids: pals.map(a => a.id), t: 0, paid: false };
+  scene = "parade";
+}
+function finishParade() {
+  const p = hc154.parade;
+  if (p && !p.paid) {
+    p.paid = true;
+    joy += 12;
+    earnStamp("parade");
+    hc154.paradeUntil = Date.now() + 90000;
+    toast("The parade left a little gift. +12 ♥", C.heart);
+    if (typeof sfxChime === "function") sfxChime(2);
+    save();
+  }
+  hc154.parade = null;
+  if (scene === "parade") scene = "play";
+}
+function paradeStep(dt) {
+  const p = hc154.parade;
+  if (!p) { scene = "play"; return; }
+  p.t += dt;
+  drawBackground();
+  ctx.fillStyle = "rgba(48, 28, 78, 0.28)";
+  ctx.fillRect(0, 0, W, H);
+  let lastX = -999;
+  p.ids.forEach((id, i) => {
+    const a = ANIMALS.find(x => x.id === id);
+    if (!a || !unlocked[id]) return;
+    const x = -36 + (p.t - i * 0.55) * 64;
+    const y = 210 + (i % 5) * 46;
+    lastX = x;
+    if (x > -40 && x < W + 40) {
+      drawSprite(a, x, y, 1.55, false, Math.sin(time * 4 + i) * 3, false, i * 3, { acc: equippedFor(a.id) });
+    }
+  });
+  ctx.fillStyle = "rgba(255,250,245,0.92)";
+  roundRect(12, 12, 150, 36, 10); ctx.fill();
+  ctx.fillStyle = C.text; font(14, true); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillText("Dusk parade", 22, 30);
+  uiButtons = [];
+  uiButtons.push(btn(W - 100, 14, 86, 44, "Skip", { id: "v154_parade_skip", size: 14, bg: "#fff", border: "#c0a0e0" }));
+  const tail = p.ids.length ? (-36 + (p.t - (p.ids.length - 1) * 0.55) * 64) : lastX;
+  if (tail > W + 36) finishParade();
+}
+
+// ---------- sticker book ----------
+function openStickers(from) {
+  ensureHc154();
+  refreshStamps();
+  hc154.stickFrom = from === "achievements" ? "achievements" : (from === "album" ? "album" : (scene === "achievements" ? "achievements" : "album"));
+  hc154.page = hc154.page || 0;
+  scene = "stickers";
+}
+function drawStampIcon(id, x, y) {
+  if (id === "hug" || id === "hugs") {
+    ctx.fillStyle = "#ff6b9d";
+    ctx.fillRect(x - 5, y - 2, 4, 4); ctx.fillRect(x + 1, y - 2, 4, 4);
+    ctx.fillRect(x - 6, y + 1, 12, 4); ctx.fillRect(x - 4, y + 5, 8, 3); ctx.fillRect(x - 2, y + 8, 4, 2);
+    if (id === "hugs") { ctx.fillStyle = "#ffb0c8"; ctx.fillRect(x + 6, y - 6, 3, 3); ctx.fillRect(x + 5, y - 4, 5, 3); }
+  } else if (id === "rain") {
+    ctx.fillStyle = "#4a90d0";
+    ctx.fillRect(x - 2, y - 7, 4, 8); ctx.fillRect(x - 4, y - 2, 8, 4); ctx.fillRect(x - 2, y + 2, 4, 6);
+  } else if (id === "breeze") {
+    ctx.fillStyle = "#7ec8ff";
+    ctx.fillRect(x - 8, y - 4, 14, 3); ctx.fillRect(x - 6, y + 1, 16, 3); ctx.fillRect(x - 4, y + 6, 10, 3);
+  } else if (id === "secret") {
+    ctx.fillStyle = "#ffe08a";
+    ctx.beginPath(); ctx.arc(x, y, 7, Math.PI * 0.15, Math.PI * 1.5); ctx.fill();
+    ctx.fillStyle = "#fffaf5";
+    ctx.beginPath(); ctx.arc(x + 3, y - 2, 5, 0, Math.PI * 2); ctx.fill();
+  } else if (id === "beach") {
+    ctx.fillStyle = "#f4a0c0";
+    ctx.fillRect(x - 8, y - 2, 16, 10);
+    ctx.fillStyle = "#fff8f2";
+    ctx.fillRect(x - 4, y - 8, 8, 6);
+    ctx.fillStyle = "#e07090";
+    ctx.fillRect(x - 1, y - 6, 3, 8);
+    ctx.fillStyle = "#e8a060";
+    ctx.fillRect(x - 9, y + 8, 18, 3);
+  } else if (id === "parade") {
+    ctx.fillStyle = "#ffd700";
+    ctx.fillRect(x - 1, y - 8, 3, 8); ctx.fillRect(x - 4, y - 5, 9, 3);
+    ctx.fillStyle = "#ff9eb8";
+    ctx.fillRect(x - 8, y + 2, 3, 6); ctx.fillRect(x + 5, y + 1, 3, 6);
+  } else {
+    ctx.fillStyle = "#3e8a32";
+    ctx.fillRect(x - 6, y, 4, 10); ctx.fillRect(x - 1, y - 4, 4, 14); ctx.fillRect(x + 4, y + 1, 4, 9);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(x - 2, y - 6, 3, 3);
+  }
+}
+function drawStickers() {
+  ensureHc154();
+  const page = hc154.page || 0;
+  const slice = STAMPS.slice(page * 4, page * 4 + 4);
+  panelHeader("Sticker Book", "Page " + (page + 1) + " / 2");
+  slice.forEach((s, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = 28 + col * ((W - 56) / 2);
+    const y = 88 + row * 168;
+    const w = (W - 70) / 2;
+    const on = !!hc154.stamps[s.id];
+    ctx.fillStyle = on ? "#fff6ea" : "rgba(230,224,232,0.85)";
+    roundRect(x, y, w, 150, 14); ctx.fill();
+    ctx.strokeStyle = on ? "#e0b040" : "#d0c8d4"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.save();
+    if (!on) ctx.globalAlpha = 0.35;
+    drawStampIcon(s.id, x + w / 2, y + 58);
+    ctx.restore();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = on ? C.text : "#9a90a0";
+    font(12, true);
+    ctx.fillText(on ? s.name : "???", x + w / 2, y + 108);
+    font(10, false); ctx.fillStyle = C.textSoft;
+    ctx.fillText(s.hint, x + w / 2, y + 128);
+  });
+  uiButtons.push(btn(16, H - 64, 72, 46, "Prev", { id: "v154_page_prev", size: 13, bg: page === 0 ? "#eee4ea" : "#fff", border: "#d0b0c0" }));
+  uiButtons.push(btn(W - 88, H - 64, 72, 46, "Next", { id: "v154_page_next", size: 13, bg: page === 1 ? "#eee4ea" : "#fff", border: "#d0b0c0" }));
+  uiButtons.push(btn(W / 2 - 54, H - 64, 108, 46, "Close", { id: "v154_stick_close", size: 15 }));
+}
+function drawStampButton() {
+  if (scene !== "album" && scene !== "achievements") return;
+  uiButtons.push(btn(W - 102, 18, 84, 44, "Stamps", { id: "v154_stamps", size: 13, bg: "#fff4c8", border: "#e0b040" }));
+}
+
+// ---------- meadow controls ----------
+function drawV154Under() {
+  if (!hc154 || !hc154.picnic) return;
+  if (scene !== "play" && scene !== "pause") return;
+  const s = picnicSpot();
+  drawBlanket(s.x, s.y);
+}
+function drawV154Meadow() {
+  if (scene !== "play" || tut) return;
+  ensureHc154();
+  if (hc154.hide) drawHideSpot(hc154.hide);
+  drawRequest();
+  const labels = [
+    ["Seek", "v154_seek", "#d8f5c8", "#70b070"],
+    ["Picnic", "v154_picnic", "#ffd0e0", "#e090b0"],
+    ["Beach", "v154_beach", "#c8ecff", "#70b0d8"],
+  ];
+  const bw = 68, gap = 6, h = 44;
+  const total = labels.length * bw + (labels.length - 1) * gap;
+  let x = Math.round((W - total) / 2);
+  const y = H - 176;
+  labels.forEach((it) => {
+    uiButtons.push(btn(x, y, bw, h, it[0], { id: it[1], size: 12, bg: it[2], border: it[3], r: 12 }));
+    x += bw + gap;
+  });
+  if (paradeReady()) {
+    uiButtons.push(btn(12, 108, 86, 44, "Parade", { id: "v154_parade", size: 13, bg: "#efe6ff", border: "#b090e0", r: 12 }));
+  }
+}
+
+function v154PlayTap(p) {
+  ensureHc154();
+  if (scene !== "play" || !hc154.hide) return false;
+  const h = hc154.hide;
+  if (dist2(p.x, p.y, h.x, h.y) > 34 * 34) return false;
+  h.taps++;
+  if (typeof sfxPet === "function") sfxPet();
+  if (h.taps >= h.need) findHide();
+  else addFloat({ x: h.x, y: h.y - 18, text: "…", life: 0.5, vy: -12, color: "#3e8a32", size: 14 });
+  return true;
+}
+function v154Tick(dt) {
+  ensureHc154();
+  refreshStamps();
+  if (scene === "play" && !tut) {
+    maybeRequest(dt);
+    picnicTick(dt);
+  }
+}
+function v154Scene(s) { return s === "beach" || s === "parade" || s === "stickers"; }
+function v154Step(dt) {
+  if (scene === "beach") beachStep(dt);
+  else if (scene === "parade") paradeStep(dt);
+  else if (scene === "stickers") drawStickers();
+}
+function v154Leave() {
+  ensureHc154();
+  if (scene === "beach") { leaveBeach(); return true; }
+  if (scene === "stickers") { scene = hc154.stickFrom || "album"; return true; }
+  if (scene === "parade") { finishParade(); return true; }
+  return false;
+}
+function v154Action(id) {
+  if (!id) return false;
+  ensureHc154();
+  if (id === "v154_seek") { startSeek(); return true; }
+  if (id === "v154_picnic") { startPicnic(); return true; }
+  if (id === "v154_beach") { openBeach(); return true; }
+  if (id === "v154_parade" || id === "v154_parade_skip") {
+    if (id === "v154_parade_skip") finishParade();
+    else startParade();
+    return true;
+  }
+  if (id === "v154_bring") { bringFriend(); return true; }
+  if (id === "v154_stamps") { openStickers(scene); return true; }
+  if (id === "v154_page_next") { hc154.page = Math.min(1, (hc154.page || 0) + 1); return true; }
+  if (id === "v154_page_prev") { hc154.page = Math.max(0, (hc154.page || 0) - 1); return true; }
+  if (id === "v154_stick_close" || (id === "close" && scene === "stickers")) {
+    scene = hc154.stickFrom || "album";
+    return true;
+  }
+  if (id === "v154_beach_back") { leaveBeach(); return true; }
+  return false;
+}
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -16533,7 +17413,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
         adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps,
-        hc15, farm };
+        hc15, farm, hc154 };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -16573,7 +17453,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     party, newParty, normalizeParty, partySnapshot, WISHES, ROOM_ITEMS, ROOM_SLOTS, prepMorning, myVisitCode, decodeVisit, acceptVisit, encodeVisit, visitPayload,
     openBand, openBooth, openWishes, openHome, partyAction, BAND_SONG,
     normalizeV12, v12Snapshot, marketOpen, marketFriend, rollWeather, prepMail, openBoat, tapSky, v12Action, DYE_COLS, COAT_COST, MARKET_HATS, MARKET_DEN, MARKET_FRIENDS, LULLABY_SONG,
-    drawSprite, tapMoon, maybeMoonHint, openFarm,
+    drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
