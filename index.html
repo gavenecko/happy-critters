@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="15.1-hearts">
+<meta name="hc-version" content="15.2-secret">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v15.1 — smaller friendship hearts
+// Happy Critters v15.2 — secret friend and endless meadow
 
 const W = 360;
 let H = 540;
@@ -4372,6 +4372,138 @@ const SPRITE_FRAMES = {
       "000000000000000000000000",
     ]),
   },
+  "gavenecko": {
+    idle: parseGrid([
+      "000000000099000000000000",
+      "000000000011000000000000",
+      "000000000001000000000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000011111aa111111100000",
+      "000001115555555511100000",
+      "000011555555555555110000",
+      "00001155iii55iii55110000",
+      "00001155ihi55ihi55110000",
+      "000011555555555555110000",
+      "0000115gg555555gg5110000",
+      "000011555i555i5555110000",
+      "0000011555iii55555110000",
+      "000000155555555555100000",
+      "000000011555555110000000",
+      "000000001111111100000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000001111aa111111000000",
+      "000000111111111111000000",
+      "000000011110011110000000",
+      "000000001100000110000000",
+      "000000000000000000000000"
+    ]),
+    blink: parseGrid([
+      "000000000099000000000000",
+      "000000000011000000000000",
+      "000000000001000000000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000011111aa111111100000",
+      "000001115555555511100000",
+      "000011555555555555110000",
+      "000011555555555555110000",
+      "000011551ii555ii15511000",
+      "000011555555555555110000",
+      "0000115gg555555gg5110000",
+      "000011555i555i5555110000",
+      "0000011555iii55555110000",
+      "000000155555555555100000",
+      "000000011555555110000000",
+      "000000001111111100000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000001111aa111111000000",
+      "000000111111111111000000",
+      "000000011110011110000000",
+      "000000001100000110000000",
+      "000000000000000000000000"
+    ]),
+    ear: parseGrid([
+      "000000000990000000000000",
+      "000000000110000000000000",
+      "000000000110000000000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000011111aa111111100000",
+      "000001115555555511100000",
+      "000011555555555555110000",
+      "00001155iii55iii55110000",
+      "00001155ihi55ihi55110000",
+      "000011555555555555110000",
+      "0000115gg555555gg5110000",
+      "000011555i555i5555110000",
+      "0000011555iii55555110000",
+      "000000155555555555100000",
+      "000000011555555110000000",
+      "000000001111111100000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000001111aa111111000000",
+      "000000111111111111000000",
+      "000000011110011110000000",
+      "000000001100000110000000",
+      "000000000000000000000000"
+    ]),
+    sad: parseGrid([
+      "000000000099000000000000",
+      "000000000011000000000000",
+      "000000000001000000000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000011111aa111111100000",
+      "000001115555555511100000",
+      "000011555555555555110000",
+      "00001155iii55iii55110000",
+      "00001155ihi55ihi55110000",
+      "000011555555555555110000",
+      "0000115gg555555gg5110000",
+      "000011555555555555110000",
+      "000001155511111555110000",
+      "000000155555555555100000",
+      "000000011555555110000000",
+      "000000001111111100000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000001111aa111111000000",
+      "000000111111111111000000",
+      "000000011110011110000000",
+      "000000001100000110000000",
+      "000000000000000000000000"
+    ]),
+    sadBlink: parseGrid([
+      "000000000099000000000000",
+      "000000000011000000000000",
+      "000000000001000000000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000011111aa111111100000",
+      "000001115555555511100000",
+      "000011555555555555110000",
+      "000011555555555555110000",
+      "000011551ii555ii15511000",
+      "000011555555555555110000",
+      "0000115gg555555gg5110000",
+      "000011555555555555110000",
+      "000001155511111555110000",
+      "000000155555555555100000",
+      "000000011555555110000000",
+      "000000001111111100000000",
+      "000000011111111110000000",
+      "000000111111111111000000",
+      "0000001111aa111111000000",
+      "000000111111111111000000",
+      "000000011110011110000000",
+      "000000001100000110000000",
+      "000000000000000000000000"
+    ]),
+  },
 };
 
 const ANIMALS = [
@@ -4411,6 +4543,8 @@ const ANIMALS = [
   { id: "phoenix", name: "Phoenix Chick", cost: 250000, rare: "rare", bio: "A little flame that only wants a hug." },
   { id: "tidepup", name: "Tidepup", cost: 500000, rare: "rare", bio: "A sea-serpent baby. Blows bubble hearts." },
   { id: "kitsune", name: "Kitsune", cost: 1000000, rare: "legend", bio: "Two tails, and one very polite bow." },
+  // v15.2 secret friend: not sold, not required for "every friend"
+  { id: "gavenecko", name: "Gavenecko", cost: 0, secret: true, bio: "Tan cheeks, a black suit, and a wave from the moon." },
 ];
 
 // Sprite anchor points (in 24px sprite units): [headCenterX, headTopY, eyeY, eyeHalfSpacing, neckY]
@@ -4426,6 +4560,7 @@ const ANCHOR = {
   leopard: [11.5, 5, 9.5, 3, 15.5], bat: [11.5, 5.5, 10, 2.5, 15], gloomking: [11.5, 4.5, 11, 3, 16],
   dragonet: [11.5, 5, 9.6, 3, 15], uni: [11.5, 4, 9.8, 3, 15], moth: [11.5, 6, 10.2, 1.3, 14],
   phoenix: [11.5, 3, 9.8, 3, 15], tidepup: [11.5, 5.5, 9.2, 2.5, 14], kitsune: [11.5, 4.5, 9.6, 3, 15],
+  gavenecko: [11.5, 3, 8.5, 2.5, 16],
 };
 
 const ACCESSORIES = [
@@ -4503,7 +4638,7 @@ const GOALS = [
   { id: "rainbow", label: "Meet the Rainbow Critter", check: s => !!s.unlocked.rainbow, reward: 250 },
   { id: "shiny", label: "Hug a shiny critter", check: s => !!s.achievements._shinyHugged, reward: 75 },
   { id: "dawn3", label: "See 3 New Dawns", check: s => s.dawnCount >= 3, reward: 200 },
-  { id: "all_animals", label: "Unlock every friend", check: s => ANIMALS.filter(a => !a.special && !a.season && a.adv == null && !a.rare).every(a => s.unlocked[a.id]), reward: 400 },
+  { id: "all_animals", label: "Unlock every friend", check: s => ANIMALS.filter(a => !a.special && !a.season && a.adv == null && !a.rare && !a.secret).every(a => s.unlocked[a.id]), reward: 400 },
   { id: "all_bgs", label: "Unlock every scene", check: s => BACKGROUNDS.every(b => s.unlockedBgs[b.id]), reward: 350 },
   { id: "friend1", label: "Make a friend (Friendship Lv 1)", check: s => maxFriend(s) >= 1, reward: 60 },
   { id: "friend2", label: "Good pals (Friendship Lv 2)", check: s => maxFriend(s) >= 2, reward: 150 },
@@ -4581,6 +4716,7 @@ const GOALS = [
   { id: "v15_picnic", label: "Join a picnic blanket", check: s => (s.stats.picnics || 0) >= 1, reward: 40 },
   { id: "v15_bub", label: "Watch meadow bubbles", check: s => (s.stats.meadowBubbles || 0) >= 1, reward: 40 },
   { id: "v15_flutter", label: "Follow the butterflies", check: s => (s.stats.flutters || 0) >= 1, reward: 40 },
+  { id: "farm200", label: "Farm 200 hearts in Endless", check: s => (s.stats.farmHearts || 0) >= 200, reward: 40 },
 ];
 function heartCost(n) {
   if (n >= 1000000 && n % 1000000 === 0) return (n / 1000000) + "m";
@@ -4619,7 +4755,7 @@ let victoryDone = false;
 // v3 additions
 let critterHugs = {}, friendLvl = {}, ownedAcc = {}, equipped = {};
 let lastGiftDay = "", giftStreak = 0, bestGiftStreak = 0, giftsOpened = 0;
-let stats = { parades: 0, storms: 0, rainDrops: 0, goldenHours: 0, powerups: 0, naps: 0, events: 0, picnics: 0, meadowBubbles: 0, flutters: 0, skips: 0, skipDays: 0, skipEarn: 0, skipEarnDay: "", skipDay: "" };
+let stats = { parades: 0, storms: 0, rainDrops: 0, goldenHours: 0, powerups: 0, naps: 0, events: 0, picnics: 0, meadowBubbles: 0, flutters: 0, skips: 0, skipDays: 0, skipEarn: 0, skipEarnDay: "", skipDay: "", farmHearts: 0 };
 let albumNew = false;
 // v4 additions (cozy polish)
 let hapticsOn = true, tutorialDone = false, lastVersionSeen = 0;
@@ -4718,7 +4854,7 @@ function load() {
     giftStreak = d.giftStreak || 0;
     bestGiftStreak = d.bestGiftStreak || 0;
     giftsOpened = d.giftsOpened || 0;
-    stats = Object.assign({ parades: 0, storms: 0, rainDrops: 0, goldenHours: 0, powerups: 0, naps: 0, events: 0, picnics: 0, meadowBubbles: 0, flutters: 0, skips: 0, skipDays: 0, skipEarn: 0, skipEarnDay: "", skipDay: "" }, isObj(d.stats) ? d.stats : {});
+    stats = Object.assign({ parades: 0, storms: 0, rainDrops: 0, goldenHours: 0, powerups: 0, naps: 0, events: 0, picnics: 0, meadowBubbles: 0, flutters: 0, skips: 0, skipDays: 0, skipEarn: 0, skipEarnDay: "", skipDay: "", farmHearts: 0 }, isObj(d.stats) ? d.stats : {});
     albumNew = !!d.albumNew;
     // v4: existing players skip the tutorial and see "What's new" once
     hapticsOn = d.hapticsOn != null ? !!d.hapticsOn : true;
@@ -4738,6 +4874,7 @@ function load() {
     kind = normalizeKind(d.kind);
     party = normalizeParty(d.party);
     v12 = normalizeV12(d.v12);
+    if (typeof normalizeHc15 === "function") hc15 = normalizeHc15(d.hc15);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -4760,6 +4897,7 @@ function save() {
       kind: kindSnapshot(),
       party: partySnapshot(),
       v12: v12Snapshot(),
+      hc15,
     }));
     saveDirty = false;
   } catch (e) {}
@@ -7906,7 +8044,7 @@ function drawShop() {
   listClip(top, bottom);
   const sc = listScroll;
   if (shopTab === "critters") {
-    const list = ANIMALS.filter(a => (!a.special || unlocked.rainbow || moodPeak >= 100) && (a.id !== "gloomking" || unlocked.gloomking));
+    const list = ANIMALS.filter(a => !a.secret && (!a.special || unlocked.rainbow || moodPeak >= 100) && (a.id !== "gloomking" || unlocked.gloomking));
     const rowH = 64;
     setListExtent(top, bottom, list.length * rowH + 8);
     list.forEach((a, i) => {
@@ -8076,9 +8214,9 @@ function drawAlbum() {
       ctx.restore();
       ctx.fillStyle = "#8a7890";
       font(14, true);
-      ctx.fillText(a.special || a.id === "gloomking" ? "???" : a.name, 98, y + 22);
+      ctx.fillText(a.special || a.secret || a.id === "gloomking" ? "???" : a.name, 98, y + 22);
       font(11, false);
-      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.adv != null ? advRescueText(a) : a.rare ? (a.rare === "legend" ? "Legendary" : "Rare") + " · Shop · " + heartCost(a.cost) + " ♥" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + heartCost(a.cost) + " ♥", 98, y + 44);
+      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.secret ? "A little secret in the night sky" : a.adv != null ? advRescueText(a) : a.rare ? (a.rare === "legend" ? "Legendary" : "Rare") + " · Shop · " + heartCost(a.cost) + " ♥" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + heartCost(a.cost) + " ♥", 98, y + 44);
     }
   });
   ctx.restore();
@@ -8219,7 +8357,7 @@ function doUI(id) {
   if (id === "dawn") { newDawn(); return; }
   if (id === "shop") { if (tut && tut.step === 3) finishTutorial(false, true); shopTab = "critters"; openPanel("shop"); return; }
   if (id === "ach") { checkAchievements(); openPanel("achievements"); return; }
-  if (id === "album") { albumNew = false; openPanel("album"); weekBump("album"); save(); return; }
+  if (id === "album") { albumNew = false; openPanel("album"); weekBump("album"); if (typeof maybeMoonHint === "function") maybeMoonHint(); save(); return; }
   if (id === "settings") { openPanel("settings"); return; }
   if (id === "seasons") { scene = "seasons"; return; }
   if (id.startsWith("sea_")) { seasonsAction(id); return; }
@@ -8255,7 +8393,7 @@ function doUI(id) {
   if (id.startsWith("tab_")) { shopTab = id.slice(4); listScroll = 0; return; }
   if (id.startsWith("buy_")) {
     const a = ANIMALS.find(x => x.id === id.slice(4));
-    if (a && !a.special && a.adv == null && !unlocked[a.id] && joy >= a.cost && seasonOpen(a)) {
+    if (a && !a.special && !a.secret && a.adv == null && !unlocked[a.id] && joy >= a.cost && seasonOpen(a)) {
       joy -= a.cost; unlocked[a.id] = true; sfxUnlock(); buzz("unlock");
       toast(a.name + " joined! ♥", C.heart);
       checkAchievements(); save();
@@ -8329,6 +8467,7 @@ function hugOffer(c) {
 }
 function playTap(p) {
   if (typeof tapSky === "function" && tapSky(p)) return;
+  if (typeof tapMoon === "function" && tapMoon(p)) return;
   if (gift && dist2(p.x, p.y, gift.x, gift.y) < 36 * 36) { openGift(); return; }
   for (const pu of powerups) {
     if (!pu.dead && dist2(p.x, p.y, pu.x, pu.y) < 27 * 27) { activatePowerup(pu); prune(powerups, notDead); return; }
@@ -8381,6 +8520,7 @@ canvas.addEventListener("pointerdown", (e) => {
   if (scene === "garden") { gardenDown(p, e.pointerType !== "mouse"); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (scene === "boat" && typeof boatTap === "function") { boatTap(p); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (scene === "skip" && typeof skipTap === "function") { skipTap(p); return; }
+  if (scene === "farm" && typeof farmTap === "function") { farmTap(p); return; }
   if (scene === "mg") { mgDown(p); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (isAdvScene(scene)) { advPointer(p); return; }
   if (scene === "play" && tut && tutBubbleHit(p)) return; // the tutorial card swallows stray taps
@@ -8452,6 +8592,7 @@ window.addEventListener("keydown", (e) => {
     else if (scene === "mg" && mg) { if (mg.state === "result") quitMg(); else if (mg.paused) mg.paused = false; else mgPause(); }
     else if (isAdvScene(scene)) advEscape();
     else if (scene === "arcade") scene = prevScene || "title";
+    else if (scene === "farm" && typeof leaveFarm === "function") leaveFarm();
     else if (scene === "garden") { if (gSel) gSel = null; else leaveGarden(); }
     else if (scene === "decor") scene = "garden";
     else if (scene === "seasons") scene = "settings";
@@ -8536,7 +8677,7 @@ function stepScene(dt) {
     partyStep(dt);
   } else if (typeof isV12Scene === "function" && isV12Scene(scene)) {
     v12Step(dt);
-  } else if (scene === "skip" && typeof v15Step === "function") {
+  } else if ((scene === "skip" || scene === "farm") && typeof v15Step === "function") {
     v15Step(dt);
   } else if (scene === "away") {
     if (awayReturn === "title") updateTitle(dt);
@@ -8577,7 +8718,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 15;
-const APP_LABEL = "v15";
+const APP_LABEL = "v15.2";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "A fuller meadow",
@@ -10941,7 +11082,8 @@ function drawArcade() {
     uiButtons.push(btn(W - 110, y + 8, 78, 40, "Go ▸", { id: "adventure", size: 14, bg: "#fff", border: "#a888e0" }));
   }
   if (typeof drawPartyGamesRow === "function") drawPartyGamesRow();
-  const top = 188, bottom = H - 76, n = 3, gap = 8;
+  uiButtons.push(btn(22, 184, W - 44, 44, "Endless Meadow", { id: "v15_farm", size: 14, bg: "#ffe0f0", border: "#e090b0" }));
+  const top = 236, bottom = H - 76, n = 3, gap = 8;
   const ch = Math.min(150, (bottom - top - gap * (n - 1)) / n);
   const A = arcade;
   ARC_GAMES.forEach((g, i) => {
@@ -15577,11 +15719,163 @@ function drawSkip() {
 }
 function v15Step(dt) {
   if (scene === "skip" && skip) drawSkip();
+  else if (scene === "farm" && farm) farmStep(dt);
 }
 function v15Action(id) {
   if (id === "v15_skip") { openSkip(); return true; }
   if (id === "v15_skip_back") { skip = null; scene = "arcade"; return true; }
+  if (id === "v15_farm") { openFarm(); return true; }
+  if (id === "v15_farm_leave") { leaveFarm(); return true; }
   return false;
+}
+
+// ---------- v15.2 secret friend + endless heart farm ----------
+let hc15 = { moonTaps: 0, moonHint: false };
+let farm = null;
+function normalizeHc15(d) {
+  const o = { moonTaps: 0, moonHint: false };
+  if (!isObj(d)) return o;
+  o.moonTaps = Math.max(0, Math.min(20, Math.floor(numOr0(d.moonTaps))));
+  o.moonHint = !!d.moonHint;
+  return o;
+}
+function maybeMoonHint() {
+  if (hc15.moonHint) return;
+  hc15.moonHint = true;
+  toast("The moon likes being tapped at night.", "#7050b0");
+  save();
+}
+function moonSpot() { return { x: W - 56, y: 96 }; }
+function tapMoon(p) {
+  if (scene !== "play" || tut || unlocked.gavenecko) return false;
+  if (typeof isNight !== "function" || !isNight()) return false;
+  const m = moonSpot();
+  if (dist2(p.x, p.y, m.x, m.y) > 30 * 30) return false;
+  hc15.moonTaps = (hc15.moonTaps || 0) + 1;
+  if (hc15.moonTaps >= 5) unlockGavenecko();
+  else {
+    addFloat({ x: m.x, y: m.y - 28, text: "☾", life: 0.7, vy: -18, color: "#fff4c8", size: 14 });
+    if (typeof sfxPet === "function") sfxPet();
+  }
+  saveSoon();
+  return true;
+}
+function unlockGavenecko() {
+  if (unlocked.gavenecko) return;
+  unlocked.gavenecko = true;
+  albumNew = true;
+  hc15.moonTaps = 5;
+  const g = ANIMALS.find(a => a.id === "gavenecko");
+  toast("Gavenecko floated in! ♥", C.heart);
+  if (typeof sfxUnlock === "function") sfxUnlock();
+  if (typeof buzz === "function") buzz("unlock");
+  if (g && scene === "play") {
+    const [y0, y1] = critterYRange();
+    const y = (y0 + y1) / 2;
+    critters.push(makeCritter(g, { x: -20, y: y, vx: 36, scale: 2.05, life: 18, phase: 0 }));
+  }
+  save();
+}
+function gentleMotion() { return typeof kind !== "undefined" && kind && kind.motion; }
+function openFarm() {
+  // Opened from Games. Do not touch prevScene: Close on Games still
+  // returns to the title or a paused meadow, and so does Leave.
+  farm = { t: 0, hearts: 0, critters: [], spawnIn: 0.4 };
+  scene = "farm";
+  for (let i = 0; i < 3; i++) farmSpawn(true);
+  if (typeof setMusicMode === "function") setMusicMode(null);
+}
+function leaveFarm() {
+  farm = null;
+  scene = prevScene || "title";
+  if (typeof setMusicMode === "function") setMusicMode(null);
+}
+function farmInterval() {
+  const base = Math.max(0.55, 1.75 - Math.min(farm.t, 100) * 0.012);
+  return gentleMotion() ? base * 1.35 : base;
+}
+function farmSpawn(instant) {
+  if (!farm) return;
+  if (farm.critters.filter(c => !c.dead).length >= 8) return;
+  const list = unlockedList();
+  const animal = list[Math.floor(Math.random() * list.length)] || ANIMALS[0];
+  const fromLeft = Math.random() < 0.5;
+  const scale = 1.6 + Math.random() * 0.35;
+  const y0 = 130, y1 = Math.max(240, H - 160);
+  const y = y0 + Math.random() * Math.max(20, y1 - y0);
+  const half = scale * SPRITE_SIZE * 0.5;
+  const c = makeCritter(animal, {
+    scale: scale,
+    y: y,
+    x: instant ? 36 + Math.random() * (W - 72) : (fromLeft ? -half - 4 : W + half + 4),
+    vx: (0.4 + Math.random() * 0.5) * 34 * (Math.random() < 0.5 ? 1 : -1),
+    life: 18 + Math.random() * 12,
+    bobAmp: gentleMotion() ? 2 : 6 + Math.random() * 4,
+  });
+  farm.critters.push(c);
+}
+function farmPayHearts(c, pay) {
+  let base = c.shiny ? 25 : (c.animal.id === "rainbow" ? 40 : 5);
+  if (c.shiny) base = Math.floor(base * 1.5);
+  if (c.sad) base = Math.floor(base * 2.2);
+  return Math.max(1, Math.floor(base * 0.4 * pay));
+}
+function farmHug(c, pay) {
+  const pts = farmPayHearts(c, pay);
+  c.idle = null;
+  c.idleT = 6;
+  c.state = "happy";
+  c.stateT = 0;
+  c.sad = false;
+  c.hugScale = gentleMotion() ? 1 : 1.1;
+  c.sqT = 0;
+  c.sqAmp = gentleMotion() ? 0 : 0.22;
+  joy += pts;
+  farm.hearts += pts;
+  stats.farmHearts = (stats.farmHearts || 0) + pts;
+  if (typeof sfxHug === "function") sfxHug(1);
+  spawnHearts(c.x, c.y - 8, gentleMotion() ? 2 : 4, true);
+  addFloat({ x: c.x, y: c.y - 18, text: "+" + pts, life: 0.9, vy: -32, color: C.heart, size: 13 });
+  if ((stats.farmHearts || 0) >= 200 && typeof checkAchievements === "function") checkAchievements();
+  saveSoon();
+}
+function farmTap(p) {
+  if (!farm) return;
+  let best = null, bestD = 1e9;
+  for (let i = farm.critters.length - 1; i >= 0; i--) {
+    const c = farm.critters[i];
+    if (c.dead || c.state !== "float") continue;
+    const rad = Math.max(24, c.scale * SPRITE_SIZE * 0.5);
+    const d = dist2(p.x, p.y, c.x, c.y);
+    if (d < rad * rad && d < bestD) { best = c; bestD = d; }
+  }
+  if (!best) return;
+  const pay = hugOffer(best);
+  if (pay) farmHug(best, pay);
+}
+function farmStep(dt) {
+  farm.t += dt;
+  farm.spawnIn -= dt;
+  if (farm.spawnIn <= 0) {
+    farmSpawn(false);
+    farm.spawnIn = farmInterval();
+  }
+  for (const c of farm.critters) updateCritter(c, dt);
+  farm.critters = farm.critters.filter(c => !c.dead);
+  updateParticles(dt);
+  drawBackground();
+  for (const c of farm.critters) if (!c.dead) drawCritter(c);
+  drawParticles();
+  ctx.fillStyle = "rgba(255,250,245,0.94)";
+  roundRect(14, 12, 176, 48, 12); ctx.fill();
+  ctx.strokeStyle = "#ffb8d0"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(12, true);
+  ctx.fillText("Endless Meadow", 26, 26);
+  ctx.fillStyle = C.heart; font(14, true);
+  ctx.fillText("♥ " + farm.hearts, 26, 46);
+  uiButtons = [];
+  uiButtons.push(btn(W - 108, 14, 92, 44, "Leave", { id: "v15_farm_leave", size: 15, bg: "#fff", border: "#e090b0" }));
 }
 
 // ===================== BOOT =====================
@@ -15610,7 +15904,8 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         tut, tutorialDone, hapticsOn, lastVersionSeen, freshSave, particles, floatTexts, storyBanner, comboPop, time,
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
-        adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps };
+        adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps,
+        hc15, farm };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -15650,6 +15945,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     party, newParty, normalizeParty, partySnapshot, WISHES, ROOM_ITEMS, ROOM_SLOTS, prepMorning, myVisitCode, decodeVisit, acceptVisit, encodeVisit, visitPayload,
     openBand, openBooth, openWishes, openHome, partyAction, BAND_SONG,
     normalizeV12, v12Snapshot, marketOpen, marketFriend, rollWeather, prepMail, openBoat, tapSky, v12Action, DYE_COLS, COAT_COST, MARKET_HATS, MARKET_DEN, MARKET_FRIENDS, LULLABY_SONG,
+    drawSprite, tapMoon, maybeMoonHint, openFarm,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
 }
