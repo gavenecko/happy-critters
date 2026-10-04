@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="15.2-secret">
+<meta name="hc-version" content="15.3-secret">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v15.2 — secret friend and endless meadow
+// Happy Critters v15.3 — four more secret friends
 
 const W = 360;
 let H = 540;
@@ -4504,6 +4504,534 @@ const SPRITE_FRAMES = {
       "000000000000000000000000"
     ]),
   },
+  "puddleduck": {
+    idle: parseGrid([
+      "000000001111111000000000",
+      "000000011999999110000000",
+      "000001199999999991100000",
+      "0000019999ii99ii99910000",
+      "0000019999i299i299991000",
+      "000001999999999999991000",
+      "000001999gg999gg99991000",
+      "000000199999999999910000",
+      "000000019999999999100000",
+      "00000000199999oooo110000",
+      "00000000019999ooooooo100",
+      "000000000019999oooo11000",
+      "000000011999999991100000",
+      "000001199999999999910000",
+      "000019999999999999999100",
+      "000019999922229999999100",
+      "000019999922229999999100",
+      "000001999999999999991000",
+      "000000199999999999910000",
+      "000000011111111111100000",
+      "000000bb110000011bb10000",
+      "00000bbbb1000001bbbb1000",
+      "00000bbbba100001abbbb000",
+      "000000111110000011110000",
+    ]),
+    blink: parseGrid([
+      "000000001111111000000000",
+      "000000011999999110000000",
+      "000001199999999991100000",
+      "000001999999999999991000",
+      "000001999911991199991000",
+      "000001999999999999991000",
+      "000001999gg999gg99991000",
+      "000000199999999999910000",
+      "000000019999999999100000",
+      "00000000199999oooo110000",
+      "00000000019999ooooooo100",
+      "000000000019999oooo11000",
+      "000000011999999991100000",
+      "000001199999999999910000",
+      "000019999999999999999100",
+      "000019999922229999999100",
+      "000019999922229999999100",
+      "000001999999999999991000",
+      "000000199999999999910000",
+      "000000011111111111100000",
+      "000000bb110000011bb10000",
+      "00000bbbb1000001bbbb1000",
+      "00000bbbba100001abbbb000",
+      "000000111110000011110000",
+    ]),
+    ear: parseGrid([
+      "000000001191111000000000",
+      "000000011999999110000000",
+      "000001199999999991100000",
+      "0000019999ii99ii99910000",
+      "0000019999i299i299991000",
+      "000001999999999999991000",
+      "000001999gg999gg99991000",
+      "000000199999999999910000",
+      "000000019999999999100000",
+      "00000000199999oooo110000",
+      "00000000019999ooooooo100",
+      "000000000019999oooo11000",
+      "000000011999999991100000",
+      "000001199999999999910000",
+      "000019999999999999999100",
+      "000019999922229999999100",
+      "000019999922229999999100",
+      "000001999999999999991000",
+      "000000199999999999910000",
+      "000000011111111111100000",
+      "000000bb110000011bb10000",
+      "00000bbbb1000001bbbb1000",
+      "00000bbbba100001abbbb000",
+      "000000111110000011110000",
+    ]),
+    sad: parseGrid([
+      "000000001111111000000000",
+      "000000011999999110000000",
+      "000001199999999991100000",
+      "0000019999ii99ii99910000",
+      "0000019999i299i299991000",
+      "000001999999999999991000",
+      "000001999gg999gg99991000",
+      "000000199999999999910000",
+      "000000019991119999100000",
+      "00000000199999oooo110000",
+      "00000000019999ooooooo100",
+      "000000000019999oooo11000",
+      "000000011999999991100000",
+      "000001199999999999910000",
+      "000019999999999999999100",
+      "000019999922229999999100",
+      "000019999922229999999100",
+      "000001999999999999991000",
+      "000000199999999999910000",
+      "000000011111111111100000",
+      "000000bb110000011bb10000",
+      "00000bbbb1000001bbbb1000",
+      "00000bbbba100001abbbb000",
+      "000000111110000011110000",
+    ]),
+    sadBlink: parseGrid([
+      "000000001111111000000000",
+      "000000011999999110000000",
+      "000001199999999991100000",
+      "000001999999999999991000",
+      "000001999911991199991000",
+      "000001999999999999991000",
+      "000001999gg999gg99991000",
+      "000000199999999999910000",
+      "000000019991119999100000",
+      "00000000199999oooo110000",
+      "00000000019999ooooooo100",
+      "000000000019999oooo11000",
+      "000000011999999991100000",
+      "000001199999999999910000",
+      "000019999999999999999100",
+      "000019999922229999999100",
+      "000019999922229999999100",
+      "000001999999999999991000",
+      "000000199999999999910000",
+      "000000011111111111100000",
+      "000000bb110000011bb10000",
+      "00000bbbb1000001bbbb1000",
+      "00000bbbba100001abbbb000",
+      "000000111110000011110000",
+    ]),
+  },
+  "teacupmouse": {
+    idle: parseGrid([
+      "000001110000001110000000",
+      "000014441000014441000000",
+      "000145554100145554100000",
+      "000145555411455554100000",
+      "000014555555555541000000",
+      "000001455ii55ii541000000",
+      "000001455i25i25i41000000",
+      "000001455555555541000000",
+      "0000001555gg555541000000",
+      "000000015555555410000000",
+      "000000001555o54100000000",
+      "000000155555555410000000",
+      "000001555555555541000000",
+      "000001555222225554100000",
+      "000000155555555541000000",
+      "000000015544444411000000",
+      "000000001542222241100000",
+      "000000001544444441110000",
+      "000000001544444441410000",
+      "000000001544444441410000",
+      "000000000144444441000000",
+      "000000000011111110000000",
+      "000000011000000110000000",
+      "000000001100000011000000",
+    ]),
+    blink: parseGrid([
+      "000001110000001110000000",
+      "000014441000014441000000",
+      "000145554100145554100000",
+      "000145555411455554100000",
+      "000014555555555541000000",
+      "000001455555555541000000",
+      "000001455111511154100000",
+      "000001455555555541000000",
+      "0000001555gg555541000000",
+      "000000015555555410000000",
+      "000000001555o54100000000",
+      "000000155555555410000000",
+      "000001555555555541000000",
+      "000001555222225554100000",
+      "000000155555555541000000",
+      "000000015544444411000000",
+      "000000001542222241100000",
+      "000000001544444441110000",
+      "000000001544444441410000",
+      "000000001544444441410000",
+      "000000000144444441000000",
+      "000000000011111110000000",
+      "000000011000000110000000",
+      "000000001100000011000000",
+    ]),
+    ear: parseGrid([
+      "000011110000001110000000",
+      "000014441000014441000000",
+      "000145554100145554100000",
+      "000145555411455554100000",
+      "000014555555555541000000",
+      "000001455ii55ii541000000",
+      "000001455i25i25i41000000",
+      "000001455555555541000000",
+      "0000001555gg555541000000",
+      "000000015555555410000000",
+      "000000001555o54100000000",
+      "000000155555555410000000",
+      "000001555555555541000000",
+      "000001555222225554100000",
+      "000000155555555541000000",
+      "000000015544444411000000",
+      "000000001542222241100000",
+      "000000001544444441110000",
+      "000000001544444441410000",
+      "000000001544444441410000",
+      "000000000144444441000000",
+      "000000000011111110000000",
+      "000000011000000110000000",
+      "000000001100000011000000",
+    ]),
+    sad: parseGrid([
+      "000001110000001110000000",
+      "000014441000014441000000",
+      "000145554100145554100000",
+      "000145555411455554100000",
+      "000014555555555541000000",
+      "000001455ii55ii541000000",
+      "000001455i25i25i41000000",
+      "000001455555555541000000",
+      "000000155511555541000000",
+      "000000015555555410000000",
+      "000000001555o54100000000",
+      "000000155555555410000000",
+      "000001555555555541000000",
+      "000001555222225554100000",
+      "000000155555555541000000",
+      "000000015544444411000000",
+      "000000001542222241100000",
+      "000000001544444441110000",
+      "000000001544444441410000",
+      "000000001544444441410000",
+      "000000000144444441000000",
+      "000000000011111110000000",
+      "000000011000000110000000",
+      "000000001100000011000000",
+    ]),
+    sadBlink: parseGrid([
+      "000001110000001110000000",
+      "000014441000014441000000",
+      "000145554100145554100000",
+      "000145555411455554100000",
+      "000014555555555541000000",
+      "000001455555555541000000",
+      "000001455111511154100000",
+      "000001455555555541000000",
+      "000000155511555541000000",
+      "000000015555555410000000",
+      "000000001555o54100000000",
+      "000000155555555410000000",
+      "000001555555555541000000",
+      "000001555222225554100000",
+      "000000155555555541000000",
+      "000000015544444411000000",
+      "000000001542222241100000",
+      "000000001544444441110000",
+      "000000001544444441410000",
+      "000000001544444441410000",
+      "000000000144444441000000",
+      "000000000011111110000000",
+      "000000011000000110000000",
+      "000000001100000011000000",
+    ]),
+  },
+  "lanternmoth": {
+    idle: parseGrid([
+      "000000000000ll0000000000",
+      "000ll00000001100000ll000",
+      "00lmmml000001900000lmmml",
+      "0lmmmmml000199910lmmmmml",
+      "lmmmmmmml019999910lmmmmm",
+      "lmmmmmmmml199999lmmmmmmm",
+      "lmmm99mmml1i11i1lmm99mmm",
+      "lmmmmmmmml1n11n1lmmmmmmm",
+      "0lmmmmmmll111111llmmmmmm",
+      "00lmmmmml00111100lmmmmml",
+      "000lmmmml000110000lmmmml",
+      "0000lml000001100000lml00",
+      "000000000000110000000000",
+      "000000000000110000000000",
+      "000000000001111100000000",
+      "00000000001l999l10000000",
+      "00000000001l222l10000000",
+      "00000000001l999l10000000",
+      "000000000001111100000000",
+      "000000000000l9l000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+    blink: parseGrid([
+      "000000000000ll0000000000",
+      "000ll00000001100000ll000",
+      "00lmmml000001900000lmmml",
+      "0lmmmmml000199910lmmmmml",
+      "lmmmmmmml019999910lmmmmm",
+      "lmmmmmmmml199999lmmmmmmm",
+      "lmmm99mmml111111lmm99mmm",
+      "lmmmmmmmml1n11n1lmmmmmmm",
+      "0lmmmmmmll111111llmmmmmm",
+      "00lmmmmml00111100lmmmmml",
+      "000lmmmml000110000lmmmml",
+      "0000lml000001100000lml00",
+      "000000000000110000000000",
+      "000000000000110000000000",
+      "000000000001111100000000",
+      "00000000001l999l10000000",
+      "00000000001l222l10000000",
+      "00000000001l999l10000000",
+      "000000000001111100000000",
+      "000000000000l9l000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+    ear: parseGrid([
+      "000000000000ll0000000000",
+      "00lll00000001100000ll000",
+      "00lmmml000001900000lmmml",
+      "0lmmmmml000199910lmmmmml",
+      "lmmmmmmml019999910lmmmmm",
+      "lmmmmmmmml199999lmmmmmmm",
+      "lmmm99mmml1i11i1lmm99mmm",
+      "lmmmmmmmml1n11n1lmmmmmmm",
+      "0lmmmmmmll111111llmmmmmm",
+      "00lmmmmml00111100lmmmmml",
+      "000lmmmml000110000lmmmml",
+      "0000lml000001100000lml00",
+      "000000000000110000000000",
+      "000000000000110000000000",
+      "000000000001111100000000",
+      "00000000001l999l10000000",
+      "00000000001l222l10000000",
+      "00000000001l999l10000000",
+      "000000000001111100000000",
+      "000000000000l9l000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+    sad: parseGrid([
+      "000000000000ll0000000000",
+      "000ll00000001100000ll000",
+      "00lmmml000001900000lmmml",
+      "0lmmmmml000199910lmmmmml",
+      "lmmmmmmml019999910lmmmmm",
+      "lmmmmmmmml199999lmmmmmmm",
+      "lmmm99mmml1i11i1lmm99mmm",
+      "lmmmmmmmml1n11n1lmmmmmmm",
+      "0lmmmmmmll111111llmmmmmm",
+      "00lmmmmml00111100lmmmmml",
+      "000lmmmml000110000lmmmml",
+      "0000lml000001100000lml00",
+      "000000000000110000000000",
+      "000000000000110000000000",
+      "000000000001111100000000",
+      "00000000001l999l10000000",
+      "00000000001l111l10000000",
+      "00000000001l999l10000000",
+      "000000000001111100000000",
+      "000000000000l9l000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+    sadBlink: parseGrid([
+      "000000000000ll0000000000",
+      "000ll00000001100000ll000",
+      "00lmmml000001900000lmmml",
+      "0lmmmmml000199910lmmmmml",
+      "lmmmmmmml019999910lmmmmm",
+      "lmmmmmmmml199999lmmmmmmm",
+      "lmmm99mmml111111lmm99mmm",
+      "lmmmmmmmml1n11n1lmmmmmmm",
+      "0lmmmmmmll111111llmmmmmm",
+      "00lmmmmml00111100lmmmmml",
+      "000lmmmml000110000lmmmml",
+      "0000lml000001100000lml00",
+      "000000000000110000000000",
+      "000000000000110000000000",
+      "000000000001111100000000",
+      "00000000001l999l10000000",
+      "00000000001l111l10000000",
+      "00000000001l999l10000000",
+      "000000000001111100000000",
+      "000000000000l9l000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+      "000000000000000000000000",
+    ]),
+  },
+  "starkitten": {
+    idle: parseGrid([
+      "00000000000l9l0000000000",
+      "0000000000l999l000000000",
+      "000000000l99l99l00000000",
+      "0000000000l999l000000000",
+      "000001100000900000011000",
+      "00001hh100011100001hh100",
+      "0001h44h1001h1001h44h100",
+      "0001h44hh11hhh11hh44h100",
+      "00001hhhhhh22hhhhhh10000",
+      "0000001hhiihhhhiih100000",
+      "0000001hhi2hhhh2ih100000",
+      "00000001hhhhhhhhh1000000",
+      "00000001hhh4g4hhh1000000",
+      "000000001hhhhhhh10000000",
+      "00000001hhhhhhhhh1000000",
+      "0000001hhhhh22hhhh100000",
+      "0000001hhhhh22hhhh100000",
+      "00000001hhhhhhhhh1000000",
+      "000000001h1hh1h100000000",
+      "000000000110011000000000",
+      "00000000000001hh10000000",
+      "00000000000001h410000000",
+      "000000000000001100000000",
+      "000000000000000000000000",
+    ]),
+    blink: parseGrid([
+      "00000000000l9l0000000000",
+      "0000000000l999l000000000",
+      "000000000l99l99l00000000",
+      "0000000000l999l000000000",
+      "000001100000900000011000",
+      "00001hh100011100001hh100",
+      "0001h44h1001h1001h44h100",
+      "0001h44hh11hhh11hh44h100",
+      "00001hhhhhh22hhhhhh10000",
+      "0000001hhhhhhhhhhh100000",
+      "0000001hh11111111h100000",
+      "00000001hhhhhhhhh1000000",
+      "00000001hhh4g4hhh1000000",
+      "000000001hhhhhhh10000000",
+      "00000001hhhhhhhhh1000000",
+      "0000001hhhhh22hhhh100000",
+      "0000001hhhhh22hhhh100000",
+      "00000001hhhhhhhhh1000000",
+      "000000001h1hh1h100000000",
+      "000000000110011000000000",
+      "00000000000001hh10000000",
+      "00000000000001h410000000",
+      "000000000000001100000000",
+      "000000000000000000000000",
+    ]),
+    ear: parseGrid([
+      "000000000l9l9l0000000000",
+      "0000000000l999l000000000",
+      "000000000l99l99l00000000",
+      "0000000000l999l000000000",
+      "000001100000900000011000",
+      "00001hh100011100001hh100",
+      "0001h44h1001h1001h44h100",
+      "0001h44hh11hhh11hh44h100",
+      "00001hhhhhh22hhhhhh10000",
+      "0000001hhiihhhhiih100000",
+      "0000001hhi2hhhh2ih100000",
+      "00000001hhhhhhhhh1000000",
+      "00000001hhh4g4hhh1000000",
+      "000000001hhhhhhh10000000",
+      "00000001hhhhhhhhh1000000",
+      "0000001hhhhh22hhhh100000",
+      "0000001hhhhh22hhhh100000",
+      "00000001hhhhhhhhh1000000",
+      "000000001h1hh1h100000000",
+      "000000000110011000000000",
+      "00000000000001hh10000000",
+      "00000000000001h410000000",
+      "000000000000001100000000",
+      "000000000000000000000000",
+    ]),
+    sad: parseGrid([
+      "00000000000l9l0000000000",
+      "0000000000l999l000000000",
+      "000000000l99l99l00000000",
+      "0000000000l999l000000000",
+      "000001100000900000011000",
+      "00001hh100011100001hh100",
+      "0001h44h1001h1001h44h100",
+      "0001h44hh11hhh11hh44h100",
+      "00001hhhhhh22hhhhhh10000",
+      "0000001hhiihhhhiih100000",
+      "0000001hhi2hhhh2ih100000",
+      "00000001hhhhhhhhh1000000",
+      "00000001hhh111hhh1000000",
+      "000000001hhhhhhh10000000",
+      "00000001hhhhhhhhh1000000",
+      "0000001hhhhh22hhhh100000",
+      "0000001hhhhh22hhhh100000",
+      "00000001hhhhhhhhh1000000",
+      "000000001h1hh1h100000000",
+      "000000000110011000000000",
+      "00000000000001hh10000000",
+      "00000000000001h410000000",
+      "000000000000001100000000",
+      "000000000000000000000000",
+    ]),
+    sadBlink: parseGrid([
+      "00000000000l9l0000000000",
+      "0000000000l999l000000000",
+      "000000000l99l99l00000000",
+      "0000000000l999l000000000",
+      "000001100000900000011000",
+      "00001hh100011100001hh100",
+      "0001h44h1001h1001h44h100",
+      "0001h44hh11hhh11hh44h100",
+      "00001hhhhhh22hhhhhh10000",
+      "0000001hhhhhhhhhhh100000",
+      "0000001hh11111111h100000",
+      "00000001hhhhhhhhh1000000",
+      "00000001hhh111hhh1000000",
+      "000000001hhhhhhh10000000",
+      "00000001hhhhhhhhh1000000",
+      "0000001hhhhh22hhhh100000",
+      "0000001hhhhh22hhhh100000",
+      "00000001hhhhhhhhh1000000",
+      "000000001h1hh1h100000000",
+      "000000000110011000000000",
+      "00000000000001hh10000000",
+      "00000000000001h410000000",
+      "000000000000001100000000",
+      "000000000000000000000000",
+    ]),
+  },
 };
 
 const ANIMALS = [
@@ -4545,6 +5073,11 @@ const ANIMALS = [
   { id: "kitsune", name: "Kitsune", cost: 1000000, rare: "legend", bio: "Two tails, and one very polite bow." },
   // v15.2 secret friend: not sold, not required for "every friend"
   { id: "gavenecko", name: "Gavenecko", cost: 0, secret: true, bio: "Tan cheeks, a black suit, and a wave from the moon." },
+  // v15.3 secret friends: not sold, not required for "every friend". One friendship track each (the normal hug hearts).
+  { id: "puddleduck", name: "Puddle Duck", cost: 0, secret: true, lock: "A secret friend in the rain", bio: "Yellow feathers and tiny blue rain boots." },
+  { id: "teacupmouse", name: "Teacup Mouse", cost: 0, secret: true, lock: "A secret friend in the yard", bio: "A small mouse with a pink teacup." },
+  { id: "lanternmoth", name: "Lantern Moth", cost: 0, secret: true, lock: "A secret friend in the mail", bio: "Soft gold wings and a tiny lantern." },
+  { id: "starkitten", name: "Star Kitten", cost: 0, secret: true, lock: "A secret friend in a long hug", bio: "A white kitten with a yellow star." },
 ];
 
 // Sprite anchor points (in 24px sprite units): [headCenterX, headTopY, eyeY, eyeHalfSpacing, neckY]
@@ -4561,6 +5094,8 @@ const ANCHOR = {
   dragonet: [11.5, 5, 9.6, 3, 15], uni: [11.5, 4, 9.8, 3, 15], moth: [11.5, 6, 10.2, 1.3, 14],
   phoenix: [11.5, 3, 9.8, 3, 15], tidepup: [11.5, 5.5, 9.2, 2.5, 14], kitsune: [11.5, 4.5, 9.6, 3, 15],
   gavenecko: [11.5, 3, 8.5, 2.5, 16],
+  puddleduck: [13.5, 1, 4, 2, 13], teacupmouse: [10, 1, 6.2, 1.7, 13],
+  lanternmoth: [12.5, 2, 6.5, 1.5, 12], starkitten: [12.5, 4, 10, 3, 15],
 };
 
 const ACCESSORIES = [
@@ -6164,6 +6699,7 @@ function hugCritter(c, moodScale, payScale) {
   else combo = 1;
   comboTimer = COMBO_WINDOW;
   if (combo > highCombo) highCombo = combo;
+  if (typeof noteComboStar === "function") noteComboStar(combo);
 
   const mult = Math.min(combo, 30);
   let pts = (c.shiny ? 25 : c.animal.id === "rainbow" ? 40 : 5) * mult;
@@ -6177,6 +6713,7 @@ function hugCritter(c, moodScale, payScale) {
   if (scoreSession > highScore) highScore = scoreSession;
   totalHugs++;
   critterHugs[c.animal.id] = (critterHugs[c.animal.id] || 0) + 1;
+  if (scene === "play" && !tut && typeof noteRainHug === "function") noteRainHug();
 
   // Tuned so ~1 hug/sec with a few clouds reaches ~25% in 30–60s and ~100% in 5–8 min
   let moodGain = 0.36 + Math.min(mult, 10) * 0.018;
@@ -8216,7 +8753,7 @@ function drawAlbum() {
       font(14, true);
       ctx.fillText(a.special || a.secret || a.id === "gloomking" ? "???" : a.name, 98, y + 22);
       font(11, false);
-      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.secret ? "A little secret in the night sky" : a.adv != null ? advRescueText(a) : a.rare ? (a.rare === "legend" ? "Legendary" : "Rare") + " · Shop · " + heartCost(a.cost) + " ♥" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + heartCost(a.cost) + " ♥", 98, y + 44);
+      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.secret ? (a.lock || "A little secret in the night sky") : a.adv != null ? advRescueText(a) : a.rare ? (a.rare === "legend" ? "Legendary" : "Rare") + " · Shop · " + heartCost(a.cost) + " ♥" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + heartCost(a.cost) + " ♥", 98, y + 44);
     }
   });
   ctx.restore();
@@ -8695,6 +9232,8 @@ function stepScene(dt) {
 
 const perfLog = window.__HC_DEBUG ? [] : null; // per-frame JS cost, only when debugging
 function frame(ts) {
+  // Screenshot harness only. Never set during play.
+  if (window.__HC_HOLD) { requestAnimationFrame(frame); return; }
   let dt = (ts - lastTs) / 1000;
   if (!(dt > 0)) dt = 1 / 60; // first frame / clock hiccups: never NaN or negative
   dt = Math.min(0.05, dt);
@@ -8718,7 +9257,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 15;
-const APP_LABEL = "v15.2";
+const APP_LABEL = "v15.3";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "A fuller meadow",
@@ -9908,6 +10447,7 @@ function openGarden() {
     const v = visitors[visitors.length - 1];
     if (v && v.state === "walk") { v.x = v.tx + (Math.random() - 0.5) * 30; v.y = v.ty + 6; }
   }
+  if (typeof noteYardVisit === "function") noteYardVisit();
 }
 function leaveGarden() {
   let sum = 0;
@@ -15098,6 +15638,7 @@ function drawMeadowToys() {
   uiButtons.push(btn(sx - 6, sy - 4, 58, 52, "", { id: "v12_market", size: 1, bg: "rgba(0,0,0,0)", border: "rgba(0,0,0,0)" }));
 }
 function drawV12Meadow() {
+  if ((scene === "play" || scene === "pause") && v12.wx === "rain" && typeof maybeDuckHint === "function") maybeDuckHint();
   skyStep(frameDt);
   if (scene === "play" || scene === "pause") {
     drawSkyBits(skyBits, false);
@@ -15239,6 +15780,7 @@ function prepMail() {
   };
 }
 function openMail() {
+  if (typeof noteMailOpen === "function") noteMailOpen();
   prepMail();
   if (scene === "play") v12.from = "pause";
   else if (scene !== "mail") v12.from = scene;
@@ -15579,6 +16121,7 @@ function roomShopItems() {
 function v12Action(id) {
   if (!id) return false;
   if (id === "v12_wx") {
+    if (typeof maybeDuckHint === "function") maybeDuckHint();
     v12.wxMode = WX_MODES[(WX_MODES.indexOf(v12.wxMode) + 1) % WX_MODES.length];
     if (v12.wxMode === "auto") v12.wxUntil = 0; else v12.wx = v12.wxMode;
     ensureWeather(); save(); return true;
@@ -15730,13 +16273,21 @@ function v15Action(id) {
 }
 
 // ---------- v15.2 secret friend + endless heart farm ----------
-let hc15 = { moonTaps: 0, moonHint: false };
+let hc15 = { moonTaps: 0, moonHint: false, rainHugs: 0, duckHint: false, yardDay: "", yardVisits: 0, mouseHint: false, mailOpens: 0, mothHint: false, starHint: false };
 let farm = null;
 function normalizeHc15(d) {
-  const o = { moonTaps: 0, moonHint: false };
+  const o = { moonTaps: 0, moonHint: false, rainHugs: 0, duckHint: false, yardDay: "", yardVisits: 0, mouseHint: false, mailOpens: 0, mothHint: false, starHint: false };
   if (!isObj(d)) return o;
   o.moonTaps = Math.max(0, Math.min(20, Math.floor(numOr0(d.moonTaps))));
   o.moonHint = !!d.moonHint;
+  o.rainHugs = Math.max(0, Math.min(40, Math.floor(numOr0(d.rainHugs))));
+  o.duckHint = !!d.duckHint;
+  o.yardDay = typeof d.yardDay === "string" ? d.yardDay.slice(0, 16) : "";
+  o.yardVisits = Math.max(0, Math.min(9, Math.floor(numOr0(d.yardVisits))));
+  o.mouseHint = !!d.mouseHint;
+  o.mailOpens = Math.max(0, Math.min(9, Math.floor(numOr0(d.mailOpens))));
+  o.mothHint = !!d.mothHint;
+  o.starHint = !!d.starHint;
   return o;
 }
 function maybeMoonHint() {
@@ -15876,6 +16427,83 @@ function farmStep(dt) {
   ctx.fillText("♥ " + farm.hearts, 26, 46);
   uiButtons = [];
   uiButtons.push(btn(W - 108, 14, 92, 44, "Leave", { id: "v15_farm_leave", size: 15, bg: "#fff", border: "#e090b0" }));
+}
+
+// ---------- v15.3 four secret friends (not in the shop, not required for every friend) ----------
+const SECRET_HELLO = {
+  puddleduck: "Puddle Duck splashed in! ♥",
+  teacupmouse: "Teacup Mouse peeked in! ♥",
+  lanternmoth: "Lantern Moth fluttered in! ♥",
+  starkitten: "Star Kitten padded in! ♥",
+};
+function unlockSecretFriend(id) {
+  if (unlocked[id]) return;
+  unlocked[id] = true;
+  albumNew = true;
+  // Own pill, above the three gameplay toasts, so a secret arrival never hides "No reply" or a goal.
+  addFloat({ x: W / 2, y: Math.max(86, toastBaseY() - 26), text: SECRET_HELLO[id] || "A secret friend arrived! ♥", life: 2.4, vy: 0, color: C.heart, size: 13, toast: true, slot: 4 });
+  if (typeof sfxUnlock === "function") sfxUnlock();
+  if (typeof buzz === "function") buzz("unlock");
+  const g = ANIMALS.find(a => a.id === id);
+  if (g && scene === "play") {
+    const [y0, y1] = critterYRange();
+    critters.push(makeCritter(g, { x: -20, y: (y0 + y1) / 2, vx: 36, scale: 2.05, life: 18, phase: 0 }));
+  }
+  save();
+}
+// One-time hints sit on their own pill so they never crowd out the three gameplay toasts.
+function softHint(text, color) {
+  addFloat({ x: W / 2, y: Math.max(64, toastBaseY() - 48), text, life: 2.4, vy: 0, color: color || "#7050b0", size: 12, toast: true, slot: 3 });
+}
+function maybeDuckHint() {
+  if (hc15.duckHint || unlocked.puddleduck) return;
+  hc15.duckHint = true;
+  softHint("Someone splashes by after a few rainy hugs.", "#4a90d0");
+  save();
+}
+function noteRainHug() {
+  if (unlocked.puddleduck) return;
+  if (!v12 || v12.wx !== "rain") return;
+  hc15.rainHugs = Math.min(40, (hc15.rainHugs || 0) + 1);
+  if (hc15.rainHugs >= 15) unlockSecretFriend("puddleduck");
+  else saveSoon();
+}
+function noteYardVisit() {
+  if (unlocked.teacupmouse) {
+    if (!hc15.mouseHint) { hc15.mouseHint = true; save(); }
+    return;
+  }
+  const day = todayKey();
+  if (hc15.yardDay !== day) { hc15.yardDay = day; hc15.yardVisits = 0; }
+  hc15.yardVisits = Math.min(9, (hc15.yardVisits || 0) + 1);
+  if (!hc15.mouseHint) {
+    hc15.mouseHint = true;
+    softHint("The yard likes a few visits.", "#c87038");
+  }
+  if (hc15.yardVisits >= 3) unlockSecretFriend("teacupmouse");
+  else save();
+}
+function noteMailOpen() {
+  if (unlocked.lanternmoth) {
+    if (!hc15.mothHint) { hc15.mothHint = true; save(); }
+    return;
+  }
+  hc15.mailOpens = Math.min(9, (hc15.mailOpens || 0) + 1);
+  if (!hc15.mothHint) {
+    hc15.mothHint = true;
+    softHint("The mailbox glows after a second look.", "#e8a060");
+  }
+  if (hc15.mailOpens >= 2) unlockSecretFriend("lanternmoth");
+  else save();
+}
+function noteComboStar(n) {
+  if (unlocked.starkitten) return;
+  if (n >= 3 && !hc15.starHint) {
+    hc15.starHint = true;
+    softHint("Keep hugging. A star is watching.", "#ffd700");
+    saveSoon();
+  }
+  if (n >= 5) unlockSecretFriend("starkitten");
 }
 
 // ===================== BOOT =====================
