@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="15.0-meadow">
+<meta name="hc-version" content="15.1-hearts">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v15 — A fuller meadow
+// Happy Critters v15.1 — smaller friendship hearts
 
 const W = 360;
 let H = 540;
@@ -7488,7 +7488,22 @@ function panelHeader(title, sub) {
   uiButtons = [];
 }
 function heartRow(x, y, lvl, size) {
-  for (let i = 0; i < 4; i++) drawPixelHeart(x + i * (size * 1.7), y, size, i < lvl ? C.heart : "rgba(160,140,160,0.35)");
+  // Album + level-up meters. drawPixelHeart is the title wordmark's chunky
+  // outlined sprite (each cell is `s` px), which blows this row up and drops
+  // the empty-heart color. Use the small 7×6 pixel heart so the row sits on
+  // the text line and still shows filled vs empty.
+  const u = Math.max(1, size / 5);
+  const step = size * 1.7;
+  for (let i = 0; i < 4; i++) {
+    const col = i < lvl ? C.heart : "rgba(160,140,160,0.35)";
+    const hx = x + i * step;
+    const spr = heartSprite(col);
+    if (spr) ctx.drawImage(spr, hx - 3 * u, y - 2 * u, 7 * u, 6 * u);
+    else {
+      ctx.fillStyle = col;
+      for (const c of HEART_CELLS) ctx.fillRect(hx + (c[0] - 3) * u, y + (c[1] - 2) * u, u, u);
+    }
+  }
 }
 
 // ===================== DRAW: WORLD OBJECTS =====================
@@ -7652,7 +7667,7 @@ function drawLevelUp() {
   ctx.fillStyle = C.text;
   font(14, true);
   ctx.fillText(f.animal.name + "  ·  Lv " + f.lvl, W / 2, cy + 36);
-  heartRow(W / 2 - 24, cy + 54, f.lvl, 6);
+  heartRow(W / 2 - 20, cy + 54, f.lvl, 6);
   font(11, false);
   ctx.fillStyle = C.textSoft;
   ctx.fillText((f.reward ? "New look: " + f.reward.name + "  ·  " : "") + "+" + f.hearts + " ♥ · +Joy", W / 2, cy + 78);
