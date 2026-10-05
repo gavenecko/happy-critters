@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="15.4-shore">
+<meta name="hc-version" content="15.5-dock">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v15.4 — shore, stickers, parade
+// Happy Critters v15.5 — activity dock
 
 const W = 360;
 let H = 540;
@@ -6831,7 +6831,12 @@ function newDawn() {
   save();
 }
 
-function critterYRange() { return [130, Math.max(260, H - 170)]; }
+function critterYRange() {
+  // Keep friends above the activity dock and the New Dawn button (v15.5).
+  let limit = H - 210;
+  if (typeof meadowDock === "function") limit = meadowDock().y - 48 - 56;
+  return [130, Math.max(240, Math.min(H - 180, limit))];
+}
 
 function makeCritter(animal, opts) {
   opts = opts || {};
@@ -8757,7 +8762,8 @@ function drawHUD() {
     uiButtons.push(btn(r.x, r.y, r.w, 44, it[0], { id: it[1], size: W < 360 ? 11 : 12, bg: it[2], border: it[3], r: 12 }));
   });
   if (mood >= 100) {
-    uiButtons.push(btn(W / 2 - 75, H - 106, 150, 44, "New Dawn ☀", { id: "dawn", size: 13, bg: "#ffe0a0", border: "#e0a040" }));
+    const dawnY = (typeof meadowDock === "function") ? meadowDock().y - 48 : H - 106;
+    uiButtons.push(btn(W / 2 - 75, dawnY, 150, 44, "New Dawn ☀", { id: "dawn", size: 13, bg: "#ffe0a0", border: "#e0a040" }));
   }
 }
 
@@ -9486,7 +9492,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 15;
-const APP_LABEL = "v15.4";
+const APP_LABEL = "v15.5";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "A cozier shore",
@@ -16736,7 +16742,7 @@ function noteComboStar(n) {
   if (n >= 5) unlockSecretFriend("starkitten");
 }
 
-// v15.4 — hide-and-seek, beach, friend notes, picnic blanket, sticker book, dusk parade.
+// v15.5 — activity buttons sit above the toolbar, not on the meadow.
 // Meadow controls only. The six toolbar buttons stay as they are.
 
 const STAMPS = [
@@ -17308,6 +17314,14 @@ function drawV154Under() {
   const s = picnicSpot();
   drawBlanket(s.x, s.y);
 }
+// Slim row just above the 6-button toolbar. Inset so the mailbox and night stall stay clear.
+function meadowDock() {
+  const h = 44;
+  const y = H - 52 - 4 - h;
+  const x0 = 68;
+  const x1 = W - 76;
+  return { x0, y, w: Math.max(140, x1 - x0), h };
+}
 function drawV154Meadow() {
   if (scene !== "play" || tut) return;
   ensureHc154();
@@ -17318,17 +17332,16 @@ function drawV154Meadow() {
     ["Picnic", "v154_picnic", "#ffd0e0", "#e090b0"],
     ["Beach", "v154_beach", "#c8ecff", "#70b0d8"],
   ];
-  const bw = 68, gap = 6, h = 44;
-  const total = labels.length * bw + (labels.length - 1) * gap;
-  let x = Math.round((W - total) / 2);
-  const y = H - 176;
+  if (paradeReady()) labels.push(["Parade", "v154_parade", "#efe6ff", "#b090e0"]);
+  const dock = meadowDock();
+  const gap = 4;
+  const n = labels.length;
+  const bw = Math.floor((dock.w - gap * (n - 1)) / n);
+  let x = dock.x0 + Math.floor((dock.w - (n * bw + (n - 1) * gap)) / 2);
   labels.forEach((it) => {
-    uiButtons.push(btn(x, y, bw, h, it[0], { id: it[1], size: 12, bg: it[2], border: it[3], r: 12 }));
+    uiButtons.push(btn(x, dock.y, bw, dock.h, it[0], { id: it[1], size: 11, bg: it[2], border: it[3], r: 12 }));
     x += bw + gap;
   });
-  if (paradeReady()) {
-    uiButtons.push(btn(12, 108, 86, 44, "Parade", { id: "v154_parade", size: 13, bg: "#efe6ff", border: "#b090e0", r: 12 }));
-  }
 }
 
 function v154PlayTap(p) {
