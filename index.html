@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="15.5-dock">
+<meta name="hc-version" content="15.6-menu">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -6832,10 +6832,8 @@ function newDawn() {
 }
 
 function critterYRange() {
-  // Keep friends above the activity dock and the New Dawn button (v15.5).
-  let limit = H - 210;
-  if (typeof meadowDock === "function") limit = meadowDock().y - 48 - 56;
-  return [130, Math.max(240, Math.min(H - 180, limit))];
+  // Keep friends above the toolbar / Fun button (v15.6).
+  return [130, Math.max(260, H - 170)];
 }
 
 function makeCritter(animal, opts) {
@@ -8762,8 +8760,8 @@ function drawHUD() {
     uiButtons.push(btn(r.x, r.y, r.w, 44, it[0], { id: it[1], size: W < 360 ? 11 : 12, bg: it[2], border: it[3], r: 12 }));
   });
   if (mood >= 100) {
-    const dawnY = (typeof meadowDock === "function") ? meadowDock().y - 48 : H - 106;
-    uiButtons.push(btn(W / 2 - 75, dawnY, 150, 44, "New Dawn ☀", { id: "dawn", size: 13, bg: "#ffe0a0", border: "#e0a040" }));
+    // Compact pill between mailbox and Fun, just above the toolbar.
+    uiButtons.push(btn(W / 2 - 55, H - 90, 110, 32, "New Dawn ☀", { id: "dawn", size: 11, bg: "#ffe0a0", border: "#e0a040", r: 12 }));
   }
 }
 
@@ -9094,6 +9092,7 @@ function drawPause() {
 
 // ===================== UI ACTIONS =====================
 function openPanel(name) {
+  if (typeof funOpen !== "undefined" && funOpen) closeFunMenu();
   if (scene === "play" || scene === "title") prevScene = scene;
   if (scene === "play" && (name === "garden" || name === "arcade")) prevScene = "pause"; // come back to a paused meadow, never an ambush
   if (scene === "pause") prevScene = "pause";
@@ -9350,6 +9349,10 @@ window.addEventListener("keydown", (e) => {
     if (scene === "play" || scene === "title") doUI("album");
     else if (scene === "album") scene = prevScene;
   }
+  if (k === "Escape" && typeof funOpen !== "undefined" && funOpen) {
+    closeFunMenu();
+    return;
+  }
   if (k === "p" || k === "P" || k === "Escape") {
     if (scene === "play") scene = "pause";
     else if (scene === "pause") scene = "play";
@@ -9399,16 +9402,20 @@ function updateTitle(dt) {
 }
 
 function stepScene(dt) {
+  if (typeof funOpen !== "undefined" && funOpen && scene !== "play") closeFunMenu();
   if (scene === "title") {
     updateTitle(dt);
     drawTitle();
     drawStoryBanner();
     if (typeof drawMorningNote === "function") drawMorningNote();
   } else if (scene === "play") {
-    updatePlay(dt);
-    if (typeof v154Tick === "function") v154Tick(dt);
+    if (!(typeof funOpen !== "undefined" && funOpen)) {
+      updatePlay(dt);
+      if (typeof v154Tick === "function") v154Tick(dt);
+    }
     renderPlay();
     if (typeof drawMorningNote === "function") drawMorningNote();
+    if (typeof drawFunSheet === "function") drawFunSheet();
   } else if (scene === "shop") {
     drawShop();
   } else if (scene === "achievements") {
@@ -9492,7 +9499,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 15;
-const APP_LABEL = "v15.5";
+const APP_LABEL = "v15.6";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "A cozier shore",
@@ -16742,7 +16749,7 @@ function noteComboStar(n) {
   if (n >= 5) unlockSecretFriend("starkitten");
 }
 
-// v15.5 — activity buttons sit above the toolbar, not on the meadow.
+// v15.6 — Fun menu folds Seek / Picnic / Beach / Parade into one button.
 // Meadow controls only. The six toolbar buttons stay as they are.
 
 const STAMPS = [
@@ -17314,34 +17321,139 @@ function drawV154Under() {
   const s = picnicSpot();
   drawBlanket(s.x, s.y);
 }
-// Slim row just above the 6-button toolbar. Inset so the mailbox and night stall stay clear.
-function meadowDock() {
-  const h = 44;
-  const y = H - 52 - 4 - h;
-  const x0 = 68;
-  const x1 = W - 76;
-  return { x0, y, w: Math.max(140, x1 - x0), h };
+// Fun button: right side above toolbar, left of the night stall (W-114 ≈ 246 at 360).
+let funOpen = false;
+let funSeenReady = "0000"; // snapshot of ready bits when menu last closed/opened
+
+function funBtnRect() {
+  const s = 42;
+  return { x: W - 114, y: H - 96, w: s, h: s, hit: 44 };
+}
+function funReadyBits() {
+  ensureHc154();
+  const pals = meadowPals().length || foundFriends().length;
+  const seekOk = !hc154.hide && pals > 0 && Date.now() >= hc154.seekUntil;
+  const picnicOk = !hc154.picnic;
+  const beachOk = beachOpen();
+  const paradeOk = paradeReady() && Date.now() >= hc154.paradeUntil && foundFriends().length > 0;
+  return (seekOk ? "1" : "0") + (picnicOk ? "1" : "0") + (beachOk ? "1" : "0") + (paradeOk ? "1" : "0");
+}
+function funHasDot() {
+  const now = funReadyBits();
+  for (let i = 0; i < 4; i++) if (now[i] === "1" && funSeenReady[i] !== "1") return true;
+  return false;
+}
+function closeFunMenu() {
+  if (!funOpen) return;
+  funOpen = false;
+  funSeenReady = funReadyBits();
+}
+function openFunMenu() {
+  funOpen = true;
+  funSeenReady = funReadyBits();
+}
+function funRowState(kind) {
+  ensureHc154();
+  if (kind === "seek") {
+    const pals = meadowPals().length || foundFriends().length;
+    if (!pals) return { ok: false, why: "Make a friend first" };
+    if (hc154.hide) return { ok: false, why: "Already hiding" };
+    const left = hc154.seekUntil - Date.now();
+    if (left > 0) return { ok: false, why: "Wait " + Math.ceil(left / 1000) + "s" };
+    return { ok: true, why: "Find a friend in the grass" };
+  }
+  if (kind === "picnic") {
+    if (hc154.picnic) return { ok: false, why: "Already out" };
+    return { ok: true, why: "Spread a blanket for friends" };
+  }
+  if (kind === "beach") {
+    if (!beachOpen()) return { ok: false, why: "Opens after the story" };
+    return { ok: true, why: "Visit the quiet shore" };
+  }
+  if (kind === "parade") {
+    if (!paradeReady()) return { ok: false, why: "At dusk or when Joy is high" };
+    if (Date.now() < hc154.paradeUntil) return { ok: false, why: "Resting little feet" };
+    if (!foundFriends().length) return { ok: false, why: "Find a friend first" };
+    return { ok: true, why: "March with your pals" };
+  }
+  return { ok: false, why: "" };
+}
+function drawFunButton() {
+  const r = funBtnRect();
+  const hx = r.x - (r.hit - r.w) / 2, hy = r.y - (r.hit - r.h) / 2;
+  // soft round button
+  ctx.fillStyle = "#fff6ea";
+  ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#e0a060"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, r.w / 2 - 0.5, 0, Math.PI * 2); ctx.stroke();
+  // tiny basket / sparkle
+  ctx.fillStyle = "#e09040";
+  ctx.fillRect(r.x + 12, r.y + 12, 18, 12);
+  ctx.fillStyle = "#ffd080";
+  ctx.beginPath(); ctx.moveTo(r.x + 12, r.y + 12); ctx.lineTo(r.x + 21, r.y + 6); ctx.lineTo(r.x + 30, r.y + 12); ctx.fill();
+  ctx.fillStyle = C.text; font(9, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Fun", r.x + r.w / 2, r.y + r.h - 8);
+  if (funHasDot()) {
+    ctx.fillStyle = "#ff5a8a";
+    ctx.beginPath(); ctx.arc(r.x + r.w - 6, r.y + 6, 5, 0, Math.PI * 2); ctx.fill();
+  }
+  uiButtons.push(btn(hx, hy, r.hit, r.hit, "", { id: "fun_toggle", size: 1, bg: "rgba(0,0,0,0)", border: "rgba(0,0,0,0)" }));
+}
+function drawFunSheet() {
+  if (!funOpen || scene !== "play") return;
+  // dim backdrop
+  ctx.fillStyle = "rgba(18, 10, 24, 0.42)";
+  ctx.fillRect(0, 0, W, H);
+  const rows = [
+    ["Seek", "seek", "v154_seek", "#d8f5c8", "#70b070"],
+    ["Picnic", "picnic", "v154_picnic", "#ffd0e0", "#e090b0"],
+    ["Beach", "beach", "v154_beach", "#c8ecff", "#70b0d8"],
+    ["Parade", "parade", "v154_parade", "#efe6ff", "#b090e0"],
+  ];
+  const rowH = 52, gap = 6, pad = 14;
+  const sheetH = pad + rows.length * (rowH + gap) - gap + 56;
+  const sheetY = H - sheetH - 8;
+  const sheetX = 16, sheetW = W - 32;
+  ctx.fillStyle = "rgba(255,250,245,0.97)";
+  roundRect(sheetX, sheetY, sheetW, sheetH, 16); ctx.fill();
+  ctx.strokeStyle = "#e0b0c8"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = C.text; font(15, true); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillText("Fun", sheetX + 16, sheetY + 22);
+  // close
+  const cx = sheetX + sheetW - 44, cy = sheetY + 8;
+  uiButtons.length = 0; // only sheet hits while open
+  uiButtons.push(btn(cx, cy, 36, 36, "✕", { id: "fun_close", size: 16, bg: "#ffe8f0", border: "#e090b0", r: 12 }));
+  let y = sheetY + 48;
+  rows.forEach((it) => {
+    const st = funRowState(it[1]);
+    const bg = st.ok ? it[3] : "#ece4ea";
+    const bd = st.ok ? it[4] : "#c8b0bc";
+    const id = st.ok ? it[2] : "fun_nope";
+    uiButtons.push(btn(sheetX + 12, y, sheetW - 24, rowH, "", { id: id, size: 1, bg: bg, border: bd, r: 12 }));
+    // labels drawn on top of the btn fill (btn draws itself later via... wait, btn only stores; drawUI draws)
+    // Store label in button text so drawButtons shows it — use two-line via custom draw:
+    ctx.fillStyle = st.ok ? C.text : "#9a8090";
+    font(14, true); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(it[0], sheetX + 24, y + 18);
+    font(11, false);
+    ctx.fillStyle = st.ok ? C.textSoft : "#b098a4";
+    ctx.fillText(st.why, sheetX + 24, y + 36);
+    y += rowH + gap;
+  });
+  // full-screen backdrop last so rows/close win first-match hit test
+  uiButtons.push(btn(0, 0, W, H, "", { id: "fun_bg", size: 1, bg: "rgba(0,0,0,0)", border: "rgba(0,0,0,0)" }));
 }
 function drawV154Meadow() {
   if (scene !== "play" || tut) return;
   ensureHc154();
   if (hc154.hide) drawHideSpot(hc154.hide);
   drawRequest();
-  const labels = [
-    ["Seek", "v154_seek", "#d8f5c8", "#70b070"],
-    ["Picnic", "v154_picnic", "#ffd0e0", "#e090b0"],
-    ["Beach", "v154_beach", "#c8ecff", "#70b0d8"],
-  ];
-  if (paradeReady()) labels.push(["Parade", "v154_parade", "#efe6ff", "#b090e0"]);
-  const dock = meadowDock();
-  const gap = 4;
-  const n = labels.length;
-  const bw = Math.floor((dock.w - gap * (n - 1)) / n);
-  let x = dock.x0 + Math.floor((dock.w - (n * bw + (n - 1) * gap)) / 2);
-  labels.forEach((it) => {
-    uiButtons.push(btn(x, dock.y, bw, dock.h, it[0], { id: it[1], size: 11, bg: it[2], border: it[3], r: 12 }));
-    x += bw + gap;
-  });
+  if (!funOpen) drawFunButton();
+}
+// kept for any older callers; Fun button sits here now
+function meadowDock() {
+  const r = funBtnRect();
+  return { x0: 68, y: r.y, w: Math.max(140, W - 76 - 68), h: 44 };
 }
 
 function v154PlayTap(p) {
@@ -17379,10 +17491,20 @@ function v154Leave() {
 function v154Action(id) {
   if (!id) return false;
   ensureHc154();
-  if (id === "v154_seek") { startSeek(); return true; }
-  if (id === "v154_picnic") { startPicnic(); return true; }
-  if (id === "v154_beach") { openBeach(); return true; }
+  if (id === "fun_toggle") {
+    if (funOpen) closeFunMenu(); else openFunMenu();
+    return true;
+  }
+  if (id === "fun_close" || id === "fun_bg") { closeFunMenu(); return true; }
+  if (id === "fun_nope") {
+    if (typeof sfxNope === "function") sfxNope();
+    return true;
+  }
+  if (id === "v154_seek") { closeFunMenu(); startSeek(); return true; }
+  if (id === "v154_picnic") { closeFunMenu(); startPicnic(); return true; }
+  if (id === "v154_beach") { closeFunMenu(); openBeach(); return true; }
   if (id === "v154_parade" || id === "v154_parade_skip") {
+    closeFunMenu();
     if (id === "v154_parade_skip") finishParade();
     else startParade();
     return true;
