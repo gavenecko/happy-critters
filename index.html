@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="15.6-menu">
+<meta name="hc-version" content="16.0-replay">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v15.5 — activity dock
+// Happy Critters v16.0 — replay update
 
 const W = 360;
 let H = 540;
@@ -5627,6 +5627,7 @@ function load() {
     v12 = normalizeV12(d.v12);
     if (typeof normalizeHc15 === "function") hc15 = normalizeHc15(d.hc15);
     if (typeof normalizeHc154 === "function") hc154 = normalizeHc154(d.hc154);
+    if (typeof normalizeHc16 === "function") hc16 = normalizeHc16(d.hc16);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -5651,6 +5652,7 @@ function save() {
       v12: v12Snapshot(),
       hc15,
       hc154,
+      hc16: (typeof hc16 !== "undefined" ? hc16 : null),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -6651,7 +6653,7 @@ function drawZzz(animalId, ox, oy, u) {
 function accAvailable(id, animalId) {
   const a = ACCESSORIES.find(x => x.id === id);
   if (!a) return false;
-  if (a.cost || a.arcade || a.season || a.adv || a.market) return !!ownedAcc[a.id];
+  if (a.cost || a.arcade || a.season || a.adv || a.market || a.seedShop) return !!ownedAcc[a.id];
   return (friendLvl[animalId] || 0) >= a.friend;
 }
 function accOptions(animalId) { return ACCESSORIES.filter(a => accAvailable(a.id, animalId)); }
@@ -8768,6 +8770,7 @@ function drawHUD() {
 function renderPlay() {
   ctx.save();
   drawBackground();
+  if (typeof drawV16Tint === "function") drawV16Tint();
   if (typeof drawV154Under === "function") drawV154Under();
   for (const gc of gloomClouds) drawGloomCloud(gc);
   for (const c of critters) if (!c.dead) drawCritter(c);
@@ -8792,12 +8795,12 @@ function renderPlay() {
 function drawShop() {
   panelHeader("Sunshine Shop", "Your Hearts: " + joy + " ♥");
   uiButtons.push(btn(22, 72, W - 44, 44, marketOpen() ? "Night market" : "Night market (asleep)", { id: "v12_market", size: 13, bg: "#efe6ff", border: "#b090e0" }));
-  const tabs = [["critters", "Critters"], ["scenes", "Scenes"], ["accs", "Wardrobe"]];
-  const tw = (W - 44 - 12) / 3;
+  const tabs = [["critters", "Critters"], ["scenes", "Scenes"], ["accs", "Wardrobe"], ["seeds", "Seeds"]];
+  const tw = (W - 44 - 18) / 4;
   tabs.forEach((t, i) => {
     const on = shopTab === t[0];
     uiButtons.push(btn(22 + i * (tw + 6), 122, tw, 44, t[1], {
-      id: "tab_" + t[0], size: 13, r: 10,
+      id: "tab_" + t[0], size: 12, r: 10,
       bg: on ? C.btn : "#f5e6ee", border: on ? "#ff80b0" : "#d0b0c0",
     }));
   });
@@ -8885,6 +8888,8 @@ function drawShop() {
         ctx.fillText("In use", 80, y + 34);
       }
     });
+  } else if (shopTab === "seeds") {
+    v16DrawSeedShop(top, bottom);
   } else {
     const rowH = 76;
     const model = ANIMALS.find(a => a.id === "cat");
@@ -8923,7 +8928,8 @@ function drawShop() {
 function drawAlbum() {
   const count = ANIMALS.filter(a => unlocked[a.id]).length;
   panelHeader("Critter Album", count + "/" + ANIMALS.length + " friends" + (typeof shellNote === "function" ? shellNote() : "") + " · hug to level up ♥");
-  const top = 78, bottom = H - 74;
+  if (typeof v16AlbumTabs === "function") { v16AlbumTabs(); if (albumTab === "sets") { v16DrawCollections(); return; } }
+  const top = typeof v16AlbumTabs === "function" ? 122 : 78, bottom = H - 74;
   const rowHs = ANIMALS.map(a => !unlocked[a.id] ? 108 : (a.rare ? 208 : 156));
   setListExtent(top, bottom, rowHs.reduce((s, h) => s + h, 0) + 4);
   listClip(top, bottom);
@@ -8988,7 +8994,8 @@ function drawAlbum() {
 function drawAchievements() {
   const done = GOALS.filter(g => achievements[g.id]).length;
   panelHeader("Little Goals", done + " / " + GOALS.length + " done");
-  const top = 78, bottom = H - 74, rowH = 34;
+  if (typeof v16GoalsTabs === "function") { v16GoalsTabs(); if (goalsTab === "quests") { v16DrawQuests(); return; } }
+  const top = typeof v16GoalsTabs === "function" ? 122 : 78, bottom = H - 74, rowH = 34;
   setListExtent(top, bottom, GOALS.length * rowH + 4);
   listClip(top, bottom);
   GOALS.forEach((g, i) => {
@@ -9104,6 +9111,7 @@ function openPanel(name) {
 function doUI(id) {
   if (!id) return;
   sfxClick();
+  if (typeof v16Action === "function" && v16Action(id)) return;
   if (typeof v154Action === "function" && v154Action(id)) return;
   if (typeof v15Action === "function" && v15Action(id)) return;
   if (typeof v12Action === "function" && v12Action(id)) return;
@@ -9288,6 +9296,7 @@ canvas.addEventListener("pointerdown", (e) => {
   if (scene === "beach" && typeof beachTap === "function") { beachTap(p); return; }
   if (scene === "mg") { mgDown(p); try { canvas.setPointerCapture(e.pointerId); } catch (err) {} return; }
   if (isAdvScene(scene)) { advPointer(p); return; }
+  if (typeof v16Pointer === "function" && v16Pointer(p)) return;
   if (scene === "play" && tut && tutBubbleHit(p)) return; // the tutorial card swallows stray taps
   if (scene === "play") playTap(p);
   else if (scene === "title") tapGloom(p);
@@ -9363,6 +9372,7 @@ window.addEventListener("keydown", (e) => {
     else if (scene === "arcade") scene = prevScene || "title";
     else if (scene === "farm" && typeof leaveFarm === "function") leaveFarm();
     else if (typeof v154Leave === "function" && v154Leave()) {}
+    else if (typeof v16Leave === "function" && v16Leave()) {}
     else if (scene === "garden") { if (gSel) gSel = null; else leaveGarden(); }
     else if (scene === "decor") scene = "garden";
     else if (scene === "seasons") scene = "settings";
@@ -9402,6 +9412,7 @@ function updateTitle(dt) {
 }
 
 function stepScene(dt) {
+  if (typeof v16Tick === "function") v16Tick(dt);
   if (typeof funOpen !== "undefined" && funOpen && scene !== "play") closeFunMenu();
   if (scene === "title") {
     updateTitle(dt);
@@ -9458,6 +9469,8 @@ function stepScene(dt) {
     v15Step(dt);
   } else if (typeof v154Scene === "function" && v154Scene(scene)) {
     v154Step(dt);
+  } else if (typeof v16Scene === "function" && v16Scene(scene)) {
+    v16Step(dt);
   } else if (scene === "away") {
     if (awayReturn === "title") updateTitle(dt);
     else if (awayReturn === "garden") updateGarden(dt);
@@ -9499,17 +9512,17 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 15;
-const APP_LABEL = "v15.6";
+const APP_LABEL = "v16.0";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "A cozier shore",
-  pals: ["hermit", "piper", "raccoon", "bluebird"],
+  sub: "Bloom Seeds & Second Spring",
+  pals: ["gloomking", "cat", "bunny", "squirrel"],
   items: [
-    "Hide-and-seek in the meadow grass.",
-    "A picnic blanket friends sit on.",
-    "Little notes when a friend wants a visit.",
-    "A sticker book in Album and Goals.",
-    "A dusk parade, and a beach after the story.",
+    "Daily Quests in Goals, with a bonus chest.",
+    "Bloom Seeds and a Seed Shop tab in the Shop.",
+    "Friend Collections in the Album.",
+    "Second Spring: a remixed storybook after the story.",
+    "Hide-and-seek, picnics, a parade, and a beach.",
   ],
 };
 
@@ -10084,6 +10097,7 @@ for (const d of DECOR) DECOR_BY_ID[d.id] = d;
 function decorUnlocked(d) {
   const u = d.unlock;
   if (!u) return true;
+  if (u.seed) return !!(typeof hc16 !== "undefined" && hc16 && hc16.own && hc16.own[d.id]);
   if (u.friend) return maxFriend({ friendLvl }) >= u.friend;
   if (u.peak) return moodPeak >= u.peak;
   if (u.goal) return !!achievements[u.goal];
@@ -10725,7 +10739,7 @@ function placeFromInv(id) {
 }
 function buyDecor(id) {
   const d = DECOR_BY_ID[id];
-  if (!d || !decorUnlocked(d) || joy < d.cost) return false;
+  if (!d || (d.unlock && d.unlock.seed) || !decorUnlocked(d) || joy < d.cost) return false;
   joy -= d.cost;
   garden.inv[id] = invCount(id) + 1;
   sfxUnlock(); buzz("unlock");
@@ -10876,8 +10890,10 @@ function drawDecor() {
       font(9.5, false); ctx.fillText(d.unlock.text, W - 34, y + 38);
       return;
     }
-    const can = joy >= d.cost;
-    listBtn(W - 108, y + 14, 80, 44, d.cost + " ♥", {
+    const seedItem = !!(d.unlock && d.unlock.seed);
+    const can = !seedItem && joy >= d.cost;
+    if (seedItem) { ctx.textAlign = "right"; ctx.fillStyle = "#3f9a48"; font(10, true); ctx.fillText("Seed Shop ✓", W - 34, y + 36); }
+    else listBtn(W - 108, y + 14, 80, 44, d.cost + " ♥", {
       id: can ? "dbuy_" + d.id : null, size: 13, r: 10,
       bg: can ? C.btn : "#eee4ea", border: can ? "#ff80b0" : "#d8c8d0", color: can ? C.btnText : "#a898a8",
     }, top, bottom);
@@ -12933,6 +12949,7 @@ function advShoo(g) {
 function advTap(p) {
   if (!st || st.paused || st.state !== "play") return;
   if (st.def.finale) { advFinaleTap(p); return; }
+  if (st.ss && typeof ssTap === "function" && ssTap(p)) return;
   let tookFog = false;
   if (st.fogs.length) {
     for (const f of st.fogs) if (!f.gone && f.a > 0.3 && dist2(p.x, p.y, f.x, f.y) < (f.r + 30) * (f.r + 30)) {
@@ -12982,7 +12999,7 @@ function advUpdate(dt) {
     if (st.def.finale) advFinaleUpdate(dt);
     else {
       advUpdateWorld(dt);
-      if (st.meter >= 100 && (!st.def.rescue || st.rescued)) advFinish(true);
+      if (st.meter >= 99.9 && (!st.def.rescue || st.rescued)) advFinish(true);
       else if (!kind.relaxed && st.time >= st.def.dur) advFinish(false);
     }
   } else if (st.state === "result") {
@@ -13000,17 +13017,17 @@ function advUpdateWorld(dt) {
     if (st.spawnT <= 0) { advSpawnPal(); st.spawnT = 0.85 + Math.random() * 0.6; }
     if (st.pals.filter(c => c.state === "float" && !c.rescue).length < 2) advSpawnPal();
     st.gT -= dt;
-    if (st.gT <= 0 && st.lings.length < st.def.gMax + (R.twist === "split" ? 2 : 0)) { advSpawnLing(); st.gT = st.def.gEvery * (0.75 + Math.random() * 0.5); }
+    if (st.gT <= 0 && st.lings.length < st.def.gMax + (advTw(R) === "split" ? 2 : 0)) { advSpawnLing(); st.gT = st.def.gEvery * (0.75 + Math.random() * 0.5); }
   }
   // wind gusts (Frosty Peaks)
   const w = st.wind;
-  if (R.twist === "wind" && playing) {
+  if (advTw(R) === "wind" && playing) {
     if (w.on > 0) { w.on -= dt; if (w.on <= 0) w.cd = 5 + Math.random() * 3; }
     else { w.cd -= dt; if (w.cd <= 0) { w.on = 2.6; w.dir = Math.random() < 0.5 ? -1 : 1; sfxAdvWind(); } }
   }
   const gust = w.on > 0 ? w.dir * 120 : 0;
   // puddles (Puddle Marsh)
-  if (R.twist === "puddle" && playing) {
+  if (advTw(R) === "puddle" && playing) {
     st.pudT -= dt;
     if (st.pudT <= 0 && st.puddles.filter(p => !p.lily).length < 4) {
       const [y0, y1] = advYRange();
@@ -13021,7 +13038,7 @@ function advUpdateWorld(dt) {
   for (const pd of st.puddles) { pd.t += dt; if (pd.lily && pd.t > 4) pd.dead = true; }
   prune(st.puddles, notDead);
   // fog (Misty Woods)
-  if (R.twist === "fog") {
+  if (advTw(R) === "fog") {
     st.fogT -= dt;
     const want = 7 + Math.floor(st.i % 3) * 2;
     if (st.fogT <= 0 && st.fogs.filter(f => !f.gone).length < want) { advAddFog(false); st.fogT = 1.1; }
@@ -13062,7 +13079,7 @@ function advUpdateWorld(dt) {
   }
   prune(st.pals, notDead);
   // gloomlings: drift about, make nearby pals sad, and slowly soak up the color
-  const split = R.twist === "split";
+  const split = advTw(R) === "split";
   for (const g of st.lings) {
     g.age += dt; g.life -= dt;
     g.x += (g.vx + gust * 0.6) * dt; g.y += Math.sin(time * 1.3 + g.phase) * 9 * dt;
@@ -13081,10 +13098,12 @@ function advUpdateWorld(dt) {
     }
   }
   prune(st.lings, notDead);
+  if (st.ss && typeof ssWorld === "function") ssWorld(dt, playing);
 }
 
 function advFinish(win) {
   if (!st || st.state === "result") return;
+  if (st.ss && typeof ssFinish === "function") { ssFinish(win); return; }
   const i = st.i, def = st.def, r = st.r;
   const res = { win, time: st.time, bestCombo: st.bestCombo, shoo: st.shoo, cheer: st.cheer, fog: st.fog, lily: st.lily, gust: st.gust, splits: st.splits, missed: st.missed, hugs: st.hugs, allHi: !!(st.fin && st.fin.friends.length && st.fin.friends.every(f => f.state !== "wait")) };
   const prev = adv.gm[i], mask = advGoalsMet(def, res);
@@ -13117,6 +13136,7 @@ function advPause() { if (st && (st.state === "intro" || st.state === "play")) s
 function advOnHidden() { if (scene === "adv") advPause(); }
 function advLeave(to) {
   // back to the map (or into the storybook page that's waiting)
+  if (st && st.ss && typeof ssLeave === "function") { ssLeave(null); return; }
   const R = st && st.result;
   st = null;
   particles.length = 0; confetti.length = 0;
@@ -13267,7 +13287,7 @@ function drawAdvHud() {
   roundRect(8, 8, W - 16, 62, 12); ctx.fill();
   ctx.strokeStyle = C.panelBorder; ctx.lineWidth = 2; ctx.stroke();
   ctx.textBaseline = "middle"; ctx.textAlign = "left";
-  ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText(R.name + " · " + (st.i % 3 + 1) + "/3" + (kind.challenge ? "  ★" : "") + (kind.relaxed ? "  ✿" : ""), 18, 22);
+  ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText(st.ss ? ssHudLabel() : R.name + " · " + (st.i % 3 + 1) + "/3" + (kind.challenge ? "  ★" : "") + (kind.relaxed ? "  ✿" : ""), 18, 22);
   ctx.fillStyle = C.text; fitFont(def.name, W - 150, 14, true, 10); ctx.fillText(def.name, 18, 39);
   if (!def.finale) {
     ctx.textAlign = "right"; font(12, true);
@@ -13311,7 +13331,8 @@ function drawAdvStage() {
   }
   drawAdvFog();
   drawAdvWind();
-  if (R.twist === "split") { // gentle moonlit corners
+  if (st.ss && typeof ssDrawExtras === "function") ssDrawExtras();
+  if (advTw(R) === "split") { // gentle moonlit corners
     const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
     vg.addColorStop(0, "rgba(60,40,90,0)"); vg.addColorStop(1, "rgba(60,40,90," + (0.35 * (1 - st.meter / 140)) + ")");
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
@@ -13319,7 +13340,8 @@ function drawAdvStage() {
   drawParticles();
   drawAdvHud();
   if (st.state === "play" || st.state === "intro") {
-    if (st.hint > 0 || st.state === "intro") advPill(R.hint, 86, R.pill, R.accent);
+    if (st.ss && (st.hint > 0 || st.state === "intro")) { const M = SS_MODS[SS_STAGES[st.ss.k].mod]; advPill(M.hint, 86, M.col, M.bd); }
+    else if (st.hint > 0 || st.state === "intro") advPill(R.hint, 86, R.pill, R.accent);
     else if (st.def.rescue && !st.rescued) advPill("Find & hug the shy " + ADV_REGIONS[st.r].critter.replace("leopard", "snow leopard") + " (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#fff6d8", "#e0c060");
     else if (st.meter >= 100 && st.def.rescue && !st.rescued) advPill("So colorful! Now find the shy friend", 86, "#fff6d8", "#e0c060");
     if (st.combo >= 3 && st.state === "play") {
@@ -13332,8 +13354,8 @@ function drawAdvStage() {
       ctx.restore();
     }
   }
-  if (st.state === "intro") drawAdvIntro();
-  if (st.state === "result") drawAdvResult();
+  if (st.state === "intro") (st.ss ? ssDrawIntro() : drawAdvIntro());
+  if (st.state === "result") (st.ss ? ssDrawResult() : drawAdvResult());
   else if (st.paused) drawAdvPause();
 }
 function drawAdvIntro() {
@@ -13746,10 +13768,20 @@ function drawAdvMap() {
   if (T(5)) { ctx.strokeStyle = "#e8b830"; ctx.lineWidth = 4; roundRect(3, 3, W - 6, H - 6, 16); ctx.stroke(); for (const [x, y] of [[10, 10], [W - 10, 10], [10, H - 10], [W - 10, H - 10]]) drawSparkle(x, y, 4 + Math.sin(time * 4) * 1, "#ffe070"); }
   // bottom bar
   const chal = !!adv.king;
+  const spring = typeof ssOpen === "function" && ssOpen();
+  if (spring) {
+    // four across: Back · Challenge · Treasures · Second Spring
+    const gap = 5, bw = (W - 20 - gap * 3) / 4;
+    uiButtons.push(btn(10, H - 62, bw, 48, "◂ Back", { id: "adv_back", size: 12, bg: "#f5e6ee", border: "#d0b0c0" }));
+    uiButtons.push(btn(10 + (bw + gap), H - 62, bw, 48, kind.challenge ? "★ On" : "★ Chal.", { id: "adv_chal", size: 12, bg: kind.challenge ? "#ffe0a0" : "#fff", border: "#e0a040" }));
+    uiButtons.push(btn(10 + (bw + gap) * 2, H - 62, bw, 48, "Treasures", { id: "adv_treas", size: 11, bg: "#fff4c8", border: "#e0b040" }));
+    uiButtons.push(btn(10 + (bw + gap) * 3, H - 62, bw, 48, "✿ Spring", { id: "ss_open", size: 12, bg: "#d8f5c8", border: "#70b070" }));
+  } else {
   uiButtons.push(btn(10, H - 62, chal ? 70 : 100, 48, "◂ Back", { id: "adv_back", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
   let bx = chal ? 86 : 116;
   if (chal) { uiButtons.push(btn(bx, H - 62, 124, 48, kind.challenge ? "★ Challenge on" : "★ Challenge", { id: "adv_chal", size: 12, bg: kind.challenge ? "#ffe0a0" : "#fff", border: "#e0a040" })); bx += 130; }
   uiButtons.push(btn(bx, H - 62, W - 10 - bx, 48, "Treasures " + advTreasures(adv) + "/" + ADV_TREASURES.length, { id: "adv_treas", size: 13, bg: "#fff4c8", border: "#e0b040" }));
+  }
   if (advSel != null) drawAdvNodeCard(advSel);
   else if (advTreasOpen) drawAdvTreasures();
   updateParticles(frameDt); drawParticles();
@@ -13913,6 +13945,8 @@ function drawCutArt(art, x, y, w, h, t) {
     drawSprite(K, cx, gy - 8 - hop(0), 3.2, false, 0, false, 1, { acc: "cloudcrown", heartEyes: true });
     drawSprite(ANIMALS[0], cx - 80, gy - hop(1), 1.6, false, 0, false, 2, { acc: equippedFor("cat") });
     drawSprite(ANIMALS.find(q => q.id === "bat"), cx + 80, gy - 30 - hop(2) * 2, 1.5, false, 0, false, 3, null);
+  } else if (kind === "kingflower" && typeof drawKingFlowerArt === "function") {
+    drawKingFlowerArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "theend") {
     ctx.fillStyle = "rgba(255,250,245,0.55)"; ctx.fillRect(x, y, w, h);
     ctx.fillStyle = "#e0508a"; font(30, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -17521,6 +17555,989 @@ function v154Action(id) {
   return false;
 }
 
+// v16.0 — Replay update, part 1: Daily Quests, Bloom Seeds + Seed Shop, Collections, Second Spring.
+// New state lives in hc16 (normalized), so older saves load unchanged.
+
+// ---------- state ----------
+let hc16 = null;
+let v16DayOverride = null; // tests only
+function v16Today() { return v16DayOverride || todayKey(); }
+function blankHc16() {
+  return { seeds: 0, seedsEarned: 0, q: null, own: {}, tint: "", trail: "", col: {}, ss: blankSS(), seen: false };
+}
+function blankSS() { return { gm: [0, 0, 0, 0, 0], runs: 0, clears: 0, done: false, crown: false, epi: false }; }
+const V16_QUEST_IDS = () => V16_QUESTS.map(q => q.id);
+function normalizeQuestDay(d) {
+  if (!isObj(d) || typeof d.day !== "string" || !Array.isArray(d.list)) return null;
+  const ids = V16_QUEST_IDS();
+  const list = [];
+  for (const q of d.list.slice(0, 3)) {
+    if (!isObj(q) || !ids.includes(q.id)) continue;
+    list.push({
+      id: q.id, arg: typeof q.arg === "string" ? q.arg.slice(0, 24) : "",
+      need: Math.max(1, Math.min(999, Math.floor(numOr0(q.need)) || 1)),
+      n: Math.max(0, Math.min(999, Math.floor(numOr0(q.n)))),
+      paid: !!q.paid, ready: !!q.ready,
+    });
+  }
+  if (!list.length) return null;
+  return { day: d.day.slice(0, 12), list, rerolled: !!d.rerolled, chest: !!d.chest };
+}
+function normalizeHc16(d) {
+  const o = blankHc16();
+  if (!isObj(d)) return o;
+  o.seeds = Math.max(0, Math.min(9999, Math.floor(numOr0(d.seeds))));
+  o.seedsEarned = Math.max(o.seeds, Math.min(99999, Math.floor(numOr0(d.seedsEarned))));
+  o.q = normalizeQuestDay(d.q);
+  if (isObj(d.own)) for (const it of SEED_ITEMS) if (d.own[it.id] === true) o.own[it.id] = true;
+  o.tint = typeof d.tint === "string" && o.own[d.tint] ? d.tint : "";
+  o.trail = typeof d.trail === "string" && o.own[d.trail] ? d.trail : "";
+  if (isObj(d.col)) for (const s of COLLECTIONS) if (d.col[s.id] === true) o.col[s.id] = true;
+  if (isObj(d.ss)) {
+    const s = d.ss;
+    if (Array.isArray(s.gm)) for (let i = 0; i < 5; i++) o.ss.gm[i] = Math.floor(numOr0(s.gm[i])) & 7;
+    o.ss.runs = Math.max(0, Math.floor(numOr0(s.runs)));
+    o.ss.clears = Math.max(0, Math.floor(numOr0(s.clears)));
+    o.ss.done = !!s.done; o.ss.crown = !!s.crown; o.ss.epi = !!s.epi;
+  }
+  o.seen = !!d.seen;
+  return o;
+}
+function ensureHc16() { if (!hc16 || !hc16.ss) hc16 = normalizeHc16(hc16); return hc16; }
+
+// ---------- Bloom Seeds ----------
+function earnSeeds(n, why) {
+  ensureHc16();
+  n = Math.max(0, Math.floor(n));
+  if (!n) return;
+  hc16.seeds = Math.min(9999, hc16.seeds + n);
+  hc16.seedsEarned = Math.min(99999, hc16.seedsEarned + n);
+  toast("+" + n + " Bloom Seed" + (n === 1 ? "" : "s") + (why ? " · " + why : ""), "#4a9a3a");
+  saveSoon();
+}
+function spendSeeds(n) {
+  ensureHc16();
+  if (hc16.seeds < n) return false;
+  hc16.seeds -= n;
+  return true;
+}
+// tiny pixel seed: a little sprout on a brown seed
+function drawSeedIcon(x, y, u) {
+  u = u || 2;
+  ctx.fillStyle = "#9a6030"; ctx.fillRect(x - 2 * u, y, 4 * u, 3 * u);
+  ctx.fillStyle = "#c88a52"; ctx.fillRect(x - u, y, 2 * u, u);
+  ctx.fillStyle = "#4a9a3a"; ctx.fillRect(x - 0.5 * u, y - 2 * u, u, 2 * u);
+  ctx.fillStyle = "#8ee070"; ctx.fillRect(x - 2.5 * u, y - 3 * u, 2 * u, u); ctx.fillRect(x + 0.5 * u, y - 3.5 * u, 2 * u, u);
+}
+
+// ---------- Daily Quests ----------
+function v16PalsForQuest() {
+  return ANIMALS.filter(a => unlocked[a.id] && !a.beach && !a.secret && a.id !== "gloomking" && a.id !== "rainbow" && (!a.season || seasonOpen(a)));
+}
+const V16_QUESTS = [
+  { id: "hugs", ev: "hug", need: () => 30, text: (q) => "Hug " + q.need + " friends", pay: 40 },
+  { id: "hugs_big", ev: "hug", need: () => 60, text: (q) => "Hug " + q.need + " friends", pay: 70 },
+  { id: "species", ev: "hug", need: () => 5, arg: (rng) => { const p = v16PalsForQuest(); return p.length ? p[Math.floor(rng() * p.length)].id : "cat"; },
+    text: (q) => { const a = ANIMALS.find(x => x.id === q.arg); return "Hug " + (a ? palName(a) : "a friend") + " " + q.need + " times"; }, pay: 45, match: (q, arg) => arg === q.arg },
+  { id: "combo", ev: "combo", need: () => 6, max: true, text: (q) => "Reach a " + q.need + "× hug combo", pay: 40 },
+  { id: "cheer", ev: "cheer", need: () => 3, text: (q) => "Cheer up " + q.need + " sad friends", pay: 40 },
+  { id: "shoo", ev: "shoo", need: () => 5, text: (q) => "Shoo " + q.need + " gloom clouds", pay: 40 },
+  { id: "night", ev: "nighthug", need: () => 5, text: (q) => "Hug " + q.need + " friends at night", pay: 50 },
+  { id: "rain", ev: "rainhug", need: () => 5, ok: () => typeof v12 !== "undefined" && v12 && v12.wx === "rain", text: (q) => "Hug " + q.need + " friends in the rain", pay: 55 },
+  { id: "arcade", ev: "arcade", need: () => 1, text: () => "Play an arcade game", pay: 35 },
+  { id: "arcade2", ev: "arcade", need: () => 3, text: (q) => "Play " + q.need + " arcade games", pay: 60 },
+  { id: "seek", ev: "seek", need: () => 1, text: () => "Find a friend in hide and seek", pay: 40 },
+  { id: "beach", ev: "beach", need: () => 1, ok: () => beachOpen(), text: () => "Visit the beach", pay: 35 },
+  { id: "shell", ev: "shell", need: () => 2, ok: () => beachOpen(), text: (q) => "Pick up " + q.need + " shells at the beach", pay: 45 },
+  { id: "picnic", ev: "picnic", need: () => 1, text: () => "Set out a picnic blanket", pay: 35 },
+  { id: "mail", ev: "mail", need: () => 1, text: () => "Check the mailbox", pay: 30 },
+  { id: "parade", ev: "parade", need: () => 1, text: () => "Watch a dusk parade", pay: 45 },
+  { id: "yard", ev: "yard", need: () => 1, text: () => "Visit the Yard", pay: 30 },
+  { id: "bubble", ev: "bubble", need: () => 3, text: (q) => "Pop " + q.need + " heart bubbles in the Yard", pay: 45 },
+  { id: "adv", ev: "adv", need: () => 1, text: () => "Play a Storybook stage", pay: 45 },
+  { id: "request", ev: "request", need: () => 1, text: () => "Bring a friend someone asked for", pay: 45 },
+  { id: "endless", ev: "endless", need: () => 15, text: (q) => "Hug " + q.need + " friends in Endless Meadow", pay: 45 },
+  { id: "power", ev: "power", need: () => 2, text: (q) => "Catch " + q.need + " power-ups", pay: 40 },
+  { id: "pet", ev: "pet", need: () => 5, text: (q) => "Pet happy friends " + q.need + " times", pay: 35 },
+  { id: "dress", ev: "dress", need: () => 1, ok: () => ACCESSORIES.some(a => ownedAcc[a.id]), text: () => "Change a friend's hat in the Album", pay: 30 },
+  { id: "album", ev: "album", need: () => 1, text: () => "Look through the Album", pay: 25 },
+];
+const V16_QUEST_BY_ID = {};
+for (const q of V16_QUESTS) V16_QUEST_BY_ID[q.id] = q;
+function questEligible(def) {
+  try { return !def.ok || !!def.ok(); } catch (e) { return false; }
+}
+// quests come from a small seeded generator (by day), so they never shift the game's own randomness
+function v16Rng(key) {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return () => { h ^= h << 13; h >>>= 0; h ^= h >> 17; h ^= h << 5; h >>>= 0; return (h % 1000003) / 1000003; };
+}
+function makeQuest(def, rng) {
+  return { id: def.id, arg: def.arg ? def.arg(rng) : "", need: def.need(), n: 0, paid: false };
+}
+function pickQuests(n, avoid, rng) {
+  rng = rng || v16Rng(v16Today());
+  const pool = V16_QUESTS.filter(d => questEligible(d) && !(avoid || []).includes(d.id));
+  const out = [];
+  const usedEv = {};
+  let guard = 0;
+  while (out.length < n && pool.length && guard++ < 80) {
+    const k = Math.floor(rng() * pool.length);
+    const d = pool[k];
+    pool.splice(k, 1);
+    if (usedEv[d.ev]) continue; // three different kinds of play each day
+    usedEv[d.ev] = true;
+    out.push(makeQuest(d, rng));
+  }
+  return out;
+}
+function rollQuests(force) {
+  ensureHc16();
+  const day = v16Today();
+  if (!force && hc16.q && hc16.q.day === day) return false;
+  hc16.q = { day, list: pickQuests(3, null, v16Rng("q" + day)), rerolled: false, chest: false };
+  saveSoon();
+  return true;
+}
+function questText(q) { const d = V16_QUEST_BY_ID[q.id]; return d ? d.text(q) : q.id; }
+function questPay(q) { const d = V16_QUEST_BY_ID[q.id]; return d ? d.pay : 30; }
+function questsAllDone() { return !!(hc16 && hc16.q && hc16.q.list.length === 3 && hc16.q.list.every(q => q.paid)); }
+function qBump(ev, arg, amt) {
+  ensureHc16();
+  if (!hc16.q || hc16.q.day !== v16Today()) rollQuests();
+  let changed = false;
+  for (const q of hc16.q.list) {
+    if (q.paid) continue;
+    const d = V16_QUEST_BY_ID[q.id];
+    if (!d || d.ev !== ev) continue;
+    if (d.match && !d.match(q, arg)) continue;
+    if (d.max) q.n = Math.max(q.n, Math.floor(amt || 0));
+    else q.n += (amt == null ? 1 : amt);
+    if (q.n >= q.need) {
+      q.n = q.need;
+      if (!q.ready) { q.ready = true; softHintSafe("Quest complete! Claim it in Goals ✿", "#4a9a3a"); if (typeof sfxChime === "function") sfxChime(3); }
+    }
+    changed = true;
+  }
+  if (changed) saveSoon();
+}
+function questReady(q) { return !q.paid && q.n >= q.need; }
+function claimQuest(i) {
+  ensureHc16();
+  const q = hc16.q && hc16.q.list[i];
+  if (!q || !questReady(q)) return false;
+  payQuest(q);
+  save();
+  return true;
+}
+function questsClaimable() { return !!(hc16 && hc16.q && (hc16.q.list.some(questReady) || (questsAllDone() && !hc16.q.chest))); }
+function payQuest(q) {
+  if (q.paid) return;
+  q.paid = true;
+  const h = questPay(q);
+  joy += h;
+  toast("Quest done! +" + h + " ♥", C.heart);
+  earnSeeds(1, "quest");
+  if (typeof sfxChime === "function") sfxChime(4);
+  if (questsAllDone()) softHintSafe("All three quests done! Open the chest in Goals.", "#4a9a3a");
+}
+function softHintSafe(t, c) { if (typeof softHint === "function") softHint(t, c); else toast(t, c); }
+function openQuestChest() {
+  ensureHc16();
+  if (!hc16.q || !questsAllDone() || hc16.q.chest) return false;
+  hc16.q.chest = true;
+  joy += 120;
+  toast("Quest chest! +120 ♥", C.heart);
+  earnSeeds(2, "chest");
+  if (typeof sfxUnlock === "function") sfxUnlock();
+  if (typeof spawnConfetti === "function" && !(kind && kind.motion)) spawnConfetti(24);
+  save();
+  return true;
+}
+function rerollQuest(i) {
+  ensureHc16();
+  const Q = hc16.q;
+  if (!Q || Q.rerolled) return false;
+  const q = Q.list[i];
+  if (!q || q.paid || q.n >= q.need) return false;
+  const fresh = pickQuests(1, Q.list.map(x => x.id).concat([q.id]), v16Rng("r" + Q.day + i));
+  if (!fresh.length) return false;
+  Q.list[i] = fresh[0];
+  Q.rerolled = true;
+  save();
+  return true;
+}
+function isNightNow() {
+  try { const L = dayLight(); return L.phase === "night" || L.night > 0.5; } catch (e) { return false; }
+}
+
+// ---------- hooks (wrap existing functions; same scope, so every caller sees them) ----------
+function v16OnHug(c) {
+  if (!c || !c.animal) return;
+  qBump("hug", c.animal.id);
+  qBump("combo", null, combo);
+  if (isNightNow()) qBump("nighthug");
+  if (typeof v12 !== "undefined" && v12 && v12.wx === "rain") qBump("rainhug");
+  v16Trail(c.x, c.y);
+}
+{
+  const f = hugCritter;
+  hugCritter = function (c, a, b) {
+    const was = c && c.state === "float", sad = c && c.sad;
+    const r = f.call(this, c, a, b);
+    if (was && c.state !== "float") { v16OnHug(c); if (sad) qBump("cheer"); }
+    return r;
+  };
+}
+{ const f = shooGloom; shooGloom = function () { const r = f.apply(this, arguments); qBump("shoo"); return r; }; }
+{ const f = petCritter; petCritter = function () { const r = f.apply(this, arguments); qBump("pet"); return r; }; }
+{ const f = activatePowerup; activatePowerup = function () { const r = f.apply(this, arguments); qBump("power"); return r; }; }
+{ const f = collectBubble; collectBubble = function () { const r = f.apply(this, arguments); qBump("bubble"); return r; }; }
+{ const f = openGarden; openGarden = function () { const r = f.apply(this, arguments); qBump("yard"); return r; }; }
+{ const f = openMail; openMail = function () { const r = f.apply(this, arguments); qBump("mail"); return r; }; }
+{ const f = finishRound; finishRound = function () { const live = typeof mg !== "undefined" && mg && mg.state !== "result"; const r = f.apply(this, arguments); if (live) qBump("arcade"); return r; }; }
+{ const f = findHide; findHide = function () { const had = !!(hc154 && hc154.hide); const r = f.apply(this, arguments); if (had && !hc154.hide) qBump("seek"); return r; }; }
+{ const f = startPicnic; startPicnic = function () { const had = !!(hc154 && hc154.picnic); const r = f.apply(this, arguments); if (!had && hc154.picnic) qBump("picnic"); return r; }; }
+{ const f = startParade; startParade = function () { const r = f.apply(this, arguments); if (scene === "parade") qBump("parade"); return r; }; }
+{ const f = openBeach; openBeach = function () { const r = f.apply(this, arguments); if (scene === "beach") qBump("beach"); return r; }; }
+{ const f = beachTap; beachTap = function () { const n = hc154 ? hc154.shells : 0; const r = f.apply(this, arguments); if (hc154 && hc154.shells > n) qBump("shell"); return r; }; }
+{ const f = fulfillRequest; fulfillRequest = function () { const had = !!(hc154 && hc154.req); const r = f.apply(this, arguments); if (had) qBump("request"); return r; }; }
+{ const f = farmHug; farmHug = function () { const r = f.apply(this, arguments); qBump("endless"); return r; }; }
+{ const f = advStartStage; advStartStage = function () { const r = f.apply(this, arguments); if (scene === "adv" && st) qBump("adv"); return r; }; }
+
+// ---------- Seed Shop items (all cosmetic) ----------
+ACC_ART.sprout = { rows: [".l...l.", "llg.gll", "..ggg..", "...g..."], cmap: { l: "#9ae070", g: "#4a9a3a" }, at: (hx, top) => [hx - 3.5, top - 4] };
+ACC_ART.beeband = { rows: ["y.....y", ".k...k.", "kykykyk"], cmap: { y: "#ffd23a", k: "#2c2030" }, at: (hx, top) => [hx - 3.5, top - 3] };
+ACC_ART.mushcap = { rows: ["..rrr..", ".rwrrr.", "rrrrwrr", ".ccccc."], cmap: { r: "#ff5a6a", w: "#fff8f2", c: "#fff0d0" }, at: (hx, top) => [hx - 3.5, top - 4] };
+ACC_ART.rainbowbow = { rows: ["r.....b", "roy.gpb", "rrywgbb", "roy.gpb", "r.....b"], cmap: { r: "#ff6b8a", o: "#ffa860", y: "#ffe066", g: "#90e070", b: "#70c0ff", p: "#c9a0ff", w: "#fff8f2" }, at: (hx, top) => [hx + 1.5, top - 3] };
+ACC_ART.kingcrown = { rows: ["a..p..a", "aa.a.aa", "aaaaaaa", "agapaga"], cmap: { a: "#ffd23a", p: "#ff8ab8", g: "#7ed860" }, at: (hx, top) => [hx - 3.5, top - 4] };
+const V16_HATS = [
+  { id: "sprout", name: "Sprout Cap", short: "Sprout", seed: 4 },
+  { id: "beeband", name: "Bumblebee Band", short: "Bee", seed: 6 },
+  { id: "mushcap", name: "Toadstool Hat", short: "Toad", seed: 7 },
+  { id: "rainbowbow", name: "Rainbow Bow", short: "R.Bow", seed: 9 },
+];
+V16_HATS.forEach(h => ACCESSORIES.push({ id: h.id, name: h.name, short: h.short, seedShop: true }));
+ACCESSORIES.push({ id: "kingcrown", name: "King's Crown", short: "K.Crown", seedShop: true });
+const V16_DECOR = [
+  { id: "glowtulips", name: "Glow Tulips", cat: "plants", seed: 5, cozy: 4, fw: 1, fh: 1, aw: 12, ah: 16, act: "sniff", spots: [[6, 19]],
+    paint(P) {
+      for (const [x, c] of [[2, "#ff9ec8"], [6, "#ffd66b"], [10, "#c9a0ff"]]) {
+        P.r(x, 6, 1, 10, "#4a9a3a"); P.r(x - 1, 2, 3, 4, c); P.p(x - 1, 1, c); P.p(x + 1, 1, c); P.p(x, 3, "#fff8e0");
+      }
+      P.r(0, 14, 12, 2, "#7a4a2a");
+    } },
+  { id: "birdbath", name: "Bird Bath", cat: "furniture", seed: 6, cozy: 5, fw: 1, fh: 1, aw: 12, ah: 18, act: "splash", spots: [[6, 21]],
+    paint(P) {
+      P.r(4, 8, 4, 8, "#cbc3d3"); P.r(2, 15, 8, 3, "#8a8098");
+      P.e(6, 5, 6, 3, "#cbc3d3"); P.e(6, 4.5, 4.5, 1.8, "#7ec8ff"); P.p(4, 4, "#d8f4ff");
+    } },
+  { id: "bloomarch", name: "Bloom Arch", cat: "furniture", seed: 9, cozy: 8, fw: 2, fh: 1, aw: 24, ah: 30, act: "arch", spots: [[12, 32]],
+    paint(P) {
+      P.r(1, 8, 3, 22, "#c88a52"); P.r(20, 8, 3, 22, "#c88a52");
+      for (let x = 1; x < 23; x++) { const y = Math.round(8 - 6 * Math.sin(Math.PI * (x - 1) / 21)); P.r(x, y, 1, 3, "#6cc050"); }
+      const cols = ["#ff8ab8", "#ffd66b", "#c9a0ff", "#fff8e0", "#ff9e7a"];
+      for (let k = 0; k < 9; k++) { const x = 2 + k * 2.5, y = Math.round(7 - 6 * Math.sin(Math.PI * (x - 1) / 21)); P.r(Math.round(x), y, 2, 2, cols[k % 5]); }
+      for (const y of [12, 18, 24]) { P.r(0, y, 2, 2, "#ff8ab8"); P.r(22, y + 2, 2, 2, "#ffd66b"); }
+    } },
+  { id: "wishwell", name: "Wishing Well", cat: "furniture", seed: 12, cozy: 10, fw: 2, fh: 1, aw: 24, ah: 28, act: "watch", spots: [[12, 31]],
+    paint(P) {
+      P.r(3, 4, 2, 14, "#9a5f34"); P.r(19, 4, 2, 14, "#9a5f34");
+      P.r(1, 1, 22, 4, "#ff8ab8"); P.r(1, 1, 22, 1, "#ffb0cc");
+      P.r(11, 5, 2, 7, "#8a6040"); P.r(10, 11, 4, 3, "#c88a52");
+      P.r(1, 16, 22, 12, "#cbc3d3"); P.r(1, 16, 22, 2, "#8a8098");
+      for (const [x, y] of [[3, 20], [11, 21], [18, 19], [7, 24], [15, 25]]) P.r(x, y, 4, 2, "#e4dcea");
+      P.r(3, 17, 18, 1, "#7ec8ff");
+    } },
+];
+V16_DECOR.forEach(d => {
+  const item = Object.assign({ cost: 0, unlock: { seed: true, text: "From the Seed Shop" } }, d);
+  DECOR.push(item); DECOR_BY_ID[item.id] = item;
+});
+const V16_TINTS = [
+  { id: "t_peach", name: "Peach Glow", seed: 5, col: "rgba(255,170,120,0.17)", sw: "#ffc8a0" },
+  { id: "t_mint", name: "Mint Breeze", seed: 5, col: "rgba(110,230,180,0.15)", sw: "#a8f0d0" },
+  { id: "t_lilac", name: "Lilac Haze", seed: 6, col: "rgba(190,150,255,0.17)", sw: "#d8c4ff" },
+  { id: "t_gold", name: "Golden Hour", seed: 8, col: "rgba(255,205,90,0.17)", sw: "#ffe08a" },
+];
+const V16_TRAILS = [
+  { id: "tr_pink", name: "Pink Sparkle Trail", seed: 6, cols: ["#ff8ab8", "#ffc0dc", "#fff"] },
+  { id: "tr_rainbow", name: "Rainbow Trail", seed: 10, cols: ["#ff6b8a", "#ffa860", "#ffe066", "#90e070", "#70c0ff", "#c9a0ff"] },
+  { id: "tr_star", name: "Star Trail", seed: 12, cols: ["#fff4b0", "#ffd23a", "#fff"] },
+];
+const SEED_ITEMS = []
+  .concat(V16_HATS.map(h => ({ id: h.id, name: h.name, kind: "hat", cost: h.seed })))
+  .concat(V16_DECOR.map(d => ({ id: d.id, name: d.name, kind: "decor", cost: d.seed })))
+  .concat(V16_TINTS.map(t => ({ id: t.id, name: t.name, kind: "tint", cost: t.seed })))
+  .concat(V16_TRAILS.map(t => ({ id: t.id, name: t.name, kind: "trail", cost: t.seed })));
+const SEED_KIND_LABEL = { hat: "Hat", decor: "Yard decor", tint: "Meadow tint", trail: "Hug trail" };
+function buySeedItem(id) {
+  ensureHc16();
+  const it = SEED_ITEMS.find(x => x.id === id);
+  if (!it || hc16.own[id]) return false;
+  if (!spendSeeds(it.cost)) { toast("Needs " + it.cost + " Bloom Seeds", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return false; }
+  hc16.own[id] = true;
+  if (it.kind === "hat") ownedAcc[id] = true;
+  if (it.kind === "decor") garden.inv[id] = (garden.inv[id] || 0) + 1;
+  if (it.kind === "tint") hc16.tint = id;
+  if (it.kind === "trail") hc16.trail = id;
+  toast(it.name + (it.kind === "decor" ? " is in your Yard storage!" : it.kind === "hat" ? " added to your wardrobe!" : " is on!"), "#4a9a3a");
+  if (typeof sfxUnlock === "function") sfxUnlock();
+  save();
+  return true;
+}
+function useSeedItem(id) {
+  ensureHc16();
+  const it = SEED_ITEMS.find(x => x.id === id);
+  if (!it || !hc16.own[id]) return false;
+  if (it.kind === "tint") hc16.tint = hc16.tint === id ? "" : id;
+  if (it.kind === "trail") hc16.trail = hc16.trail === id ? "" : id;
+  save();
+  return true;
+}
+function drawV16Tint() {
+  if (!hc16 || !hc16.tint) return;
+  const t = V16_TINTS.find(x => x.id === hc16.tint);
+  if (!t) return;
+  ctx.fillStyle = t.col; ctx.fillRect(0, 0, W, H);
+}
+function v16Trail(x, y) {
+  if (!hc16 || !hc16.trail) return;
+  const t = V16_TRAILS.find(q => q.id === hc16.trail);
+  if (!t) return;
+  const n = (kind && kind.motion) ? 2 : 7;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 20 + Math.random() * 50;
+    particles.push({ kind: "spark", x: x + Math.cos(a) * 6, y: y + Math.sin(a) * 6, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+      life: 0.5 + Math.random() * 0.4, max: 0.9, size: 2.5 + Math.random() * 2.5, color: t.cols[i % t.cols.length] });
+  }
+}
+
+// ---------- Collections ----------
+const COLLECTIONS = [
+  { id: "meadow", name: "Meadow Pals", ids: ["cat", "dog", "bunny", "chick", "duckling"], seeds: 3, col: "#ff9ec8" },
+  { id: "forest", name: "Forest Folk", ids: ["fox", "hedgehog", "raccoon", "redpanda", "squirrel"], seeds: 4, col: "#c88a52" },
+  { id: "water", name: "Water Friends", ids: ["otter", "frog", "penguin", "turtle", "puddleduck"], seeds: 4, col: "#70c0ff" },
+  { id: "sky", name: "Sky Friends", ids: ["bluebird", "dragonfly", "bat", "owl"], seeds: 4, col: "#a0d8ff" },
+  { id: "night", name: "Night Friends", ids: ["owl", "bat", "lanternmoth", "starkitten", "gavenecko"], seeds: 5, col: "#8a78c8" },
+  { id: "secret", name: "Secret Friends", ids: ["gavenecko", "puddleduck", "teacupmouse", "lanternmoth", "starkitten"], seeds: 6, col: "#c9a0ff" },
+  { id: "story", name: "Storybook Heroes", ids: ["squirrel", "owl", "turtle", "leopard", "bat", "gloomking"], seeds: 6, col: "#ffd23a" },
+  { id: "shore", name: "Shore Friends", ids: ["hermit", "piper"], seeds: 3, col: "#f0c070" },
+  { id: "seasons", name: "Four Seasons", ids: ["lamb", "firefly", "fawn", "seal"], seeds: 5, col: "#90e070" },
+  { id: "rares", name: "Rares", ids: ["dragonet", "uni", "moth", "phoenix", "tidepup", "kitsune"], seeds: 10, col: "#e0b030" },
+];
+// only keep friends that really exist in this build
+for (const s of COLLECTIONS) s.ids = s.ids.filter(id => ANIMALS.some(a => a.id === id));
+function colHave(s) { return s.ids.filter(id => unlocked[id]).length; }
+function colDone(s) { return s.ids.length > 0 && colHave(s) === s.ids.length; }
+function checkCollections() {
+  ensureHc16();
+  let paid = 0;
+  for (const s of COLLECTIONS) {
+    if (hc16.col[s.id] || !colDone(s)) continue;
+    hc16.col[s.id] = true;
+    paid++;
+    toast("Set complete: " + s.name + "!", "#c08000");
+    earnSeeds(s.seeds, s.name);
+  }
+  if (paid) save();
+  return paid;
+}
+function drawBadge(x, y, col, on) {
+  ctx.fillStyle = on ? col : "#d8d0dc";
+  ctx.fillRect(x - 4, y + 4, 3, 8); ctx.fillRect(x + 1, y + 4, 3, 8);
+  ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = on ? "#fff8e0" : "#eee8f0";
+  ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+  if (on) { ctx.fillStyle = col; ctx.fillRect(x - 1, y - 2, 2, 4); ctx.fillRect(x - 2, y - 1, 4, 2); }
+}
+
+// ---------- UI: tabs inside Goals and Album, Seeds tab inside Shop ----------
+let goalsTab = "goals", albumTab = "friends";
+function v16TabRow(tabs, cur, y) {
+  const tw = (W - 44 - 6 * (tabs.length - 1)) / tabs.length;
+  tabs.forEach((t, i) => {
+    const on = cur === t[0];
+    uiButtons.push(btn(22 + i * (tw + 6), y, tw, 44, t[1], { id: t[2], size: 13, r: 10, bg: on ? C.btn : "#f5e6ee", border: on ? "#ff80b0" : "#d0b0c0" }));
+  });
+}
+function v16GoalsTabs() {
+  ensureHc16();
+  const dot = questsClaimable();
+  v16TabRow([["goals", "Goals", "v16_gtab_goals"], ["quests", "Daily Quests" + (dot ? " •" : ""), "v16_gtab_quests"]], goalsTab, 70);
+}
+function v16AlbumTabs() {
+  v16TabRow([["friends", "Friends", "v16_atab_friends"], ["sets", "Collections", "v16_atab_sets"]], albumTab, 70);
+}
+function v16SeedLine(x, y, align) {
+  ensureHc16();
+  const label = hc16.seeds + " Bloom Seed" + (hc16.seeds === 1 ? "" : "s");
+  font(12, true); ctx.textBaseline = "middle";
+  const w = ctx.measureText(label).width;
+  const x0 = align === "center" ? x - (w + 14) / 2 : x;
+  drawSeedIcon(x0 + 4, y - 1, 1.6);
+  ctx.fillStyle = "#3f8a32"; ctx.textAlign = "left";
+  ctx.fillText(label, x0 + 14, y);
+}
+function v16DrawQuests() {
+  ensureHc16();
+  rollQuests();
+  const Q = hc16.q;
+  const top = 122, bottom = H - 74;
+  const cardH = 84;
+  const total = 30 + Q.list.length * (cardH + 8) + 96 + 40;
+  setListExtent(top, bottom, total);
+  listClip(top, bottom);
+  let y = top + 4 - listScroll;
+  v16SeedLine(W / 2, y + 12, "center");
+  y += 30;
+  Q.list.forEach((q, i) => {
+    const done = q.paid;
+    ctx.fillStyle = done ? "rgba(200,240,190,0.7)" : "rgba(255,245,250,0.92)";
+    roundRect(24, y, W - 48, cardH, 12); ctx.fill();
+    ctx.strokeStyle = done ? "#80c060" : C.panelBorder; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = done ? "#3f9a48" : C.text;
+    const txt = (done ? "✓ " : "") + questText(q);
+    fitFont(txt, W - 150, 13, true, 9);
+    ctx.fillText(txt, 36, y + 20);
+    // progress bar
+    const bx = 36, bw = W - 210, by = y + 40;
+    ctx.fillStyle = "rgba(60,50,70,0.14)"; roundRect(bx, by, bw, 10, 5); ctx.fill();
+    ctx.fillStyle = done ? "#80c060" : "#ff9ec8"; roundRect(bx, by, Math.max(10, bw * Math.min(1, q.n / q.need)), 10, 5); ctx.fill();
+    ctx.fillStyle = C.textSoft; font(10, true); ctx.textAlign = "left";
+    ctx.fillText(q.n + " / " + q.need, bx + bw + 8, by + 5);
+    font(10, false); ctx.fillStyle = C.textSoft;
+    ctx.fillText("+" + questPay(q) + " ♥  ·  +1", 36, y + 66);
+    drawSeedIcon(36 + ctx.measureText("+" + questPay(q) + " ♥  ·  +1").width + 9, y + 65, 1.4);
+    if (questReady(q)) {
+      listBtn(W - 112, y + 20, 78, 44, "Claim", { id: "v16_claim_" + i, size: 13, r: 10, bg: "#ffe08a", border: "#e0a040" }, top, bottom);
+    } else if (!done && !Q.rerolled) {
+      listBtn(W - 112, y + 20, 78, 44, "Reroll", { id: "v16_reroll_" + i, size: 12, r: 10, bg: "#fff", border: "#d0b0c0" }, top, bottom);
+    }
+    y += cardH + 8;
+  });
+  // bonus chest
+  const all = questsAllDone();
+  ctx.fillStyle = Q.chest ? "rgba(200,240,190,0.7)" : all ? "rgba(255,240,190,0.95)" : "rgba(240,234,242,0.9)";
+  roundRect(24, y, W - 48, 88, 12); ctx.fill();
+  ctx.strokeStyle = all ? "#e0b040" : "#d8c8d0"; ctx.lineWidth = 2; ctx.stroke();
+  drawChestIcon(60, y + 46, all && !Q.chest, Q.chest);
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(13, true);
+  ctx.fillText(Q.chest ? "Chest opened ✓" : "Bonus chest", 92, y + 24);
+  ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText("Finish all three: +120 ♥ and 2 seeds", 92, y + 44);
+  if (all && !Q.chest) listBtn(W - 112, y + 40, 78, 44, "Open", { id: "v16_chest", size: 13, r: 10, bg: "#ffe08a", border: "#e0a040" }, top, bottom);
+  y += 96;
+  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText(Q.rerolled ? "Reroll used today" : "One free reroll a day", W / 2, y + 8);
+  ctx.fillText("New quests at midnight", W / 2, y + 24);
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+function drawChestIcon(x, y, glow, open) {
+  if (glow) { ctx.fillStyle = "rgba(255,230,120," + (0.35 + Math.sin(time * 4) * 0.15) + ")"; ctx.beginPath(); ctx.arc(x, y, 24, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = "#9a5f34"; ctx.fillRect(x - 16, y - 4, 32, 18);
+  ctx.fillStyle = "#c88a52"; ctx.fillRect(x - 14, y - 2, 28, 14);
+  ctx.fillStyle = "#9a5f34"; ctx.fillRect(x - 16, open ? y - 20 : y - 14, 32, 10);
+  ctx.fillStyle = "#e8b078"; ctx.fillRect(x - 14, open ? y - 18 : y - 12, 28, 6);
+  ctx.fillStyle = "#ffd23a"; ctx.fillRect(x - 3, y - 6, 6, 8);
+  if (open) { ctx.fillStyle = "#ff8ab8"; ctx.fillRect(x - 8, y - 8, 4, 4); ctx.fillStyle = "#8ee070"; ctx.fillRect(x + 4, y - 9, 3, 4); }
+}
+function v16DrawCollections() {
+  ensureHc16();
+  const top = 122, bottom = H - 74, rowH = 96;
+  const doneN = COLLECTIONS.filter(s => hc16.col[s.id]).length;
+  setListExtent(top, bottom, 28 + COLLECTIONS.length * rowH + 8);
+  listClip(top, bottom);
+  let y = top + 4 - listScroll;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = C.textSoft; font(11, true);
+  ctx.fillText("Sets complete " + doneN + " / " + COLLECTIONS.length, W / 2 - 60, y + 12);
+  v16SeedLine(W / 2 + 30, y + 12);
+  y += 28;
+  COLLECTIONS.forEach((s, i) => {
+    if (y > bottom || y + rowH < top) { y += rowH; return; }
+    const have = colHave(s), n = s.ids.length, done = !!hc16.col[s.id];
+    ctx.fillStyle = done ? "rgba(255,240,190,0.8)" : "rgba(255,245,250,0.92)";
+    roundRect(24, y, W - 48, rowH - 8, 12); ctx.fill();
+    ctx.strokeStyle = done ? "#e0b040" : C.panelBorder; ctx.lineWidth = 1.5; ctx.stroke();
+    drawBadge(44, y + 22, s.col, done);
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text; font(13, true);
+    ctx.fillText(s.name, 60, y + 18);
+    ctx.textAlign = "right"; font(10, true); ctx.fillStyle = done ? "#a07000" : C.textSoft;
+    ctx.fillText(done ? "Badge earned ✓" : "+" + s.seeds + " seeds", W - 36, y + 18);
+    // progress bar
+    const bx = 60, bw = W - 140, by = y + 32;
+    ctx.fillStyle = "rgba(60,50,70,0.14)"; roundRect(bx, by, bw, 8, 4); ctx.fill();
+    ctx.fillStyle = s.col; roundRect(bx, by, Math.max(8, bw * have / Math.max(1, n)), 8, 4); ctx.fill();
+    ctx.textAlign = "left"; ctx.fillStyle = C.textSoft; font(10, true);
+    ctx.fillText(have + "/" + n, bx + bw + 8, by + 4);
+    // members
+    const step = Math.min(44, (W - 84) / Math.max(1, n));
+    s.ids.forEach((id, k) => {
+      const a = ANIMALS.find(q => q.id === id);
+      if (!a) return;
+      const x = 48 + k * step + step / 2 - 8, yy = y + 66;
+      if (unlocked[id]) drawSprite(a, x, yy, 1.0, false, 0, false, k * 11 + i, null);
+      else { ctx.save(); ctx.globalAlpha = 0.16; drawSprite(a, x, yy, 1.0, false, 0, false, k, null); ctx.restore(); ctx.fillStyle = "#9a90a8"; font(10, true); ctx.textAlign = "center"; ctx.fillText("?", x, yy); }
+    });
+    y += rowH;
+  });
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+function v16DrawSeedShop(top, bottom) {
+  ensureHc16();
+  const rowH = 70;
+  setListExtent(top, bottom, 34 + SEED_ITEMS.length * rowH + 8);
+  let y = top + 4 - listScroll;
+  v16SeedLine(W / 2, y + 12, "center");
+  y += 34;
+  const model = ANIMALS.find(a => a.id === "cat");
+  SEED_ITEMS.forEach((it, i) => {
+    if (y > bottom || y + rowH < top) { y += rowH; return; }
+    const own = !!hc16.own[it.id];
+    const using = (it.kind === "tint" && hc16.tint === it.id) || (it.kind === "trail" && hc16.trail === it.id);
+    ctx.fillStyle = using ? "rgba(255,230,150,0.7)" : own ? "rgba(200,240,190,0.6)" : "rgba(255,245,250,0.92)";
+    roundRect(24, y, W - 48, rowH - 6, 10); ctx.fill();
+    ctx.strokeStyle = own ? "#80c060" : "#a8d890"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.75)"; roundRect(30, y + 6, 50, 50, 8); ctx.fill();
+    if (it.kind === "hat") drawSprite(model, 55, y + 36, 1.7, false, 0, false, i * 30, { acc: it.id });
+    else if (it.kind === "decor") { const d = DECOR_BY_ID[it.id]; if (typeof decorPreview === "function" && d) decorPreview(d, 55, y + 31, 44); }
+    else if (it.kind === "tint") {
+      const t = V16_TINTS.find(q => q.id === it.id);
+      const g = ctx.createLinearGradient(0, y + 10, 0, y + 50); g.addColorStop(0, "#a8d8ff"); g.addColorStop(1, "#ffe8f0");
+      ctx.fillStyle = g; roundRect(36, y + 12, 38, 38, 6); ctx.fill();
+      ctx.fillStyle = "#7ec850"; ctx.fillRect(36, y + 40, 38, 10);
+      ctx.fillStyle = t.col.replace(/0\.1\d\)/, "0.45)"); roundRect(36, y + 12, 38, 38, 6); ctx.fill();
+    } else {
+      const t = V16_TRAILS.find(q => q.id === it.id);
+      for (let k = 0; k < 6; k++) drawSparkle(42 + k * 5 + Math.sin(time * 3 + k) * 2, y + 44 - k * 5, 2 + (k % 2), t.cols[k % t.cols.length]);
+      drawHeart(70, y + 18, 5, C.heart);
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text; fitFont(it.name, W - 210, 13, true, 9);
+    ctx.fillText(it.name, 88, y + 20);
+    ctx.fillStyle = C.textSoft; font(10, false);
+    ctx.fillText(SEED_KIND_LABEL[it.kind] + (own ? (using ? " · in use" : " · owned") : ""), 88, y + 40);
+    if (!own) {
+      const can = hc16.seeds >= it.cost;
+      listBtn(W - 108, y + 10, 78, 44, it.cost + "     ", { id: "v16_sbuy_" + it.id, size: 13, r: 10, bg: can ? "#c8f0b0" : "#eee4ea", border: can ? "#70b050" : "#d8c8d0", color: can ? "#2f6a28" : "#a898a8" }, top, bottom);
+      if (y + 10 >= top - 2 && y + 54 <= bottom + 2) drawSeedIcon(W - 108 + 54, y + 31, 1.6);
+    } else if (it.kind === "tint" || it.kind === "trail") {
+      listBtn(W - 108, y + 10, 78, 44, using ? "Off" : "Use", { id: "v16_suse_" + it.id, size: 13, r: 10, bg: using ? "#fff" : "#d0e8ff", border: using ? "#d0b0c0" : "#80b0e0" }, top, bottom);
+    } else {
+      ctx.textAlign = "right"; ctx.fillStyle = "#3f9a48"; font(11, true);
+      ctx.fillText(it.kind === "hat" ? "Wear in Album" : "In Yard storage", W - 34, y + 32);
+    }
+    y += rowH;
+  });
+}
+
+// ---------- Second Spring (new game plus) ----------
+// Five remixed stages, one per region. Uses the storybook stage engine with st.ss set,
+// and keeps its own stars in hc16.ss, so the main adventure save is never touched.
+const SS_MODS = {
+  windy: { name: "Windy", tw: "wind", hint: "Windy! Gusts push everyone along", col: "#e6f0ff", bd: "#a0c8ff" },
+  starry: { name: "Starry", tw: "", hint: "Starry! Tap falling stars for color", col: "#fff6d0", bd: "#e0c060" },
+  foggy: { name: "Foggy", tw: "fog", hint: "Foggy! Tap the fog to clear it", col: "#eef2f4", bd: "#b8c4cc" },
+  puddly: { name: "Slushy", tw: "puddle", hint: "Slushy! Tap puddles into lily pads", col: "#dcf2fa", bd: "#70c8e0" },
+  moonlit: { name: "Moonlit", tw: "split", hint: "Moonlit! Stars fall and gloomlings split", col: "#eee2ff", bd: "#c9a0ff", stars: true },
+};
+const SS_STAGES = [
+  { r: 0, name: "Blossom Breeze", mod: "windy", dur: 120, par: 58, gEvery: 4.2, gMax: 3, sad: 0.22, pat: "wave", x: { k: "combo", n: 8, text: "Reach an 8× combo" } },
+  { r: 1, name: "Wishing Woods", mod: "starry", dur: 125, par: 60, gEvery: 4.0, gMax: 3, sad: 0.25, pat: "loop", x: { k: "star", n: 5, text: "Catch 5 falling stars" } },
+  { r: 2, name: "Misty Marsh", mod: "foggy", dur: 125, par: 62, gEvery: 3.9, gMax: 3, sad: 0.25, pat: "dive", x: { k: "fog", n: 15, text: "Clear 15 fog puffs" } },
+  { r: 3, name: "Thawing Peaks", mod: "puddly", dur: 130, par: 66, gEvery: 3.7, gMax: 4, sad: 0.28, pat: "wave", x: { k: "lily", n: 6, text: "Make 6 lily pads" } },
+  { r: 4, name: "Castle Garden", mod: "moonlit", dur: 135, par: 72, gEvery: 3.6, gMax: 4, sad: 0.3, pat: "loop", x: { k: "cheer", n: 8, text: "Cheer up 8 sad pals" } },
+];
+function ssOpen() { return !!(typeof adv !== "undefined" && adv && adv.ended); }
+function ssWon(k) { ensureHc16(); return !!(hc16.ss.gm[k] & 1); }
+function ssStageOpen(k) { return ssOpen() && (k === 0 || ssWon(k - 1)); }
+function ssStars(k) { ensureHc16(); const m = hc16.ss.gm[k] || 0; return (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1); }
+function ssTotalStars() { let n = 0; for (let k = 0; k < 5; k++) n += ssStars(k); return n; }
+let ssSel = null;
+function openSSMap() {
+  if (!ssOpen()) { toast("Second Spring opens after the Gloom King's story", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return false; }
+  st = null; ssSel = null;
+  scene = "ssmap";
+  particles.length = 0; confetti.length = 0;
+  setMusicMode("adv_map");
+  ensureHc16();
+  return true;
+}
+function ssStartStage(k) {
+  if (k < 0 || k > 4 || !ssStageOpen(k)) return false;
+  const S = SS_STAGES[k], M = SS_MODS[S.mod];
+  const def = { name: S.name, dur: S.dur, par: S.par, gEvery: S.gEvery, gMax: S.gMax, sad: S.sad, x: S.x };
+  st = {
+    i: S.r * 3 + 1, r: S.r, def, state: "intro", t: 0, time: 0, paused: false, meter: 0, pals: [], lings: [], spawnT: 0.2,
+    gT: 2.0, combo: 0, comboT: 0, bestCombo: 0, shoo: 0, cheer: 0, fog: 0, lily: 0, gust: 0, splits: 0, missed: 0,
+    hugs: 0, result: null, rt: 0, fogs: [], puddles: [], fogT: 0, pudT: 2.5, wind: { cd: 4, on: 0, dir: 1 },
+    rescueC: null, rescued: false, hint: 3.2,
+    ss: { k, mod: S.mod, tw: M.tw, pat: S.pat, stars: [], starT: 1.5, caught: 0, starry: S.mod === "starry" || !!M.stars },
+  };
+  scene = "adv"; advSel = null; ssSel = null;
+  particles.length = 0; floatTexts.length = 0; confetti.length = 0;
+  for (let n = 0; n < 3; n++) advSpawnPal();
+  if (M.tw === "fog") for (let n = 0; n < 7; n++) advAddFog(true);
+  setMusicMode("adv_r" + S.r);
+  ensureHc16(); hc16.ss.runs++;
+  qBump("adv");
+  return true;
+}
+function advTw(R) { return st && st.ss ? st.ss.tw : R.twist; }
+// called at the end of advUpdateWorld while a Second Spring stage runs
+function ssWorld(dt, playing) {
+  const S = st.ss;
+  // remixed gloom patterns
+  for (const g of st.lings) {
+    if (S.pat === "wave") g.y += Math.sin(time * 3 + g.phase) * 26 * dt;
+    else if (S.pat === "loop") { g.x += Math.cos(time * 1.8 + g.phase) * 30 * dt; g.y += Math.sin(time * 1.8 + g.phase) * 30 * dt; }
+    else if (S.pat === "dive") g.y += Math.sin(time * 1.1 + g.phase) * 44 * dt;
+    const [y0, y1] = advYRange();
+    g.y = clamp(g.y, y0 - 40, y1 - 20);
+  }
+  if (!S.starry) return;
+  if (playing) {
+    S.starT -= dt;
+    if (S.starT <= 0 && S.stars.length < 3) {
+      S.stars.push({ x: 30 + Math.random() * (W - 60), y: 90, vy: 34 + Math.random() * 16, t: 0 });
+      S.starT = 2.0 + Math.random() * 1.2;
+    }
+  }
+  const [, y1] = advYRange();
+  for (const s of S.stars) { s.t += dt; s.y += s.vy * dt; if (s.y > y1 + 30) s.dead = true; }
+  prune(S.stars, notDead);
+}
+function ssTap(p) {
+  const S = st.ss;
+  if (!S.starry) return false;
+  for (const s of S.stars) {
+    if (dist2(p.x, p.y, s.x, s.y) < 30 * 30) {
+      s.dead = true; S.caught++;
+      advGain(4);
+      if (typeof spawnSparkles === "function") spawnSparkles(s.x, s.y, 10);
+      if (typeof sfxChime === "function") sfxChime(S.caught + 3);
+      addFloat({ x: s.x, y: s.y - 14, text: "★ " + S.caught, life: 0.8, vy: -26, color: "#d0a000", size: 13 });
+      prune(S.stars, notDead);
+      return true;
+    }
+  }
+  return false;
+}
+function ssDrawExtras() {
+  const S = st.ss;
+  if (S.starry) for (const s of S.stars) {
+    const tw = 1 + Math.sin(s.t * 8) * 0.15;
+    ctx.fillStyle = "rgba(255,240,170,0.35)"; ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffd23a"; drawStarShape(s.x, s.y, 9 * tw, 1, 1);
+    ctx.fillStyle = "rgba(255,248,200,0.8)"; ctx.fillRect(s.x - 1, s.y - 22, 2, 8);
+  }
+  // spring petals drifting over every remix stage
+  const n = (kind && kind.motion) ? 4 : 10;
+  for (let i = 0; i < n; i++) {
+    const x = ((i * 83 + time * (14 + i % 3 * 6)) % (W + 20)) - 10, y = 100 + ((i * 61 + time * 22) % Math.max(100, H - 220));
+    ctx.fillStyle = i % 2 ? "#ffc0dc" : "#fff0f6"; ctx.fillRect(x, y, 3, 2); ctx.fillRect(x + 1, y + 2, 2, 1);
+  }
+}
+function ssThird(def, res) {
+  if (def.x.k === "star") return (res.stars || 0) >= def.x.n;
+  return advThirdStar(def, res);
+}
+function ssGoalTexts(def) { return ["Bring back the color", advSecondText(def), def.x.k === "star" ? def.x.text : advThirdText(def)]; }
+function ssFinish(win) {
+  if (!st || st.state === "result") return;
+  ensureHc16();
+  const S = st.ss, k = S.k, def = st.def, SS = hc16.ss;
+  const res = { win, time: st.time, bestCombo: st.bestCombo, shoo: st.shoo, cheer: st.cheer, fog: st.fog, lily: st.lily, gust: st.gust, splits: st.splits, missed: st.missed, hugs: st.hugs, stars: S.caught };
+  let mask = 0;
+  if (win) { mask = 1; if (advSecondStar(def, res)) mask |= 2; if (ssThird(def, res)) mask |= 4; }
+  const prev = SS.gm[k];
+  SS.gm[k] = prev | mask;
+  const newStars = [1, 2, 4].filter(b => (mask & b) && !(prev & b)).length;
+  let hearts = 0, seeds = 0, crown = false, epi = false;
+  if (win) {
+    hearts = (!(prev & 1) ? 60 + k * 15 : 12) + newStars * 20;
+    seeds = newStars;
+    if (!SS.done && SS.gm.every(m => m & 1)) {
+      SS.done = true; SS.clears++;
+      seeds += 5;
+      if (!SS.crown) { SS.crown = true; ownedAcc.kingcrown = true; crown = true; }
+      if (!SS.epi) epi = true;
+    } else if (k === 4 && SS.done) SS.clears++;
+    if (typeof sfxVictory === "function") sfxVictory();
+    if (typeof spawnConfetti === "function") spawnConfetti(30);
+  } else {
+    hearts = Math.floor(st.meter / 20);
+    if (typeof sfxMiss === "function") sfxMiss();
+  }
+  joy += hearts;
+  st.result = { win, mask, prev, stars: mask ? [1, 2, 4].filter(b => mask & b).length : 0, hearts, seeds, crown, epi, meter: Math.round(st.meter) };
+  st.state = "result"; st.rt = 0;
+  if (seeds) earnSeeds(seeds, "Second Spring");
+  if (crown) toast("King's Crown added to your wardrobe!", "#c08000");
+  if (typeof checkAchievements === "function") checkAchievements();
+  save();
+}
+function ssLeave(next) {
+  const R = st && st.result;
+  st = null;
+  particles.length = 0; confetti.length = 0;
+  if (R && R.epi) { startCutscene("ss_end", () => { hc16.ss.epi = true; save(); openSSMap(); }); return; }
+  if (next != null && ssStageOpen(next)) { ssStartStage(next); return; }
+  openSSMap();
+}
+function ssDrawIntro() {
+  const k = st.t, def = st.def, S = SS_STAGES[st.ss.k], M = SS_MODS[S.mod];
+  ctx.fillStyle = "rgba(40,20,50,0.22)"; ctx.fillRect(0, 0, W, H);
+  const top = H / 2 - 110, e = easeOutBack(Math.min(1, k / 0.35));
+  ctx.save(); ctx.translate(W / 2, top + 90); ctx.scale(e, e); ctx.translate(-W / 2, -(top + 90));
+  solidPanel(34, top, W - 68, 196);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#5aa848"; font(11, true); ctx.fillText("Second Spring · Stage " + (st.ss.k + 1) + " / 5", W / 2, top + 24);
+  ctx.fillStyle = C.text; font(19, true); ctx.fillText(def.name, W / 2, top + 50);
+  ctx.fillStyle = M.col; roundRect(W / 2 - 50, top + 66, 100, 22, 11); ctx.fill();
+  ctx.strokeStyle = M.bd; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(11, true); ctx.fillText(M.name, W / 2, top + 77);
+  font(11.5, false);
+  const have = hc16.ss.gm[st.ss.k] || 0;
+  ssGoalTexts(def).forEach((g, j) => { drawStarShape(64, top + 108 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 140, 11.5, false, 9); ctx.fillText(g, 80, top + 109 + j * 24); });
+  ctx.restore();
+}
+function ssDrawResult() {
+  const R = st.result, t = st.rt;
+  ctx.fillStyle = "rgba(40,20,50," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
+  const ph = R.win ? 380 : 280, top = Math.round(H / 2 - ph / 2);
+  solidPanel(22, top, W - 44, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (R.win) {
+    ctx.fillStyle = C.text; font(20, true); ctx.fillText("Spring is blooming!", W / 2, top + 30);
+    for (let i = 0; i < 3; i++) {
+      const s0 = t - 0.35 - i * 0.22, kk = s0 <= 0 ? 0 : easeOutBack(Math.min(1, s0 / 0.3));
+      if (s0 > 0 && s0 - frameDt <= 0 && (R.mask >> i) & 1 && typeof sfxStar === "function") sfxStar(i);
+      drawStarShape(W / 2 + (i - 1) * 54, top + 74 - (i === 1 ? 5 : 0), i === 1 ? 22 : 19, (R.mask >> i) & 1, Math.max(0.01, kk));
+    }
+    font(11.5, false);
+    ssGoalTexts(st.def).forEach((txt, j) => {
+      const got = (R.mask >> j) & 1, before = (R.prev >> j) & 1;
+      ctx.textAlign = "left"; ctx.fillStyle = got ? "#3f9a48" : "#a898a8";
+      fitFont((got ? "✓ " : "· ") + txt + (got && !before ? "  NEW" : ""), W - 100, 11.5, false, 9);
+      ctx.fillText((got ? "✓ " : "· ") + txt + (got && !before ? "  NEW" : ""), 46, top + 116 + j * 20);
+    });
+    ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(11, false);
+    ctx.fillText("Best ★ " + ssStars(st.ss.k) + " / 3  ·  Time " + fmtClock(st.time), W / 2, top + 184);
+    ctx.fillStyle = C.heart; font(20, true);
+    ctx.fillText("♥ +" + R.hearts, W / 2 - (R.seeds ? 40 : 0), top + 212);
+    if (R.seeds) { drawSeedIcon(W / 2 + 34, top + 212, 2); ctx.fillStyle = "#3f8a32"; font(18, true); ctx.textAlign = "left"; ctx.fillText("+" + R.seeds, W / 2 + 44, top + 212); ctx.textAlign = "center"; }
+    if (R.crown) { ctx.fillStyle = "#c08000"; font(12, true); ctx.fillText("✦ King's Crown unlocked!", W / 2, top + 240); }
+    const K = ANIMALS.find(a => a.id === "gloomking");
+    const hop = (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 5)) * 6;
+    if (K) drawSprite(K, W / 2, top + ph - 100 - hop, 1.7, false, 0, false, 5, { acc: R.crown || ownedAcc.kingcrown ? "kingcrown" : "cloudcrown", heartEyes: true });
+  } else {
+    ctx.fillStyle = C.text; font(19, true); ctx.fillText("Almost bloomed!", W / 2, top + 34);
+    ctx.fillStyle = C.textSoft; font(12, false);
+    ctx.fillText("You brought back " + R.meter + "% of the color!", W / 2, top + 64);
+    ctx.fillText("Try again whenever you like ♥", W / 2, top + 84);
+    if (R.hearts) { ctx.fillStyle = C.heart; font(16, true); ctx.fillText("♥ +" + R.hearts + " for trying", W / 2, top + 114); }
+    drawSprite(ANIMALS[0], W / 2, top + 170, 1.7, false, 0, false, 5, { acc: equippedFor("cat") });
+  }
+  uiButtons = [];
+  if (t > 0.5) {
+    const by = top + ph - 62;
+    const items = [["Retry", "adv_retry", "#d0ffd8", "#70c080"], ["Map", "adv_map", "#e8d0ff", "#c090e0"]];
+    if (R.win && st.ss.k < 4 && !R.epi) items.push(["Next ▸", "adv_next", C.btn, "#ff80b0"]);
+    if (R.win && R.epi) items.push(["Story ▸", "adv_map", C.btn, "#ff80b0"]);
+    const n = items.length, gap = 8, bw = (W - 60 - gap * (n - 1)) / n;
+    items.forEach((it, j) => uiButtons.push(btn(30 + j * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
+  }
+}
+function ssHudLabel() {
+  const S = SS_STAGES[st.ss.k];
+  return "Second Spring · " + (st.ss.k + 1) + "/5 · " + SS_MODS[S.mod].name + (st.ss.starry ? "  ★" + st.ss.caught : "");
+}
+// map: a soft spring path with five blossoms
+function ssNodePos(k) {
+  const top = 150, bot = H - 110, step = (bot - top) / 4;
+  return { x: k % 2 ? W - 96 : 96, y: bot - k * step };
+}
+function drawSSMap() {
+  ensureHc16();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#bfe6ff"); g.addColorStop(0.55, "#fff0f6"); g.addColorStop(1, "#d8f4c0");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // rolling hills + blossoms
+  ctx.fillStyle = "#a8e08a"; ctx.beginPath(); ctx.ellipse(W * 0.25, H - 30, 220, 120, 0, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#8fd070"; ctx.beginPath(); ctx.ellipse(W * 0.85, H - 10, 220, 140, 0, Math.PI, 0); ctx.fill();
+  for (let i = 0; i < 22; i++) {
+    const x = (i * 71) % W, y = H - 120 + ((i * 37) % 110);
+    ctx.fillStyle = C.flower[i % 6]; ctx.fillRect(x, y, 4, 4); ctx.fillStyle = "#5aa848"; ctx.fillRect(x + 1, y + 4, 2, 4);
+  }
+  const n = (kind && kind.motion) ? 5 : 14;
+  for (let i = 0; i < n; i++) {
+    const x = ((i * 53 + time * 12) % (W + 20)) - 10, y = 80 + ((i * 97 + time * 18) % (H - 160));
+    ctx.fillStyle = i % 2 ? "#ffc0dc" : "#fff"; ctx.fillRect(x, y, 3, 2);
+  }
+  // path
+  for (let k = 0; k < 4; k++) {
+    const a = ssNodePos(k), b = ssNodePos(k + 1);
+    const m = Math.max(3, Math.floor(Math.hypot(b.x - a.x, b.y - a.y) / 12));
+    for (let j = 1; j < m; j++) { const t = j / m; ctx.fillStyle = ssWon(k) ? "rgba(255,250,240,0.95)" : "rgba(210,205,220,0.8)"; ctx.fillRect(a.x + (b.x - a.x) * t - 2, a.y + (b.y - a.y) * t - 2, 4, 4); }
+  }
+  uiButtons = [];
+  for (let k = 0; k < 5; k++) {
+    const p = ssNodePos(k), S = SS_STAGES[k], R = ADV_REGIONS[S.r], open = ssStageOpen(k), won = ssWon(k);
+    ctx.fillStyle = "rgba(60,40,70,0.18)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 20, 18, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = won ? R.accent : open ? "#fff" : "#d8d2de";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = won ? "#fff" : open ? "#90d070" : "#b8b0c0"; ctx.lineWidth = 3; ctx.stroke();
+    // blossom in the middle
+    if (open) { for (let q = 0; q < 5; q++) { const a = q * Math.PI * 2 / 5 + time * 0.3; ctx.fillStyle = won ? "#fff" : "#ffb0cc"; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * 6, p.y + Math.sin(a) * 6, 4, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = "#ffd23a"; ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.fillStyle = "#9a90a8"; font(12, true); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🔒", p.x, p.y + 1); }
+    for (let s = 0; s < 3; s++) drawStarShape(p.x + (s - 1) * 11, p.y + 28, 5, (hc16.ss.gm[k] >> s) & 1, 1);
+    // label
+    const left = p.x < W / 2;
+    ctx.textAlign = left ? "left" : "right"; ctx.textBaseline = "middle";
+    const lx = left ? p.x + 30 : p.x - 30;
+    ctx.fillStyle = open ? C.text : "#9a90a8"; fitFont(S.name, 150, 13, true, 9); ctx.fillText(S.name, lx, p.y - 8);
+    ctx.fillStyle = open ? "#5aa848" : "#a898a8"; font(10, true); ctx.fillText(R.name + " · " + SS_MODS[S.mod].name, lx, p.y + 9);
+    uiButtons.push({ x: p.x - 28, y: p.y - 28, w: 56, h: 64, id: "ss_node_" + k });
+  }
+  // header
+  ctx.fillStyle = "rgba(255,250,245,0.96)"; roundRect(8, 8, W - 16, 62, 14); ctx.fill();
+  ctx.strokeStyle = "#90d070"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText("✿ Second Spring ✿", W / 2, 30);
+  ctx.fillStyle = "#5aa848"; font(12, true);
+  const sub = "★ " + ssTotalStars() + " / 15" + (hc16.ss.done ? "  ·  The King's garden is blooming" : "  ·  A remix of the storybook");
+  fitFont(sub, W - 36, 12, true, 9); ctx.fillText(sub, W / 2, 53);
+  uiButtons.push(btn(10, H - 62, 110, 48, "◂ Storybook", { id: "ss_back", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
+  if (hc16.ss.epi) uiButtons.push(btn(W - 130, H - 62, 120, 48, "Epilogue", { id: "ss_epi", size: 13, bg: "#ffe6f0", border: "#ff9ec8" }));
+  if (ssSel != null) drawSSCard(ssSel);
+}
+function drawSSCard(k) {
+  const S = SS_STAGES[k], M = SS_MODS[S.mod], R = ADV_REGIONS[S.r];
+  ctx.fillStyle = "rgba(40,20,50,0.4)"; ctx.fillRect(0, 0, W, H);
+  const ph = 290, top = Math.round(H / 2 - ph / 2);
+  solidPanel(28, top, W - 56, ph);
+  uiButtons = [];
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#5aa848"; font(11, true); ctx.fillText(R.name + " · Stage " + (k + 1) + " / 5", W / 2, top + 26);
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText(S.name, W / 2, top + 52);
+  ctx.fillStyle = M.col; roundRect(W / 2 - 60, top + 68, 120, 24, 12); ctx.fill();
+  ctx.strokeStyle = M.bd; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(12, true); ctx.fillText(M.name, W / 2, top + 80);
+  ctx.fillStyle = C.textSoft; font(11, false); fitFont(M.hint, W - 90, 11, false, 8.5); ctx.fillText(M.hint, W / 2, top + 106);
+  const have = hc16.ss.gm[k] || 0;
+  ssGoalTexts(S).forEach((g, j) => { drawStarShape(58, top + 134 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 130, 11.5, false, 9); ctx.fillText(g, 74, top + 135 + j * 24); });
+  uiButtons.push(btn(44, top + ph - 64, (W - 100) / 2, 48, "Close", { id: "ss_close", size: 14, bg: "#fff", border: "#d0b0c0" }));
+  uiButtons.push(btn(56 + (W - 100) / 2, top + ph - 64, (W - 100) / 2, 48, "Play ▸", { id: "ss_play", size: 15 }));
+}
+
+// epilogue: the King plants a flower
+ADV_CUTS.ss_end = [
+  { art: "kingflower:0", text: "When spring came again, the Gloom King knelt in the meadow with one tiny seed." },
+  { art: "kingflower:1", text: "He watered it with the softest little drizzle he could make." },
+  { art: "kingflower:2", text: "Up popped a flower, bright as a hug. “For everyone,” he said, and smiled." },
+];
+function drawKingFlowerArt(n, x, y, w, h, t, cx, gy) {
+  const K = ANIMALS.find(q => q.id === "gloomking");
+  const hop = k => (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 4 + k)) * 4;
+  const fx = cx + 54;
+  // little soil mound
+  ctx.fillStyle = "#8a5a3a"; ctx.beginPath(); ctx.ellipse(fx, gy + 4, 22, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#a8724a"; ctx.fillRect(fx - 10, gy - 1, 20, 3);
+  if (K) drawSprite(K, cx - 40, gy - 20 - hop(0), 2.6, false, 0, false, 1, { acc: ownedAcc.kingcrown ? "kingcrown" : "cloudcrown", heartEyes: n === 2 });
+  if (n === 0) {
+    ctx.fillStyle = "#9a6030"; ctx.fillRect(fx - 3, gy - 6, 6, 5);
+    drawSparkle(fx + 12, gy - 20, 2 + Math.sin(t * 4), "#fff4b0");
+  } else if (n === 1) {
+    ctx.fillStyle = "#e2d4fa"; ctx.beginPath(); ctx.arc(fx - 6, gy - 70, 12, 0, Math.PI * 2); ctx.arc(fx + 8, gy - 72, 14, 0, Math.PI * 2); ctx.arc(fx + 2, gy - 62, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#7ec8ff";
+    for (let k = 0; k < 6; k++) { const yy = gy - 52 + ((t * 40 + k * 9) % 44); ctx.fillRect(fx - 10 + k * 4, yy, 2, 5); }
+    ctx.fillStyle = "#4a9a3a"; ctx.fillRect(fx - 1, gy - 12, 2, 10);
+    ctx.fillStyle = "#8ee070"; ctx.fillRect(fx - 6, gy - 14, 5, 3); ctx.fillRect(fx + 1, gy - 16, 5, 3);
+  } else {
+    const grow = Math.min(1, t % 6 / 1.2);
+    const sh = Math.round(30 * Math.max(0.6, grow));
+    ctx.fillStyle = "#4a9a3a"; ctx.fillRect(fx - 2, gy - sh, 4, sh);
+    ctx.fillStyle = "#6cc050"; ctx.fillRect(fx - 12, gy - 16, 10, 4); ctx.fillRect(fx + 2, gy - 22, 10, 4);
+    const hy = gy - sh - 8;
+    ctx.fillStyle = "#ff8ab8";
+    for (let q = 0; q < 6; q++) { const a = q * Math.PI / 3; ctx.beginPath(); ctx.arc(fx + Math.cos(a) * 9, hy + Math.sin(a) * 9, 6, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = "#ffd23a"; ctx.beginPath(); ctx.arc(fx, hy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff8e0"; ctx.fillRect(fx - 2, hy - 3, 2, 2);
+    const pals = ["cat", "bunny", "squirrel"].map(id => ANIMALS.find(a => a.id === id)).filter(Boolean);
+    pals.forEach((a, k) => drawSprite(a, x + 34 + k * 30, gy - 4 - hop(k + 1), 1.1, false, 0, false, k, { heartEyes: true }));
+    for (let k = 0; k < 4; k++) drawHeart(fx + Math.cos(t * 1.4 + k * 1.6) * 34, hy - 10 + Math.sin(t * 1.4 + k * 1.6) * 16, 4, C.heart);
+  }
+}
+
+// ---------- tick, scenes, actions ----------
+let v16T = 0;
+function v16Tick(dt) {
+  v16T -= dt;
+  if (v16T > 0) return;
+  v16T = 1;
+  ensureHc16();
+  rollQuests();
+  checkCollections();
+}
+function v16Scene(s) { return s === "ssmap"; }
+function v16Step(dt) { if (scene === "ssmap") { drawSSMap(); updateParticles(dt); drawParticles(); } }
+function v16Leave() {
+  if (scene === "ssmap") { if (ssSel != null) ssSel = null; else openAdvMap(); return true; }
+  return false;
+}
+function v16Action(id) {
+  if (!id) return false;
+  ensureHc16();
+  if (id === "album") { qBump("album"); albumTab = "friends"; }
+  if (id === "ach") goalsTab = "goals";
+  if (id.startsWith("wear_") && accOptions(id.slice(5)).length) qBump("dress");
+  if (id === "v16_gtab_goals" || id === "v16_gtab_quests") { goalsTab = id.slice(9); listScroll = 0; listMax = 0; if (goalsTab === "quests") rollQuests(); return true; }
+  if (id === "v16_atab_friends" || id === "v16_atab_sets") { albumTab = id.slice(9); listScroll = 0; listMax = 0; return true; }
+  if (id.startsWith("v16_reroll_")) { if (!rerollQuest(+id.slice(11)) && typeof sfxNope === "function") sfxNope(); return true; }
+  if (id === "v16_chest") { openQuestChest(); return true; }
+  if (id.startsWith("v16_claim_")) { claimQuest(+id.slice(10)); return true; }
+  if (id.startsWith("v16_sbuy_")) { buySeedItem(id.slice(9)); return true; }
+  if (id.startsWith("v16_suse_")) { useSeedItem(id.slice(9)); return true; }
+  if (id === "ss_open") { openSSMap(); return true; }
+  if (id === "ss_back") { ssSel = null; openAdvMap(); return true; }
+  if (id === "ss_close") { ssSel = null; return true; }
+  if (id === "ss_epi") { startCutscene("ss_end", openSSMap); return true; }
+  if (id.startsWith("ss_node_")) {
+    const k = +id.slice(8);
+    if (!ssStageOpen(k)) { toast("Finish " + SS_STAGES[k - 1].name + " first", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return true; }
+    ssSel = k; return true;
+  }
+  if (id === "ss_play") { const k = ssSel; ssSel = null; if (k != null) ssStartStage(k); return true; }
+  // stage buttons while a Second Spring stage is running
+  if (st && st.ss && scene === "adv") {
+    if (id === "adv_retry") { const k = st.ss.k; st = null; ssStartStage(k); return true; }
+    if (id === "adv_next") { ssLeave(st.ss.k + 1); return true; }
+    if (id === "adv_map") { ssLeave(null); return true; }
+  }
+  return false;
+}
+function v16Pointer(p) {
+  if (scene === "ssmap" && ssSel != null) { ssSel = null; return true; }
+  return false;
+}
+const v16Api = {
+  get hc16() { return hc16; },
+  setDay(k) { v16DayOverride = k; },
+  rollQuests, qBump, claimQuest, openQuestChest, rerollQuest, earnSeeds, buySeedItem, useSeedItem, checkCollections,
+  openSSMap, ssStartStage, ssFinish, ssOpen, ssStageOpen, normalizeHc16,
+  V16_QUESTS, SEED_ITEMS, COLLECTIONS, SS_STAGES,
+  get goalsTab() { return goalsTab; }, get albumTab() { return albumTab; },
+};
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -17548,7 +18565,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
         adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps,
-        hc15, farm, hc154 };
+        hc15, farm, hc154, hc16 };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -17588,6 +18605,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     party, newParty, normalizeParty, partySnapshot, WISHES, ROOM_ITEMS, ROOM_SLOTS, prepMorning, myVisitCode, decodeVisit, acceptVisit, encodeVisit, visitPayload,
     openBand, openBooth, openWishes, openHome, partyAction, BAND_SONG,
     normalizeV12, v12Snapshot, marketOpen, marketFriend, rollWeather, prepMail, openBoat, tapSky, v12Action, DYE_COLS, COAT_COST, MARKET_HATS, MARKET_DEN, MARKET_FRIENDS, LULLABY_SONG,
+    v16: v16Api,
     drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
