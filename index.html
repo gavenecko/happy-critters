@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.0-replay">
+<meta name="hc-version" content="16.1-region">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.0 — replay update
+// Happy Critters v16.1 — Sky Islands region update
 
 const W = 360;
 let H = 540;
@@ -8763,7 +8763,9 @@ function drawHUD() {
   });
   if (mood >= 100) {
     // Compact pill between mailbox and Fun, just above the toolbar.
-    uiButtons.push(btn(W / 2 - 55, H - 90, 110, 32, "New Dawn ☀", { id: "dawn", size: 11, bg: "#ffe0a0", border: "#e0a040", r: 12 }));
+    // compact 32px pill, with a full 44px-tall hit area that stays clear of the toolbar
+    btn(W / 2 - 55, H - 92, 110, 32, "New Dawn ☀", { size: 11, bg: "#ffe0a0", border: "#e0a040", r: 12 });
+    uiButtons.push({ x: W / 2 - 55, y: H - 98, w: 110, h: 44, id: "dawn" });
   }
 }
 
@@ -8839,6 +8841,9 @@ function drawShop() {
       } else if (a.special) {
         ctx.fillStyle = "#c09000"; font(11, false);
         ctx.fillText("Cure the day!", W - 38, y + 30);
+      } else if (a.skyK != null) {
+        ctx.fillStyle = "#4a90d0"; fitFont(skyStoryText(a), 140, 10.5, true, 8);
+        ctx.fillText(skyStoryText(a), W - 38, y + 30);
       } else if (a.adv != null) {
         ctx.fillStyle = "#8a70c0"; fitFont(advRescueText(a), 140, 10.5, true, 8);
         ctx.fillText(advRescueText(a), W - 38, y + 30);
@@ -8983,7 +8988,7 @@ function drawAlbum() {
       font(14, true);
       ctx.fillText(a.special || a.secret || a.id === "gloomking" ? "???" : a.name, 98, y + 22);
       font(11, false);
-      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.secret ? (a.lock || "A little secret in the night sky") : a.adv != null ? advRescueText(a) : a.rare ? (a.rare === "legend" ? "Legendary" : "Rare") + " · Shop · " + heartCost(a.cost) + " ♥" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + heartCost(a.cost) + " ♥", 98, y + 44);
+      ctx.fillText(a.special ? "Cure the day to meet this friend" : a.secret ? (a.lock || "A little secret in the night sky") : a.skyK != null ? skyStoryText(a) : a.adv != null ? advRescueText(a) : a.rare ? (a.rare === "legend" ? "Legendary" : "Rare") + " · Shop · " + heartCost(a.cost) + " ♥" : a.season && !seasonOpen(a) ? seasonLockText(a) + " · " + a.cost + " ♥" : "Unlock in the Shop · " + heartCost(a.cost) + " ♥", 98, y + 44);
     }
   });
   ctx.restore();
@@ -9164,7 +9169,7 @@ function doUI(id) {
   if (id.startsWith("tab_")) { shopTab = id.slice(4); listScroll = 0; return; }
   if (id.startsWith("buy_")) {
     const a = ANIMALS.find(x => x.id === id.slice(4));
-    if (a && !a.special && !a.secret && a.adv == null && !unlocked[a.id] && joy >= a.cost && seasonOpen(a)) {
+    if (a && !a.special && !a.secret && a.adv == null && a.skyK == null && !unlocked[a.id] && joy >= a.cost && seasonOpen(a)) {
       joy -= a.cost; unlocked[a.id] = true; sfxUnlock(); buzz("unlock");
       toast(a.name + " joined! ♥", C.heart);
       checkAchievements(); save();
@@ -9511,18 +9516,18 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 15;
-const APP_LABEL = "v16.0";
+const APP_VERSION = 16;
+const APP_LABEL = "v16.1";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "Bloom Seeds & Second Spring",
-  pals: ["gloomking", "cat", "bunny", "squirrel"],
+  sub: "Sky Islands & Bloom Seeds",
+  pals: ["cloudlamb", "stormsprite", "kitekitten", "skywhale"],
   items: [
-    "Daily Quests in Goals, with a bonus chest.",
-    "Bloom Seeds and a Seed Shop tab in the Shop.",
-    "Friend Collections in the Album.",
+    "Sky Islands: 3 new stages at the top of the Storybook map.",
+    "8 sky friends to meet, and a sulky Storm Sprite to hug.",
+    "New hats and Yard decor, for hearts or Bloom Seeds.",
+    "Daily Quests in Goals and Collections in the Album.",
     "Second Spring: a remixed storybook after the story.",
-    "Hide-and-seek, picnics, a parade, and a beach.",
   ],
 };
 
@@ -13321,7 +13326,7 @@ function drawAdvStage() {
   if (!st) return;
   const R = ADV_REGIONS[st.r];
   if (st.def.finale) { drawAdvFinale(); return; }
-  drawAdvBg(st.r, st.meter / 100);
+  if (st.ss && st.ss.mode === "sky") drawSkyBg(st.meter / 100); else drawAdvBg(st.r, st.meter / 100);
   drawAdvPuddles();
   const order = st.pals.slice().sort((a, b) => a.baseY - b.baseY);
   for (const c of order) drawAdvPal(c);
@@ -13340,8 +13345,9 @@ function drawAdvStage() {
   drawParticles();
   drawAdvHud();
   if (st.state === "play" || st.state === "intro") {
-    if (st.ss && (st.hint > 0 || st.state === "intro")) { const M = SS_MODS[SS_STAGES[st.ss.k].mod]; advPill(M.hint, 86, M.col, M.bd); }
+    if (st.ss && (st.hint > 0 || st.state === "intro")) { const M = ssModInfo(); advPill(M.hint, 86, M.col, M.bd); }
     else if (st.hint > 0 || st.state === "intro") advPill(R.hint, 86, R.pill, R.accent);
+    else if (st.def.rescue && !st.rescued && st.ss && st.ss.mode === "sky") advPill("Hug the sulky Storm Sprite (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#eef0ff", "#a0a8e0");
     else if (st.def.rescue && !st.rescued) advPill("Find & hug the shy " + ADV_REGIONS[st.r].critter.replace("leopard", "snow leopard") + " (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#fff6d8", "#e0c060");
     else if (st.meter >= 100 && st.def.rescue && !st.rescued) advPill("So colorful! Now find the shy friend", 86, "#fff6d8", "#e0c060");
     if (st.combo >= 3 && st.state === "play") {
@@ -13672,7 +13678,7 @@ function closeAdvMap() {
   else scene = "title";
 }
 function advBand(r) {
-  const top = 78, bot = H - 76, bh = (bot - top) / 5;
+  const top = 78, bot = H - 76, bh = (bot - top) / (typeof SKY_STAGES !== "undefined" ? 6 : 5); // band 5 = Sky Islands
   return { y0: bot - (r + 1) * bh, y1: bot - r * bh, h: bh };
 }
 function advNodePos(i) {
@@ -13721,6 +13727,7 @@ function drawAdvMap() {
   const tot = advTotalStars(adv), T = k => advHasTreasure(adv, k);
   ctx.fillStyle = "#fbeee0"; ctx.fillRect(0, 0, W, H);
   for (let r = 0; r < 5; r++) drawAdvBand(r, advRegionDone(adv, r), advRegionOpen(adv, r));
+  if (typeof drawSkyBand === "function") drawSkyBand();
   // rainbow bridges between restored regions (treasure)
   if (T(2)) for (let r = 0; r < 4; r++) if (advRegionDone(adv, r)) {
     const a = advNodePos(r * 3 + 2), b = advNodePos(r * 3 + 3);
@@ -13751,6 +13758,7 @@ function drawAdvMap() {
     if (won || open) for (let s = 0; s < 3; s++) drawStarShape(p.x + (s - 1) * 11, p.y + rad + 7, 5, (adv.gm[i] >> s) & 1, 1);
     uiButtons.push({ x: p.x - 26, y: p.y - 26, w: 52, h: 52 + 8, id: "adv_node_" + i });
   }
+  if (typeof drawSkyNodes === "function") drawSkyNodes();
   // our little leader waits at the next stage
   if (next >= 0) { const p = advNodePos(next); drawSprite(ANIMALS[0], p.x + (p.x > W / 2 ? -34 : 34), p.y - 6 - Math.abs(Math.sin(time * 5)) * 4, 1.05, false, 0, false, 3, { acc: equippedFor("cat") }); }
   // treasures on the map
@@ -13783,6 +13791,7 @@ function drawAdvMap() {
   uiButtons.push(btn(bx, H - 62, W - 10 - bx, 48, "Treasures " + advTreasures(adv) + "/" + ADV_TREASURES.length, { id: "adv_treas", size: 13, bg: "#fff4c8", border: "#e0b040" }));
   }
   if (advSel != null) drawAdvNodeCard(advSel);
+  else if (typeof skySel !== "undefined" && skySel != null) drawSkyCard(skySel);
   else if (advTreasOpen) drawAdvTreasures();
   updateParticles(frameDt); drawParticles();
 }
@@ -13897,7 +13906,7 @@ function drawCutArt(art, x, y, w, h, t) {
   const sc = w / W;
   const bgR = kind === "region" ? n : kind === "friend" ? n : kind === "king" || kind === "grouphug" ? 4 : 0;
   const bgK = kind === "graymeadow" || kind === "thieves" ? 0.1 : kind === "region" ? 0.2 : kind === "king" ? 0.15 + n * 0.1 : 1;
-  ctx.save(); ctx.translate(x, y + h - H * sc); ctx.scale(sc, sc); drawAdvBg(bgR, bgK); ctx.restore();
+  ctx.save(); ctx.translate(x, y + h - H * sc); ctx.scale(sc, sc); if (kind === "sky") drawSkyBg(1); else drawAdvBg(bgR, bgK); ctx.restore();
   const cx = x + w / 2, gy = y + h - 34;
   const hop = k => Math.abs(Math.sin(t * 5 + k)) * 5;
   if (kind === "graymeadow") {
@@ -13945,6 +13954,8 @@ function drawCutArt(art, x, y, w, h, t) {
     drawSprite(K, cx, gy - 8 - hop(0), 3.2, false, 0, false, 1, { acc: "cloudcrown", heartEyes: true });
     drawSprite(ANIMALS[0], cx - 80, gy - hop(1), 1.6, false, 0, false, 2, { acc: equippedFor("cat") });
     drawSprite(ANIMALS.find(q => q.id === "bat"), cx + 80, gy - 30 - hop(2) * 2, 1.5, false, 0, false, 3, null);
+  } else if (kind === "sky") {
+    drawSkyCutArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "kingflower" && typeof drawKingFlowerArt === "function") {
     drawKingFlowerArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "theend") {
@@ -14088,7 +14099,7 @@ function advPointer(p) {
   if (scene === "adv") advTap(p);
   else if (scene === "advcut") cutAdvance();
   else if (scene === "advcredits" && credits) credits.fast = !credits.fast;
-  else if (scene === "advmap" && (advSel != null || advTreasOpen)) { advSel = null; advTreasOpen = false; }
+  else if (scene === "advmap" && (advSel != null || advTreasOpen || skySel != null)) { advSel = null; advTreasOpen = false; skySel = null; }
 }
 function advStep(dt) {
   if (scene === "adv") advUpdate(dt);
@@ -14105,7 +14116,7 @@ function advEscape() {
   if (scene === "adv") { if (st && st.state === "result") advLeave(openAdvMap); else if (st && st.paused) st.paused = false; else advPause(); return true; }
   if (scene === "advcut") { cutSkip(); return true; }
   if (scene === "advcredits") { creditsEnd(); return true; }
-  if (scene === "advmap") { if (advSel != null || advTreasOpen) { advSel = null; advTreasOpen = false; } else closeAdvMap(); return true; }
+  if (scene === "advmap") { if (advSel != null || advTreasOpen || skySel != null) { advSel = null; advTreasOpen = false; skySel = null; } else closeAdvMap(); return true; }
   return false;
 }
 const isAdvScene = s => s === "adv" || s === "advmap" || s === "advcut" || s === "advcredits";
@@ -18194,6 +18205,7 @@ function ssStartStage(k) {
 function advTw(R) { return st && st.ss ? st.ss.tw : R.twist; }
 // called at the end of advUpdateWorld while a Second Spring stage runs
 function ssWorld(dt, playing) {
+  if (st && st.ss && st.ss.mode === "sky") return skyWorld(dt, playing); // v16.1 Sky Islands stages
   const S = st.ss;
   // remixed gloom patterns
   for (const g of st.lings) {
@@ -18216,6 +18228,7 @@ function ssWorld(dt, playing) {
   prune(S.stars, notDead);
 }
 function ssTap(p) {
+  if (st && st.ss && st.ss.mode === "sky") return skyTap(p); // v16.1 Sky Islands stages
   const S = st.ss;
   if (!S.starry) return false;
   for (const s of S.stars) {
@@ -18232,6 +18245,7 @@ function ssTap(p) {
   return false;
 }
 function ssDrawExtras() {
+  if (st && st.ss && st.ss.mode === "sky") return skyDrawExtras(); // v16.1 Sky Islands stages
   const S = st.ss;
   if (S.starry) for (const s of S.stars) {
     const tw = 1 + Math.sin(s.t * 8) * 0.15;
@@ -18252,6 +18266,7 @@ function ssThird(def, res) {
 }
 function ssGoalTexts(def) { return ["Bring back the color", advSecondText(def), def.x.k === "star" ? def.x.text : advThirdText(def)]; }
 function ssFinish(win) {
+  if (st && st.ss && st.ss.mode === "sky") return skyFinish(win); // v16.1 Sky Islands stages
   if (!st || st.state === "result") return;
   ensureHc16();
   const S = st.ss, k = S.k, def = st.def, SS = hc16.ss;
@@ -18286,6 +18301,7 @@ function ssFinish(win) {
   save();
 }
 function ssLeave(next) {
+  if (st && st.ss && st.ss.mode === "sky") return skyLeave(next); // v16.1 Sky Islands stages
   const R = st && st.result;
   st = null;
   particles.length = 0; confetti.length = 0;
@@ -18294,6 +18310,7 @@ function ssLeave(next) {
   openSSMap();
 }
 function ssDrawIntro() {
+  if (st && st.ss && st.ss.mode === "sky") return skyDrawIntro(); // v16.1 Sky Islands stages
   const k = st.t, def = st.def, S = SS_STAGES[st.ss.k], M = SS_MODS[S.mod];
   ctx.fillStyle = "rgba(40,20,50,0.22)"; ctx.fillRect(0, 0, W, H);
   const top = H / 2 - 110, e = easeOutBack(Math.min(1, k / 0.35));
@@ -18311,6 +18328,7 @@ function ssDrawIntro() {
   ctx.restore();
 }
 function ssDrawResult() {
+  if (st && st.ss && st.ss.mode === "sky") return skyDrawResult(); // v16.1 Sky Islands stages
   const R = st.result, t = st.rt;
   ctx.fillStyle = "rgba(40,20,50," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
   const ph = R.win ? 380 : 280, top = Math.round(H / 2 - ph / 2);
@@ -18357,7 +18375,12 @@ function ssDrawResult() {
     items.forEach((it, j) => uiButtons.push(btn(30 + j * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
   }
 }
+function ssModInfo() {
+  if (st.ss.mode === "sky") return skyModInfo();
+  return SS_MODS[SS_STAGES[st.ss.k].mod];
+}
 function ssHudLabel() {
+  if (st && st.ss && st.ss.mode === "sky") return skyHudLabel(); // v16.1 Sky Islands stages
   const S = SS_STAGES[st.ss.k];
   return "Second Spring · " + (st.ss.k + 1) + "/5 · " + SS_MODS[S.mod].name + (st.ss.starry ? "  ★" + st.ss.caught : "");
 }
@@ -18519,7 +18542,7 @@ function v16Action(id) {
   if (id === "ss_play") { const k = ssSel; ssSel = null; if (k != null) ssStartStage(k); return true; }
   // stage buttons while a Second Spring stage is running
   if (st && st.ss && scene === "adv") {
-    if (id === "adv_retry") { const k = st.ss.k; st = null; ssStartStage(k); return true; }
+    if (id === "adv_retry") { const k = st.ss.k, sky = st.ss.mode === "sky"; st = null; if (sky) skyStartStage(k); else ssStartStage(k); return true; }
     if (id === "adv_next") { ssLeave(st.ss.k + 1); return true; }
     if (id === "adv_map") { ssLeave(null); return true; }
   }
@@ -18536,6 +18559,659 @@ const v16Api = {
   openSSMap, ssStartStage, ssFinish, ssOpen, ssStageOpen, normalizeHc16,
   V16_QUESTS, SEED_ITEMS, COLLECTIONS, SS_STAGES,
   get goalsTab() { return goalsTab; }, get albumTab() { return albumTab; },
+};
+
+// v16.1 Sky Islands friends: pixel art (generated by hc-art/gen.py)
+SPRITE_FRAMES["cloudlamb"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000011110000000000", "0000000001hhhh1000000000", "000000111hhhhhh111000000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhhh10000", "00001hhhhhhhhhhhhhh10000", "00011hhhhhhhhhhhhhh11000", "001hhhhhhhh55hhhhhhhh100", "01hh666hh555555hh666hh10", "01hh666h5ih55ih5h666hh10", "01hhhhhh5ii55ii5hhhhhh10", "001qqqhh5ii55ii5hhqqq100", "001qqqhgg515515gghqqq100", "001qqqhhh551155hhhqqq100", "001qqqhhhh5555hhhhqqq100", "001qqqhhhhhhhhhhhhqqq100", "0001qqqqqqqqqqqqqqqq1000", "00001qqqqqqqqqqqqqq10000", "000001qqqqqqqqqqqq100000", "0000001ffqqqqqqff1000000", "0000001ff1qqqq1ff1000000", "0000001ff111111ff1000000", "000000011000000110000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000011110000000000", "0000000001hhhh1000000000", "000000111hhhhhh111000000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhhh10000", "00001hhhhhhhhhhhhhh10000", "00011hhhhhhhhhhhhhh11000", "001hhhhhhhh55hhhhhhhh100", "01hh666hh555555hh666hh10", "01hh666h55555555h666hh10", "01hhhhhh55555555hhhhhh10", "001qqqhh51155115hhqqq100", "001qqqhgg515515gghqqq100", "001qqqhhh551155hhhqqq100", "001qqqhhhh5555hhhhqqq100", "001qqqhhhhhhhhhhhhqqq100", "0001qqqqqqqqqqqqqqqq1000", "00001qqqqqqqqqqqqqq10000", "000001qqqqqqqqqqqq100000", "0000001ffqqqqqqff1000000", "0000001ff1qqqq1ff1000000", "0000001ff111111ff1000000", "000000011000000110000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000011110000000000", "0000000001hhhh1000000000", "000000111hhhhhh111000000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhhh10000", "00001hhhhhhhhhhhhhh10000", "00011hhhhhhhhhhhhhh11000", "001hhhhhhhh55hhhhhhhh100", "01hh666hh555555hh666hh10", "01hh666h5ih55ih5h666hh10", "01hhhhhh5ii55ii5hhhhhh10", "001qqqhh5ii55ii5hhqqq100", "001qqqhh5k511555hhqqq100", "001qqqhhhk15515hhhqqq100", "001qqqhhhh5555hhhhqqq100", "001qqqhhhhhhhhhhhhqqq100", "0001qqqqqqqqqqqqqqqq1000", "00001qqqqqqqqqqqqqq10000", "000001qqqqqqqqqqqq100000", "0000001ffqqqqqqff1000000", "0000001ff1qqqq1ff1000000", "0000001ff111111ff1000000", "000000011000000110000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000011110000000000", "0000000001hhhh1000000000", "000000111hhhhhh111000000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhhh10000", "00001hhhhhhhhhhhhhh10000", "00011hhhhhhhhhhhhhh11000", "001hhhhhhhh55hhhhhhhh100", "01hh666hh555555hh666hh10", "01hh666h5ih55ih5h666hh10", "01hhhhhh5ii55ii5hhhhhh10", "001qqqhh5ii55ii5hhqqq100", "001qqqhh5k511555hhqqq100", "001qqqhhhk15515hhhqqq100", "001qqqhhhh5555hhhhqqq100", "001qqqhhhhhhhhhhhhqqq100", "0001qqqqqqqqqqqqqqqq1000", "00001qqqqqqqqqqqqqq10000", "000001qqqqqqqqqqqq100000", "0000001ffqqqqqqff1000000", "0000001ff1qqqq1ff1000000", "0000001ff111111ff1000000", "000000011000000110000000"]),
+};
+ANCHOR["cloudlamb"] = [11.5, 2, 10.5, 2, 18];
+SPRITE_FRAMES["kitekitten"] = {
+  idle: parseGrid(["000000000000000000019100", "000000000000000000111110", "000000000000000001tt1991", "000011000000000111111111", "000155100000001551tt1991", "000154511111115451tt1991", "000015555555555510111110", "000001666555555100019100", "000016666555555510001000", "000155ih5555ih55510f4000", "000155ii5555ii5551f00000", "000155ii2222ii5551f00a00", "0001gg522222225ggff00000", "0000155212212255f1104000", "0000015521122551f6610000", "000000155555551166100000", "000001555555555666100000", "000001555222555661000000", "000001552222256610000000", "000001552222255100000000", "000000155222551000000000", "000001555555551000000000", "000000111111110000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000019100", "000000000000000000111110", "000000000000000001tt1991", "000011000000000111111111", "000155100000001551tt1991", "000154511111115451tt1991", "000015555555555510111110", "000001666555555100019100", "000016666555555510001000", "0001555555555555510f4000", "000155555555555551f00000", "000155112222115551f00a00", "0001gg522222225ggff00000", "0000155212212255f1104000", "0000015521122551f6610000", "000000155555551166100000", "000001555555555666100000", "000001555222555661000000", "000001552222256610000000", "000001552222255100000000", "000000155222551000000000", "000001555555551000000000", "000000111111110000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000019100", "000000000000000000111110", "000000000000000001tt1991", "000011000000000111111111", "000155100000001551tt1991", "000154511111115451tt1991", "000015555555555510111110", "000001666555555100019100", "000016666555555510001000", "000155ih5555ih55510f4000", "000155ii5555ii5551f00000", "000155ii2222ii5551f00a00", "000155k2222222555ff00000", "000015k221122255f1104000", "0000015512212551f6610000", "000000155555551166100000", "000001555555555666100000", "000001555222555661000000", "000001552222256610000000", "000001552222255100000000", "000000155222551000000000", "000001555555551000000000", "000000111111110000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000019100", "000000000000000000111110", "000000000000000001tt1991", "000011000000000111111111", "000155100000001551tt1991", "000154511111115451tt1991", "000015555555555510111110", "000001666555555100019100", "000016666555555510001000", "000155ih5555ih55510f4000", "000155ii5555ii5551f00000", "000155ii2222ii5551f00a00", "000155k2222222555ff00000", "000015k221122255f1104000", "0000015512212551f6610000", "000000155555551166100000", "000001555555555666100000", "000001555222555661000000", "000001552222256610000000", "000001552222255100000000", "000000155222551000000000", "000001555555551000000000", "000000111111110000000000", "000000000000000000000000"]),
+};
+ANCHOR["kitekitten"] = [10, 5, 9.5, 3, 15];
+SPRITE_FRAMES["rainbowsnail"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000t0000t00000000000000", "0001N1001N10000000000000", "0001N101NN10001110000000", "00001N11N10011jjj1100000", "00001N11N111jjjjjjj11000", "0000010011jjjxxxxxjjj100", "0000011111jxxx999xxxj100", "00001NNNNjjx99ccc99xjj10", "0001NNNNNjxx9ccacc9xxj10", "001NNNNNjjx9ccaAacc9xjj1", "001NihNNihx9caAAAac9xjj1", "001NiiNNiix9ccaAacc9xjj1", "001NNNNNNjxx9ccacc9xxj10", "001NN1NN1jjx99ccc99xjj10", "001NNN11NNjxxx999xxxj100", "0001NNNNNNjjjxxxxxjjj100", "001NNNNNNNNNjjjjjjjNN100", "001NNNNNNNNNNNjjjNNNNN10", "001HHHHHHHHHHHHHHHHHH100", "000111111111111111111000", "000000000000000000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000t0000t00000000000000", "0001N1001N10000000000000", "0001N101NN10001110000000", "00001N11N10011jjj1100000", "00001N11N111jjjjjjj11000", "0000010011jjjxxxxxjjj100", "0000011111jxxx999xxxj100", "00001NNNNjjx99ccc99xjj10", "0001NNNNNjxx9ccacc9xxj10", "001NNNNNjjx9ccaAacc9xjj1", "001NNNNNjjx9caAAAac9xjj1", "001N11NN11x9ccaAacc9xjj1", "001NNNNNNjxx9ccacc9xxj10", "001NN1NN1jjx99ccc99xjj10", "001NNN11NNjxxx999xxxj100", "0001NNNNNNjjjxxxxxjjj100", "001NNNNNNNNNjjjjjjjNN100", "001NNNNNNNNNNNjjjNNNNN10", "001HHHHHHHHHHHHHHHHHH100", "000111111111111111111000", "000000000000000000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000t0000t00000000000000", "0001N1001N10000000000000", "0001N101NN10001110000000", "00001N11N10011jjj1100000", "00001N11N111jjjjjjj11000", "0000010011jjjxxxxxjjj100", "0000011111jxxx999xxxj100", "00001NNNNjjx99ccc99xjj10", "0001NNNNNjxx9ccacc9xxj10", "001NNNNNjjx9ccaAacc9xjj1", "001NihNNihx9caAAAac9xjj1", "001NiiNNiix9ccaAacc9xjj1", "001NkNNNNjxx9ccacc9xxj10", "001NkN11Njjx99ccc99xjj10", "001NN1NN1Njxxx999xxxj100", "0001NNNNNNjjjxxxxxjjj100", "001NNNNNNNNNjjjjjjjNN100", "001NNNNNNNNNNNjjjNNNNN10", "001HHHHHHHHHHHHHHHHHH100", "000111111111111111111000", "000000000000000000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000t0000t00000000000000", "0001N1001N10000000000000", "0001N101NN10001110000000", "00001N11N10011jjj1100000", "00001N11N111jjjjjjj11000", "0000010011jjjxxxxxjjj100", "0000011111jxxx999xxxj100", "00001NNNNjjx99ccc99xjj10", "0001NNNNNjxx9ccacc9xxj10", "001NNNNNjjx9ccaAacc9xjj1", "001NihNNihx9caAAAac9xjj1", "001NiiNNiix9ccaAacc9xjj1", "001NkNNNNjxx9ccacc9xxj10", "001NkN11Njjx99ccc99xjj10", "001NN1NN1Njxxx999xxxj100", "0001NNNNNNjjjxxxxxjjj100", "001NNNNNNNNNjjjjjjjNN100", "001NNNNNNNNNNNjjjNNNNN10", "001HHHHHHHHHHHHHHHHHH100", "000111111111111111111000", "000000000000000000000000", "000000000000000000000000"]),
+};
+ANCHOR["rainbowsnail"] = [6.5, 6, 12.5, 2, 16];
+SPRITE_FRAMES["skywhale"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000011111111100000000", "0000001hhhhhhhhh10000000", "00000001hhhhhhh100000110", "0000000011hhh11000001aa1", "00000000001k100000001aa1", "00000000111k111000001a11", "00000111babbbab11101aaaa", "00001babbbbbbbbbab11a1a1", "0001bbbbbbbbbbbbbbba1aa1", "001aaaaaaaaaaaaaaaaaa110", "001aaaihaaaaaihaaaaa1000", "01aaaaiiaaaaaiiaaaaaa100", "01aaaaiiaaaaaiiaaaaaa100", "01aaggaqq1qq1qqqggaaa100", "001aaqqqqq11qqqqqqaa1000", "001aaqqqqqqqqqqqqqaa1000", "0001aqqqqqqqqqqqqqa10000", "00001qqqqqqqqqbbbq100000", "0000011qqqqqqqbbb1000000", "000000011111111110000000", "000000000000000000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000011111111100000000", "0000001hhhhhhhhh10000000", "00000001hhhhhhh100000110", "0000000011hhh11000001aa1", "00000000001k100000001aa1", "00000000111k111000001a11", "00000111babbbab11101aaaa", "00001babbbbbbbbbab11a1a1", "0001bbbbbbbbbbbbbbba1aa1", "001aaaaaaaaaaaaaaaaaa110", "001aaaaaaaaaaaaaaaaa1000", "01aaaaaaaaaaaaaaaaaaa100", "01aaaa11aaaaa11aaaaaa100", "01aaggaqq1qq1qqqggaaa100", "001aaqqqqq11qqqqqqaa1000", "001aaqqqqqqqqqqqqqaa1000", "0001aqqqqqqqqqqqqqa10000", "00001qqqqqqqqqbbbq100000", "0000011qqqqqqqbbb1000000", "000000011111111110000000", "000000000000000000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000011111111100000000", "0000001hhhhhhhhh10000000", "00000001hhhhhhh100000110", "0000000011hhh11000001aa1", "00000000001k100000001aa1", "00000000111k111000001a11", "00000111babbbab11101aaaa", "00001babbbbbbbbbab11a1a1", "0001bbbbbbbbbbbbbbba1aa1", "001aaaaaaaaaaaaaaaaaa110", "001aaaihaaaaaihaaaaa1000", "01aaaaiiaaaaaiiaaaaaa100", "01aaaaiiaaaaaiiaaaaaa100", "01aaaakqqq11qqqqaaaaa100", "001aaqkqq1qq1qqqqqaa1000", "001aaqqqqqqqqqqqqqaa1000", "0001aqqqqqqqqqqqqqa10000", "00001qqqqqqqqqbbbq100000", "0000011qqqqqqqbbb1000000", "000000011111111110000000", "000000000000000000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000011111111100000000", "0000001hhhhhhhhh10000000", "00000001hhhhhhh100000110", "0000000011hhh11000001aa1", "00000000001k100000001aa1", "00000000111k111000001a11", "00000111babbbab11101aaaa", "00001babbbbbbbbbab11a1a1", "0001bbbbbbbbbbbbbbba1aa1", "001aaaaaaaaaaaaaaaaaa110", "001aaaihaaaaaihaaaaa1000", "01aaaaiiaaaaaiiaaaaaa100", "01aaaaiiaaaaaiiaaaaaa100", "01aaaakqqq11qqqqaaaaa100", "001aaqkqq1qq1qqqqqaa1000", "001aaqqqqqqqqqqqqqaa1000", "0001aqqqqqqqqqqqqqa10000", "00001qqqqqqqqqbbbq100000", "0000011qqqqqqqbbb1000000", "000000011111111110000000", "000000000000000000000000", "000000000000000000000000"]),
+};
+ANCHOR["skywhale"] = [10.5, 7, 12.5, 3.5, 19];
+SPRITE_FRAMES["breezebunny"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001111111000", "0qqqq000000001IIIIIII100", "0000000000011IgggggggI10", "00000000111IIIIIIIIIII10", "00000001IIIIIIIIIII11100", "qqq0001IIIIIIIgggggII100", "000001IIIIIIIIIIIIII1000", "00001IIihIIIihIII1110000", "00001IIiiIIIiiIII1000000", "00001IIiiIIIiiIII10qqqq0", "00001ggII1II1IggI1000000", "000001IIII11IIII10000000", "00000LLLLLLLLLLL00000000", "00000LMLLMLLMLLMLL000000", "0000001IIIIIIII10LLL0000", "0000001IIIIIIII100000000", "0000001IIIIIIII100000000", "00000011IIIIII1000000000", "000001IIIIIIIII100000000", "000000111111111000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001111111000", "0qqqq000000001IIIIIII100", "0000000000011IgggggggI10", "00000000111IIIIIIIIIII10", "00000001IIIIIIIIIII11100", "qqq0001IIIIIIIgggggII100", "000001IIIIIIIIIIIIII1000", "00001IIIIIIIIIIII1110000", "00001IIIIIIIIIIII1000000", "00001II11III11III10qqqq0", "00001ggII1II1IggI1000000", "000001IIII11IIII10000000", "00000LLLLLLLLLLL00000000", "00000LMLLMLLMLLMLL000000", "0000001IIIIIIII10LLL0000", "0000001IIIIIIII100000000", "0000001IIIIIIII100000000", "00000011IIIIII1000000000", "000001IIIIIIIII100000000", "000000111111111000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001111111000", "0qqqq000000001IIIIIII100", "0000000000011IgggggggI10", "00000000111IIIIIIIIIII10", "00000001IIIIIIIIIII11100", "qqq0001IIIIIIIgggggII100", "000001IIIIIIIIIIIIII1000", "00001IIihIIIihIII1110000", "00001IIiiIIIiiIII1000000", "00001IIiiIIIiiIII10qqqq0", "00001IIkII11IIIII1000000", "000001IkI1II1III10000000", "00000LLLLLLLLLLL00000000", "00000LMLLMLLMLLMLL000000", "0000001IIIIIIII10LLL0000", "0000001IIIIIIII100000000", "0000001IIIIIIII100000000", "00000011IIIIII1000000000", "000001IIIIIIIII100000000", "000000111111111000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001111111000", "0qqqq000000001IIIIIII100", "0000000000011IgggggggI10", "00000000111IIIIIIIIIII10", "00000001IIIIIIIIIII11100", "qqq0001IIIIIIIgggggII100", "000001IIIIIIIIIIIIII1000", "00001IIihIIIihIII1110000", "00001IIiiIIIiiIII1000000", "00001IIiiIIIiiIII10qqqq0", "00001IIkII11IIIII1000000", "000001IkI1II1III10000000", "00000LLLLLLLLLLL00000000", "00000LMLLMLLMLLMLL000000", "0000001IIIIIIII10LLL0000", "0000001IIIIIIII100000000", "0000001IIIIIIII100000000", "00000011IIIIII1000000000", "000001IIIIIIIII100000000", "000000111111111000000000", "000000000000000000000000"]),
+};
+ANCHOR["breezebunny"] = [10.5, 6.5, 10.5, 2.5, 15];
+SPRITE_FRAMES["hotairhamster"] = {
+  idle: parseGrid(["000000001111111100000000", "0000000199hjjj9910000000", "0000001j9hjjjj99j1000000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "0000001j99jjjj99j1000000", "0000000199jjjj9910000000", "0000001111jjjj1111000000", "000001611011110116100000", "000016416166661614610000", "000016166666666661610000", "00000116ih6666ih61100000", "00000166ii6mm6ii66100000", "000001666mmmmmm666100000", "000001ggmm1mm1mmgg100000", "00000116mmm11mmm61100000", "00001HHHHHHHHHHHHHH10000", "00001rrrrrrrrrrrrrr10000", "000017777777777777710000", "00001rr7rr7rr7rr7rr10000", "00001rrrrrrrrrrrrrr10000", "000001111111111111100000"]),
+  blink: parseGrid(["000000001111111100000000", "0000000199hjjj9910000000", "0000001j9hjjjj99j1000000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "0000001j99jjjj99j1000000", "0000000199jjjj9910000000", "0000001111jjjj1111000000", "000001611011110116100000", "000016416166661614610000", "000016166666666661610000", "000001166666666661100000", "00000166116mm61166100000", "000001666mmmmmm666100000", "000001ggmm1mm1mmgg100000", "00000116mmm11mmm61100000", "00001HHHHHHHHHHHHHH10000", "00001rrrrrrrrrrrrrr10000", "000017777777777777710000", "00001rr7rr7rr7rr7rr10000", "00001rrrrrrrrrrrrrr10000", "000001111111111111100000"]),
+  sad: parseGrid(["000000001111111100000000", "0000000199hjjj9910000000", "0000001j9hjjjj99j1000000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "0000001j99jjjj99j1000000", "0000000199jjjj9910000000", "0000001111jjjj1111000000", "000001611011110116100000", "000016416166661614610000", "000016166666666661610000", "00000116ih6666ih61100000", "00000166ii6mm6ii66100000", "00000166kmmmmmm666100000", "00000166kmm11mmm66100000", "00000116mm1mm1mm61100000", "00001HHHHHHHHHHHHHH10000", "00001rrrrrrrrrrrrrr10000", "000017777777777777710000", "00001rr7rr7rr7rr7rr10000", "00001rrrrrrrrrrrrrr10000", "000001111111111111100000"]),
+  sadBlink: parseGrid(["000000001111111100000000", "0000000199hjjj9910000000", "0000001j9hjjjj99j1000000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "000001jj99jjjj99jj100000", "0000001j99jjjj99j1000000", "0000000199jjjj9910000000", "0000001111jjjj1111000000", "000001611011110116100000", "000016416166661614610000", "000016166666666661610000", "00000116ih6666ih61100000", "00000166ii6mm6ii66100000", "00000166kmmmmmm666100000", "00000166kmm11mmm66100000", "00000116mm1mm1mm61100000", "00001HHHHHHHHHHHHHH10000", "00001rrrrrrrrrrrrrr10000", "000017777777777777710000", "00001rr7rr7rr7rr7rr10000", "00001rrrrrrrrrrrrrr10000", "000001111111111111100000"]),
+};
+ANCHOR["hotairhamster"] = [11.5, 0, 13.5, 3, 10];
+SPRITE_FRAMES["stormsprite"] = {
+  idle: parseGrid(["000000000001lll100000000", "00000000001lll1000000000", "0000000001lllll100000000", "000000000011ll1000000000", "0000000001CClC1000000000", "000000111IICCCC111000000", "000011CCCCCCCCCCCC110000", "0001CCCCCCCCCCCCCCCC1000", "0001CICCCCCCCCCCICCC1000", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCihCCCCihCCCCC100", "01CCCCCCiiCCCCiiCCCCCC10", "01CCCCCCiiCCCCiiCCCCCC10", "01CCCCggCCCCCCCCggCCCC10", "01CCCCCCCC1CC1CCCCCCCC10", "001CCCCCCCC11CCCCCCCC100", "000k11DDDDDDDDDDDD11k000", "0000001DDDDDDDDDD1000000", "00000001DDDDDDDD10000000", "00000001kkDDDDkk10000000", "00000001kk1111kk10000000", "000000001100001100000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000001lll100000000", "00000000001lll1000000000", "0000000001lllll100000000", "000000000011ll1000000000", "0000000001CClC1000000000", "000000111IICCCC111000000", "000011CCCCCCCCCCCC110000", "0001CCCCCCCCCCCCCCCC1000", "0001CICCCCCCCCCCICCC1000", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCCCCCCCCCCCCCC100", "01CCCCCCCCCCCCCCCCCCCC10", "01CCCCCC11CCCC11CCCCCC10", "01CCCCggCCCCCCCCggCCCC10", "01CCCCCCCC1CC1CCCCCCCC10", "001CCCCCCCC11CCCCCCCC100", "000k11DDDDDDDDDDDD11k000", "0000001DDDDDDDDDD1000000", "00000001DDDDDDDD10000000", "00000001kkDDDDkk10000000", "00000001kk1111kk10000000", "000000001100001100000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000001lll100000000", "00000000001lll1000000000", "0000000001lllll100000000", "000000000011ll1000000000", "0000000001CClC1000000000", "000000111IICCCC111000000", "000011CCCCCCCCCCCC110000", "0001CCCCCCCCCCCCCCCC1000", "0001CICCCCCCCCCCICCC1000", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCihCCCCihCCCCC100", "01CCCCCCiiCCCCiiCCCCCC10", "01CCCCCCiiCCCCiiCCCCCC10", "01CCCCCCkCCCCCCCCCCCCC10", "01CCCCCCkCC11CCCCCCCCC10", "001CCCCCCC1CC1CCCCCCC100", "000k11DDDDDDDDDDDD11k000", "0000001DDDDDDDDDD1000000", "00000001DDDDDDDD10000000", "00000001kkDDDDkk10000000", "00000001kk1111kk10000000", "000000001100001100000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000001lll100000000", "00000000001lll1000000000", "0000000001lllll100000000", "000000000011ll1000000000", "0000000001CClC1000000000", "000000111IICCCC111000000", "000011CCCCCCCCCCCC110000", "0001CCCCCCCCCCCCCCCC1000", "0001CICCCCCCCCCCICCC1000", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCCCCCCCCCCCCCC100", "001CCCCCihCCCCihCCCCC100", "01CCCCCCiiCCCCiiCCCCCC10", "01CCCCCCiiCCCCiiCCCCCC10", "01CCCCCCkCCCCCCCCCCCCC10", "01CCCCCCkCC11CCCCCCCCC10", "001CCCCCCC1CC1CCCCCCC100", "000k11DDDDDDDDDDDD11k000", "0000001DDDDDDDDDD1000000", "00000001DDDDDDDD10000000", "00000001kkDDDDkk10000000", "00000001kk1111kk10000000", "000000001100001100000000", "000000000000000000000000"]),
+};
+ANCHOR["stormsprite"] = [11.5, 4, 11.5, 3, 18];
+SPRITE_FRAMES["cometpup"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "0000000111l1110000000000", "0000111bblllbb1110000000", "0001KKbbbblbbbbKK10000h1", "001KKKihbbbbihbKKK1001ll", "001KKKiibbbbiibKKK101mll", "001KKKiiqqqqiibKKK11lmmm", "001KKKbqqiiqqqbKKK1mll10", "001KKggq1qq1qqggKKlmm100", "0001KKbqq11qqqbKKmll1000", "000011bbqqqqqbb1lmm10000", "0000001bbbbbbb11ll100000", "000001bbbqqqbbb111000000", "000001bbqqqqqbb100000000", "000001bbqqqqqbb100000000", "0000001bbqqqbb1000000000", "000001bbbbbbbb1000000000", "000000111111110000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "0000000111l1110000000000", "0000111bblllbb1110000000", "0001KKbbbblbbbbKK10000h1", "001KKKbbbbbbbbbKKK1001ll", "001KKKbbbbbbbbbKKK101mll", "001KKK11qqqq11bKKK11lmmm", "001KKKbqqiiqqqbKKK1mll10", "001KKggq1qq1qqggKKlmm100", "0001KKbqq11qqqbKKmll1000", "000011bbqqqqqbb1lmm10000", "0000001bbbbbbb11ll100000", "000001bbbqqqbbb111000000", "000001bbqqqqqbb100000000", "000001bbqqqqqbb100000000", "0000001bbqqqbb1000000000", "000001bbbbbbbb1000000000", "000000111111110000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "0000000111l1110000000000", "0000111bblllbb1110000000", "0001KKbbbblbbbbKK10000h1", "001KKKihbbbbihbKKK1001ll", "001KKKiibbbbiibKKK101mll", "001KKKiiqqqqiibKKK11lmmm", "001KKKkqqiiqqqbKKK1mll10", "001KKKkqq11qqqbKKKlmm100", "0001KKbq1qq1qqbKKmll1000", "000011bbqqqqqbb1lmm10000", "0000001bbbbbbb11ll100000", "000001bbbqqqbbb111000000", "000001bbqqqqqbb100000000", "000001bbqqqqqbb100000000", "0000001bbqqqbb1000000000", "000001bbbbbbbb1000000000", "000000111111110000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "0000000111l1110000000000", "0000111bblllbb1110000000", "0001KKbbbblbbbbKK10000h1", "001KKKihbbbbihbKKK1001ll", "001KKKiibbbbiibKKK101mll", "001KKKiiqqqqiibKKK11lmmm", "001KKKkqqiiqqqbKKK1mll10", "001KKKkqq11qqqbKKKlmm100", "0001KKbq1qq1qqbKKmll1000", "000011bbqqqqqbb1lmm10000", "0000001bbbbbbb11ll100000", "000001bbbqqqbbb111000000", "000001bbqqqqqbb100000000", "000001bbqqqqqbb100000000", "0000001bbqqqbb1000000000", "000001bbbbbbbb1000000000", "000000111111110000000000", "000000000000000000000000"]),
+};
+ANCHOR["cometpup"] = [10, 5.5, 10, 3, 15];
+
+// ===================== v16.1 — Sky Islands region update =====================
+// New state lives in hc16.sky (normalized below), so older saves load untouched.
+
+// ---------- eight sky friends ----------
+// skyK = befriended in that Sky Islands stage (counts toward "Unlock every friend");
+// the rest are sold in the Shop between the regular friends (max 4200) and the rares (25000+).
+const SKY_FRIENDS = [
+  { id: "cloudlamb", name: "Cloud Lamb", cost: 0, skyK: 0, bio: "Made of the fluffiest cloud. Naps wherever it floats." },
+  { id: "kitekitten", name: "Kite Kitten", cost: 0, skyK: 1, bio: "Never lets go of its kite. Loves a breezy day." },
+  { id: "breezebunny", name: "Breeze Bunny", cost: 5200, bio: "Its long ears ride the wind like ribbons." },
+  { id: "rainbowsnail", name: "Rainbow Snail", cost: 6400, bio: "Slow and happy. Leaves a tiny rainbow trail." },
+  { id: "hotairhamster", name: "Hot-Air Hamster", cost: 7800, bio: "Travels by tiny balloon. Packs snacks for everyone." },
+  { id: "cometpup", name: "Comet Pup", cost: 9600, bio: "Zooms around with a sparkly star tail. Very good pup." },
+  { id: "skywhale", name: "Sky Whale", cost: 12500, bio: "A small, chubby whale that swims through the clouds." },
+  { id: "stormsprite", name: "Storm Sprite", cost: 0, skyK: 2, bio: "Was only lonely. Its tiny rumbles are shy hellos." },
+];
+for (const f of SKY_FRIENDS) if (!ANIMALS.some(a => a.id === f.id)) ANIMALS.push(Object.assign({ sky: true }, f));
+const SKY_IDS = SKY_FRIENDS.map(f => f.id);
+function skyStoryText(a) { return "✦ Befriend in the Sky Islands"; }
+function skyFriendsHave() { return SKY_IDS.filter(id => unlocked[id]).length; }
+
+// ---------- collections: the old "Sky Friends" set becomes "Wing Friends" ----------
+for (const s of COLLECTIONS) if (s.id === "sky") s.name = "Wing Friends";
+[
+  { id: "skyisles", name: "Sky Friends", ids: SKY_IDS.slice(), seeds: 10, col: "#8fd0ff" },
+  { id: "breezy", name: "Breezy Buddies", ids: ["kitekitten", "breezebunny", "hotairhamster", "bluebird", "dragonfly"], seeds: 5, col: "#b8e8ff" },
+  { id: "fluffy", name: "Fluffy Bunch", ids: ["cloudlamb", "bunny", "chick", "hedgehog", "skywhale"], seeds: 4, col: "#fff0f6" },
+  { id: "starlight", name: "Starlight Pals", ids: ["cometpup", "stormsprite", "starkitten", "gavenecko", "rainbowsnail"], seeds: 6, col: "#ffe680" },
+].forEach(s => { s.ids = s.ids.filter(id => ANIMALS.some(a => a.id === id)); if (!COLLECTIONS.some(c => c.id === s.id)) COLLECTIONS.push(s); });
+
+// ---------- state ----------
+const SKY_N = 3;
+function blankSky() { return { gm: [0, 0, 0], best: [0, 0, 0], runs: 0, wins: 0, lift: 0, puff: 0, done: false }; }
+function normalizeSky(d) {
+  const o = blankSky();
+  if (!isObj(d)) return o;
+  if (Array.isArray(d.gm)) for (let i = 0; i < SKY_N; i++) o.gm[i] = Math.floor(numOr0(d.gm[i])) & 7;
+  if (Array.isArray(d.best)) for (let i = 0; i < SKY_N; i++) o.best[i] = Math.max(0, numOr0(d.best[i]));
+  for (const k of ["runs", "wins", "lift", "puff"]) o[k] = Math.max(0, Math.floor(numOr0(d[k])));
+  o.done = !!d.done;
+  return o;
+}
+{
+  const nh = normalizeHc16;
+  normalizeHc16 = function (d) { const o = nh(d); o.sky = normalizeSky(isObj(d) ? d.sky : null); return o; };
+  const bh = blankHc16;
+  blankHc16 = function () { const o = bh(); o.sky = blankSky(); return o; };
+}
+function skyState() { ensureHc16(); if (!hc16.sky) hc16.sky = blankSky(); return hc16.sky; }
+// opens after the Gloom Castle (the King befriended) OR once you have 10 friends — never needs Second Spring
+function skyFriendCount() { return ANIMALS.filter(a => unlocked[a.id]).length; }
+function skyOpen() { return !!((typeof adv !== "undefined" && adv && adv.king) || skyFriendCount() >= 10); }
+function skyWon(k) { return !!(skyState().gm[k] & 1); }
+function skyStageOpen(k) { return skyOpen() && k >= 0 && k < SKY_N && (k === 0 || skyWon(k - 1)); }
+function skyStars(k) { const m = skyState().gm[k] || 0; return (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1); }
+function skyTotalStars() { let n = 0; for (let k = 0; k < SKY_N; k++) n += skyStars(k); return n; }
+
+// ---------- new wardrobe items: 5 for hearts (Wardrobe tab), 5 for Bloom Seeds (Seed Shop) ----------
+Object.assign(ACC_ART, {
+  cloudhat: { rows: ["..www..", ".wwwww.", "wwwqwww", "qwwwwwq", ".qqqqq."], cmap: { w: "#ffffff", q: "#c8e4ff" }, at: (hx, top) => [hx - 3.5, top - 4] },
+  kiteclip: { rows: [".p.", "pyp", "byb", ".b.", "..r", ".r."], cmap: { p: "#ff8ab8", y: "#ffe066", b: "#70c0ff", r: "#ff6b8a" }, at: (hx, top) => [hx + 3, top - 4] },
+  goggles: { rows: ["bbb.bbb", "bqbbbqb", "bbb.bbb"], cmap: { b: "#9a6030", q: "#9fe0ff" }, at: (hx, top) => [hx - 3.5, top - 1] },
+  propcap: { rows: ["rr.y.bb", "...k...", ".rrrrr.", "rrbbbrr", "rrrrrrr"], cmap: { r: "#ff6b7a", b: "#70c0ff", y: "#ffd23a", k: "#5a4060" }, at: (hx, top) => [hx - 3.5, top - 5] },
+  windscarf: { rows: ["...tl", "ttttttt", "tltltlt", "ttttttt"], cmap: { t: "#5cc8c0", l: "#c8fff4" }, at: (hx, top) => [hx - 3.5, top - 2] },
+  starclip: { rows: ["..y..", "yyyyy", ".yoy.", "y...y"], cmap: { y: "#ffd23a", o: "#fff6b0" }, at: (hx, top) => [hx + 2.5, top - 2] },
+  boltclip: { rows: ["..yy", ".yy.", "yyyy", ".yy.", "yy.."], cmap: { y: "#ffd23a" }, at: (hx, top) => [hx + 3, top - 3] },
+  cometclip: { rows: ["....y", "p.yyy", ".pyyy", "..py.", "...p."], cmap: { y: "#ffe066", p: "#c9a0ff" }, at: (hx, top) => [hx + 2, top - 3] },
+  rainhalo: { rows: [".rrryyy.", "r.......g", ".bbbppp."], cmap: { r: "#ff6b8a", y: "#ffe066", g: "#90e070", b: "#70c0ff", p: "#c9a0ff" }, at: (hx, top) => [hx - 4, top - 4] },
+  featherpin: { rows: ["...w", "..wq", ".wq.", "wq..", "k..."], cmap: { w: "#ffffff", q: "#9fd8ff", k: "#c89020" }, at: (hx, top) => [hx + 3, top - 4] },
+});
+const SKY_HEART_HATS = [
+  { id: "cloudhat", name: "Cloud Puff Hat", short: "Cloud", cost: 1600 },
+  { id: "kiteclip", name: "Kite Clip", short: "Kite", cost: 2000 },
+  { id: "goggles", name: "Aviator Goggles", short: "Goggles", cost: 2600 },
+  { id: "propcap", name: "Propeller Cap", short: "Prop", cost: 3200 },
+  { id: "windscarf", name: "Breezy Headband", short: "Breezy", cost: 3800 },
+];
+const SKY_SEED_HATS = [
+  { id: "starclip", name: "Star Clip", short: "Star", seed: 6 },
+  { id: "featherpin", name: "Feather Pin", short: "Feather", seed: 7 },
+  { id: "boltclip", name: "Little Bolt Clip", short: "Bolt", seed: 8 },
+  { id: "cometclip", name: "Comet Clip", short: "Comet", seed: 9 },
+  { id: "rainhalo", name: "Rainbow Halo", short: "R.Halo", seed: 11 },
+];
+for (const h of SKY_HEART_HATS) if (!ACCESSORIES.some(a => a.id === h.id)) { const a = { id: h.id, name: h.name, short: h.short, cost: h.cost }; ACCESSORIES.push(a); SHOP_ACCS.push(a); }
+for (const h of SKY_SEED_HATS) if (!ACCESSORIES.some(a => a.id === h.id)) { ACCESSORIES.push({ id: h.id, name: h.name, short: h.short, seedShop: true }); SEED_ITEMS.push({ id: h.id, name: h.name, kind: "hat", cost: h.seed }); }
+
+// ---------- eight new Yard decor pieces (6 for hearts, 2 from the Seed Shop) ----------
+const SKY_DECOR = [
+  { id: "cloudbench", name: "Cloud Bench", cat: "furniture", cost: 1400, cozy: 7, fw: 2, fh: 1, aw: 24, ah: 18, act: "sit", spots: [[7, 11], [17, 11]],
+    paint(P) {
+      P.e(5, 5, 5, 4, "#ffffff"); P.e(12, 4, 6, 4.5, "#ffffff"); P.e(19, 5, 5, 4, "#ffffff");
+      P.r(1, 7, 22, 6, "#ffffff"); P.r(1, 11, 22, 2, "#d8ecff"); P.p(8, 2, "#fff"); P.r(10, 2, 3, 1, "#eef6ff");
+      P.r(3, 13, 2, 5, "#9fd0f0"); P.r(19, 13, 2, 5, "#9fd0f0");
+    } },
+  { id: "rainbowarch", name: "Rainbow Arch", cat: "furniture", cost: 2600, cozy: 9, fw: 2, fh: 1, aw: 24, ah: 26, act: "arch", spots: [[12, 28]],
+    paint(P) {
+      const cols = ["#ff6b8a", "#ffa860", "#ffe066", "#90e070", "#70c0ff", "#c9a0ff"];
+      cols.forEach((c, k) => { for (let x = 0; x < 24; x++) { const r = 11.5 - k, dx = x - 11.5; if (Math.abs(dx) <= r) { const y = Math.round(13 - Math.sqrt(r * r - dx * dx)); P.r(x, y, 1, 2, c); } } });
+      for (let k = 0; k < 6; k++) { P.r(k, 13, 1, 11, cols[k]); P.r(23 - k, 13, 1, 11, cols[k]); }
+      P.e(3, 23, 4, 2.5, "#ffffff"); P.e(20, 23, 4, 2.5, "#ffffff");
+    } },
+  { id: "kitepost", name: "Kite Post", cat: "toys", cost: 1100, cozy: 5, fw: 1, fh: 1, aw: 12, ah: 28, act: "watch", spots: [[6, 30]],
+    paint(P) {
+      P.r(2, 10, 2, 18, "#c88a52"); P.r(0, 26, 6, 2, "#9a5f34");
+      P.r(4, 9, 1, 1, "#5a4060"); P.r(5, 7, 1, 2, "#5a4060"); P.r(6, 5, 1, 2, "#5a4060");
+      P.r(8, 0, 2, 1, "#ff8ab8"); P.r(7, 1, 4, 1, "#ff8ab8"); P.r(6, 2, 6, 1, "#ffe066"); P.r(7, 3, 4, 1, "#70c0ff"); P.r(8, 4, 2, 1, "#70c0ff");
+      P.p(9, 2, "#fff"); P.p(5, 11, "#ff6b8a"); P.p(6, 13, "#ffe066"); P.p(5, 15, "#90e070");
+    } },
+  { id: "windchimes", name: "Wind Chimes", cat: "furniture", cost: 900, cozy: 4, fw: 1, fh: 1, aw: 12, ah: 24, act: "watch", spots: [[6, 26]],
+    paint(P) {
+      P.r(5, 0, 2, 2, "#9a5f34"); P.r(1, 2, 10, 2, "#c88a52");
+      for (const [x, h, c] of [[2, 9, "#9fd8ff"], [5, 12, "#c9a0ff"], [8, 8, "#ffe066"], [10, 10, "#ff8ab8"]]) { P.r(x, 4, 1, 2, "#8a8098"); P.r(x, 6, 1, h, c); P.p(x, 6, "#fff"); }
+      P.r(5, 19, 1, 3, "#8a8098"); P.r(4, 22, 4, 2, "#fff6c0");
+    } },
+  { id: "balloonbasket", name: "Balloon Basket", cat: "toys", cost: 3400, cozy: 8, fw: 1, fh: 1, aw: 12, ah: 28, act: "watch", spots: [[6, 30]],
+    paint(P) {
+      P.e(6, 7, 6, 7, "#ff8ab8"); P.r(4, 0, 4, 14, "#ffe066"); P.r(1, 5, 1, 4, "#ffb0cc"); P.p(3, 3, "#fff");
+      P.r(3, 14, 1, 5, "#8a6040"); P.r(8, 14, 1, 5, "#8a6040");
+      P.r(2, 19, 8, 7, "#c88a52"); P.r(2, 19, 8, 1, "#9a5f34"); P.r(2, 22, 8, 1, "#9a5f34");
+      P.r(0, 26, 12, 2, "#e8e0f0");
+    } },
+  { id: "starlamp", name: "Comet Lamp", cat: "furniture", cost: 2000, cozy: 6, fw: 1, fh: 1, aw: 12, ah: 26, act: null, spots: [],
+    paint(P) {
+      P.r(5, 10, 2, 14, "#8a8098"); P.r(3, 23, 6, 3, "#8a8098");
+      P.r(5, 1, 2, 9, "#ffe066"); P.r(3, 3, 6, 5, "#ffe066"); P.r(1, 4, 10, 2, "#ffe066"); P.r(5, 4, 2, 2, "#fff8d0");
+      P.p(1, 9, "#c9a0ff"); P.p(10, 10, "#c9a0ff"); P.p(2, 12, "#fff6b0");
+    } },
+  { id: "floatisle", name: "Floating Isle", cat: "plants", seed: 10, cozy: 9, fw: 2, fh: 1, aw: 24, ah: 26, act: "watch", spots: [[12, 28]],
+    paint(P) {
+      P.e(12, 6, 10, 3, "#6cc050"); P.r(2, 6, 20, 3, "#8a5a3a"); P.e(12, 10, 9, 5, "#8a5a3a"); P.e(12, 13, 5, 4, "#6a4020");
+      P.r(15, 0, 2, 6, "#9a5f34"); P.e(16, 0, 4, 2.5, "#4a9a3a"); P.p(5, 4, "#ff8ab8"); P.p(9, 4, "#ffe066"); P.p(19, 4, "#c9a0ff");
+      P.r(6, 9, 1, 8, "#9fd8ff"); P.r(6, 17, 1, 3, "#d8f4ff");
+      P.e(4, 22, 4, 2, "#ffffff"); P.e(19, 23, 5, 2, "#ffffff"); P.e(12, 24, 4, 2, "#eef6ff");
+    } },
+  { id: "skylantern", name: "Sky Lantern", cat: "furniture", seed: 8, cozy: 6, fw: 1, fh: 1, aw: 12, ah: 24, act: null, spots: [],
+    paint(P) {
+      P.r(3, 0, 6, 1, "#ff9a3c"); P.r(2, 1, 8, 9, "#ffb070"); P.r(3, 2, 6, 7, "#ffd8a0"); P.r(5, 4, 2, 3, "#fff6d8"); P.r(3, 10, 6, 1, "#c87038");
+      P.r(5, 11, 1, 10, "#8a8098"); P.e(6, 22, 5, 2, "#ffffff");
+    } },
+];
+for (const d of SKY_DECOR) {
+  if (DECOR_BY_ID[d.id]) continue;
+  const item = d.seed ? Object.assign({ cost: 0, unlock: { seed: true, text: "From the Seed Shop" } }, d) : Object.assign({}, d);
+  DECOR.push(item); DECOR_BY_ID[item.id] = item;
+  if (d.seed) SEED_ITEMS.push({ id: d.id, name: d.name, kind: "decor", cost: d.seed });
+}
+
+// ---------- ten Sky Daily Quests ----------
+[
+  { id: "sky_play", ev: "skyplay", need: () => 1, ok: () => skyOpen(), text: () => "Play a Sky Islands stage", pay: 45 },
+  { id: "sky_clear", ev: "skyclear", need: () => 1, ok: () => skyOpen(), text: () => "Clear a Sky Islands stage", pay: 60 },
+  { id: "sky_lift", ev: "skylift", need: () => 4, ok: () => skyOpen(), text: (q) => "Hug " + q.need + " pals riding updrafts", pay: 50 },
+  { id: "sky_puff", ev: "skypuff", need: () => 5, ok: () => skyOpen() && skyWon(0), text: (q) => "Pop " + q.need + " cloud puffs in the sky", pay: 50 },
+  { id: "sky_cheer", ev: "skycheer", need: () => 3, ok: () => skyOpen(), text: (q) => "Cheer up " + q.need + " sad pals in the Sky Islands", pay: 50 },
+  { id: "sky_star", ev: "skystar", need: () => 1, ok: () => skyOpen() && skyTotalStars() < SKY_N * 3, text: () => "Earn a new Sky Islands star", pay: 60 },
+  { id: "sky_map", ev: "skymap", need: () => 1, ok: () => skyOpen(), text: () => "Peek at the Sky Islands on the map", pay: 25 },
+  { id: "sky_hug", ev: "hug", need: () => 6, ok: () => skyFriendsHave() > 0, text: (q) => "Hug Sky friends " + q.need + " times", pay: 45, match: (q, arg) => SKY_IDS.includes(arg) },
+  { id: "sky_lamb", ev: "hug", need: () => 4, ok: () => !!unlocked.cloudlamb, text: (q) => "Hug Cloud Lamb " + q.need + " times", pay: 40, match: (q, arg) => arg === "cloudlamb" },
+  { id: "sky_storm", ev: "hug", need: () => 3, ok: () => !!unlocked.stormsprite, text: (q) => "Give Storm Sprite " + q.need + " hugs", pay: 45, match: (q, arg) => arg === "stormsprite" },
+].forEach(q => { if (!V16_QUEST_BY_ID[q.id]) { V16_QUESTS.push(q); V16_QUEST_BY_ID[q.id] = q; } });
+
+// ---------- Sky Islands: three stages on the storybook map ----------
+// Same stage engine as the storybook (st.ss with mode "sky"); the sky twist is updrafts that float
+// pals upward (hug them there for a "Whee!") and cloud puffs that briefly hide gloomlings.
+const SKY_STAGES = [
+  { name: "Cloud Hop Meadow", mod: "Updrafts", hint: "Updrafts! Hug pals while they float up", dur: 120, par: 60, gEvery: 4.4, gMax: 3, sad: 0.22, puffs: false, pat: null,
+    x: { k: "lift", n: 5, text: "Hug 5 pals riding updrafts" }, friend: "cloudlamb" },
+  { name: "Rainbow Bridges", mod: "Cloud Puffs", hint: "Cloud puffs hide gloom! Tap them away", dur: 125, par: 62, gEvery: 4.0, gMax: 3, sad: 0.25, puffs: true, pat: "loop",
+    x: { k: "puff", n: 6, text: "Pop 6 cloud puffs" }, friend: "kitekitten" },
+  { name: "Thundercloud Top", mod: "Sulky Storm", hint: "A sulky Storm Sprite! Give it 3 gentle hugs", dur: 135, par: 70, gEvery: 3.8, gMax: 4, sad: 0.28, puffs: true, pat: "wave", rescue: true,
+    x: { k: "cheer", n: 6, text: "Cheer up 6 sad pals" }, friend: "stormsprite" },
+];
+let skySel = null;
+const SKY_LOCK_TEXT = "Opens with 10 friends or after Gloom Castle";
+function skyModInfo() { const S = SKY_STAGES[st.ss.k]; return { name: S.mod, hint: S.hint, col: "#e6f4ff", bd: "#8fd0ff" }; }
+function skyStartStage(k, skipCut) {
+  if (!skyStageOpen(k)) return false;
+  if (!skipCut && k === 0 && !adv.cuts.sky_intro) { startCutscene("sky_intro", () => skyStartStage(k, true)); return true; }
+  if (!skipCut && k === 2 && !adv.cuts.sky_storm) { startCutscene("sky_storm", () => skyStartStage(k, true)); return true; }
+  const S = SKY_STAGES[k];
+  const def = { name: S.name, dur: S.dur, par: S.par, gEvery: S.gEvery, gMax: S.gMax, sad: S.sad, x: S.x, rescue: !!S.rescue };
+  st = {
+    i: 1, r: 0, def, state: "intro", t: 0, time: 0, paused: false, meter: 0, pals: [], lings: [], spawnT: 0.2,
+    gT: 2.2, combo: 0, comboT: 0, bestCombo: 0, shoo: 0, cheer: 0, fog: 0, lily: 0, gust: 0, splits: 0, missed: 0,
+    hugs: 0, result: null, rt: 0, fogs: [], puddles: [], fogT: 0, pudT: 2.5, wind: { cd: 1e9, on: 0, dir: 1 },
+    rescueC: null, rescued: false, hint: 3.2,
+    ss: { mode: "sky", k, tw: "", pat: S.pat, stars: [], starT: 0, caught: 0, starry: false, drafts: [], dT: 0.8, puffs: [], pT: 2.5, lift: 0, puff: 0 },
+  };
+  scene = "adv"; advSel = null; skySel = null; advTreasOpen = false;
+  particles.length = 0; floatTexts.length = 0; confetti.length = 0;
+  for (let n = 0; n < 3; n++) advSpawnPal();
+  if (S.rescue) {
+    const a = ANIMALS.find(x => x.id === "stormsprite");
+    const [y0, y1] = advYRange();
+    const c = { animal: a, x: W * 0.7, y: (y0 + y1) / 2, baseY: (y0 + y1) / 2, vx: -14, ph: 0, bob: 3, scale: 2.0, sad: true, state: "float",
+      t: 0, life: 1e9, hugs: 0, heartT: 0, rescue: true };
+    st.rescueC = c; st.pals.push(c);
+  }
+  setMusicMode("adv_r0");
+  skyState().runs++;
+  qBump("skyplay"); qBump("adv");
+  return true;
+}
+function skyWorld(dt, playing) {
+  const S = st.ss, D = SKY_STAGES[S.k];
+  const [y0, y1] = advYRange();
+  for (const g of st.lings) {
+    if (S.pat === "wave") g.y += Math.sin(time * 3 + g.phase) * 22 * dt;
+    else if (S.pat === "loop") { g.x += Math.cos(time * 1.6 + g.phase) * 24 * dt; g.y += Math.sin(time * 1.6 + g.phase) * 24 * dt; }
+    g.y = clamp(g.y, y0 - 40, y1 - 20);
+  }
+  // gentle wind: everyone sways a little
+  for (const c of st.pals) if (c.state === "float" && !c.rescue) c.x += Math.sin(time * 0.7 + c.ph * 0.1) * 7 * dt;
+  // updrafts
+  if (playing) {
+    S.dT -= dt;
+    if (S.dT <= 0 && S.drafts.length < 2) { S.drafts.push({ x: 60 + Math.random() * (W - 120), w: 56, t: 0, life: 7 + Math.random() * 2 }); S.dT = 3.5 + Math.random() * 2; }
+  }
+  for (const d of S.drafts) {
+    d.t += dt; if (d.t > d.life) d.dead = true;
+    for (const c of st.pals) if (c.state === "float" && !c.rescue && Math.abs(c.x - d.x) < d.w / 2) c.baseY = Math.max(y0 - 10, c.baseY - 30 * dt);
+  }
+  prune(S.drafts, notDead);
+  // cloud puffs drift over a gloomling and hide it for a few seconds
+  if (D.puffs && playing) {
+    S.pT -= dt;
+    const free = st.lings.filter(g => !g.dead && !S.puffs.some(p => p.g === g));
+    if (S.pT <= 0 && S.puffs.length < 2 && free.length) { S.puffs.push({ g: free[Math.floor(Math.random() * free.length)], t: 0, life: 5 }); S.pT = 3 + Math.random() * 2; }
+  }
+  for (const p of S.puffs) { p.t += dt; if (p.t > p.life || !p.g || p.g.dead) p.dead = true; }
+  prune(S.puffs, notDead);
+}
+function skyTap(p) {
+  const S = st.ss;
+  for (const q of S.puffs) {
+    const x = lingCX(q.g), y = q.g.y;
+    if (dist2(p.x, p.y, x, y) < 36 * 36) {
+      q.dead = true; S.puff++;
+      advGain(1.0);
+      for (let k = 0; k < 6; k++) particles.push({ kind: "poof", x: x + (Math.random() - 0.5) * 30, y: y + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5) * 60, vy: -10 - Math.random() * 30, life: 0.6, max: 0.6, size: 10 + Math.random() * 8, color: "#ffffff" });
+      if (typeof sfxChime === "function") sfxChime(Math.min(S.puff + 2, 12));
+      addFloat({ x, y: y - 16, text: "Poof! ☁", life: 0.8, vy: -28, color: "#5aa0d8", size: 13 });
+      qBump("skypuff");
+      prune(S.puffs, notDead);
+      return true;
+    }
+  }
+  return false;
+}
+// hugging a pal inside an updraft is a "Whee!"; cheering sad pals counts for the sky quest
+{
+  const f = advHug;
+  advHug = function (c) {
+    const sky = !!(st && st.ss && st.ss.mode === "sky" && c);
+    const inDraft = sky && !c.rescue && c.state === "float" && st.ss.drafts.some(d => Math.abs(c.x - d.x) < d.w / 2 + 6);
+    const wasSad = sky && c.state === "float" && c.sad && !c.rescue;
+    f.apply(this, arguments);
+    if (!sky || !st) return;
+    if (inDraft && c.state === "happy") {
+      st.ss.lift++; advGain(0.6); qBump("skylift");
+      addFloat({ x: c.x, y: c.y - 34, text: "Whee! ↑", life: 0.9, vy: -40, color: "#4a9ad8", size: 13 });
+    }
+    if (wasSad && !c.sad) qBump("skycheer");
+  };
+}
+function drawCloudPuff(x, y, s, a, rim) {
+  ctx.save(); ctx.globalAlpha = a;
+  if (rim) { // gameplay puffs get a soft lilac rim and twinkles so they read as tappable
+    ctx.fillStyle = "#c9c2f0";
+    for (const [dx, dy, r] of [[-14, 0, 15], [0, -8, 18], [15, 0, 15], [0, 6, 17]]) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.fillStyle = "#dff0ff";
+  for (const [dx, dy, r] of [[-16, 6, 13], [16, 6, 13], [0, 9, 14]]) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = "#ffffff";
+  for (const [dx, dy, r] of [[-14, 0, 13], [0, -8, 16], [15, 0, 13], [0, 4, 15]]) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+function skyDrawExtras() {
+  const S = st.ss, calm = kind && kind.motion;
+  const [y0, y1] = advYRange();
+  for (const d of S.drafts) {
+    const a = Math.min(1, d.t / 0.6, (d.life - d.t) / 0.6);
+    const g = ctx.createLinearGradient(0, y1 + 40, 0, y0 - 40);
+    g.addColorStop(0, "rgba(140,205,255,0)"); g.addColorStop(0.5, "rgba(150,210,255," + 0.5 * a + ")"); g.addColorStop(1, "rgba(220,240,255,0)");
+    ctx.fillStyle = g; ctx.fillRect(d.x - d.w / 2, y0 - 40, d.w, y1 - y0 + 80);
+    ctx.fillStyle = "rgba(255,255,255," + 0.35 * a + ")"; ctx.fillRect(d.x - d.w / 2, y0 - 40, 2, y1 - y0 + 80); ctx.fillRect(d.x + d.w / 2 - 2, y0 - 40, 2, y1 - y0 + 80);
+    ctx.fillStyle = "rgba(255,255,255," + 0.9 * a + ")";
+    for (let k = 0; k < 6; k++) {
+      // little rising chevrons
+      const yy = y1 + 30 - ((k * 53 + (calm ? 0 : time * 70)) % (y1 - y0 + 60)), xx = d.x + Math.sin(time * 2 + k) * (d.w * 0.18);
+      for (let q = 0; q < 4; q++) { ctx.fillRect(xx - 1 - q * 2, yy + q * 2, 2, 2); ctx.fillRect(xx + 1 + q * 2 - 2, yy + q * 2, 2, 2); }
+    }
+  }
+  for (const p of S.puffs) {
+    const a = Math.min(1, p.t / 0.4, (p.life - p.t) / 0.5);
+    const px = lingCX(p.g), py = p.g.y;
+    drawCloudPuff(px, py, 1.05 + Math.sin(time * 3 + p.t) * 0.03, Math.max(0, a), true);
+    if (a > 0.5) for (let q = 0; q < 2; q++) drawSparkle(px + Math.cos(time * 2.5 + q * 3) * 22, py - 10 + Math.sin(time * 2.5 + q * 3) * 10, 2.2, "#b8a8ff");
+  }
+}
+function skyThird(def, res) {
+  if (def.x.k === "lift") return res.lift >= def.x.n;
+  if (def.x.k === "puff") return res.puff >= def.x.n;
+  return advThirdStar(def, res);
+}
+function skyGoalTexts(def) {
+  return [def.rescue ? "Bring back the color & befriend the Storm Sprite" : "Bring back the color", advSecondText(def), def.x.text];
+}
+function skyFinish(win) {
+  if (!st || st.state === "result") return;
+  const S = st.ss, k = S.k, def = st.def, Y = skyState();
+  const res = { win, time: st.time, bestCombo: st.bestCombo, shoo: st.shoo, cheer: st.cheer, fog: st.fog, lily: st.lily, gust: st.gust, splits: st.splits, missed: st.missed, hugs: st.hugs, lift: S.lift, puff: S.puff };
+  let mask = 0;
+  if (win) { mask = 1; if (advSecondStar(def, res)) mask |= 2; if (skyThird(def, res)) mask |= 4; }
+  const prev = Y.gm[k];
+  Y.gm[k] = prev | mask;
+  const newStars = [1, 2, 4].filter(b => (mask & b) && !(prev & b)).length;
+  let hearts = 0, seeds = 0, friend = null, end = false;
+  if (win) {
+    Y.wins++;
+    if (!Y.best[k] || st.time < Y.best[k]) Y.best[k] = Math.round(st.time * 10) / 10;
+    hearts = (!(prev & 1) ? 80 + k * 30 : 15) + newStars * 25;
+    seeds = newStars + (!(prev & 1) ? 2 : 0);
+    const id = SKY_STAGES[k].friend;
+    if (id && !unlocked[id]) { unlocked[id] = true; albumNew = true; friend = ANIMALS.find(a => a.id === id); }
+    if (k === SKY_N - 1 && !Y.done) { Y.done = true; seeds += 5; if (!adv.cuts.sky_end) end = true; }
+    qBump("skyclear");
+    if (newStars) qBump("skystar", null, newStars);
+    if (typeof sfxVictory === "function") sfxVictory();
+    if (typeof spawnConfetti === "function") spawnConfetti(30);
+  } else {
+    hearts = Math.floor(st.meter / 20);
+    if (typeof sfxMiss === "function") sfxMiss();
+  }
+  Y.lift += S.lift; Y.puff += S.puff;
+  joy += hearts;
+  st.result = { win, mask, prev, stars: popcnt3(mask), hearts, seeds, friend, end, meter: Math.round(st.meter) };
+  st.state = "result"; st.rt = 0;
+  if (seeds) earnSeeds(seeds, "Sky Islands");
+  if (friend) toast(friend.name + " is your friend! ♥", C.heart);
+  if (typeof checkAchievements === "function") checkAchievements();
+  save();
+}
+function skyLeave(next) {
+  const R = st && st.result;
+  st = null;
+  particles.length = 0; confetti.length = 0;
+  if (R && R.end) { startCutscene("sky_end", openAdvMap); return; }
+  if (next != null && skyStageOpen(next)) { skyStartStage(next); return; }
+  openAdvMap();
+}
+function skyDrawIntro() {
+  const k = st.t, def = st.def, S = SKY_STAGES[st.ss.k];
+  ctx.fillStyle = "rgba(30,40,70,0.2)"; ctx.fillRect(0, 0, W, H);
+  const top = H / 2 - 110, e = easeOutBack(Math.min(1, k / 0.35));
+  ctx.save(); ctx.translate(W / 2, top + 90); ctx.scale(e, e); ctx.translate(-W / 2, -(top + 90));
+  solidPanel(34, top, W - 68, 196);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#4a90d0"; font(11, true); ctx.fillText("Sky Islands · Stage " + (st.ss.k + 1) + " / " + SKY_N, W / 2, top + 24);
+  ctx.fillStyle = C.text; font(19, true); ctx.fillText(def.name, W / 2, top + 50);
+  ctx.fillStyle = "#e6f4ff"; roundRect(W / 2 - 56, top + 66, 112, 22, 11); ctx.fill();
+  ctx.strokeStyle = "#8fd0ff"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(11, true); ctx.fillText(S.mod, W / 2, top + 77);
+  const have = skyState().gm[st.ss.k] || 0;
+  skyGoalTexts(def).forEach((g, j) => { drawStarShape(64, top + 108 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 140, 11.5, false, 8.5); ctx.fillText(g, 80, top + 109 + j * 24); });
+  ctx.restore();
+}
+function skyDrawResult() {
+  const R = st.result, t = st.rt;
+  ctx.fillStyle = "rgba(30,40,70," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
+  const ph = R.win ? 390 : 280, top = Math.round(H / 2 - ph / 2);
+  solidPanel(22, top, W - 44, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (R.win) {
+    ctx.fillStyle = C.text; font(20, true); ctx.fillText("The sky is sparkling!", W / 2, top + 30);
+    for (let i = 0; i < 3; i++) {
+      const s0 = t - 0.35 - i * 0.22, kk = s0 <= 0 ? 0 : easeOutBack(Math.min(1, s0 / 0.3));
+      if (s0 > 0 && s0 - frameDt <= 0 && (R.mask >> i) & 1 && typeof sfxStar === "function") sfxStar(i);
+      drawStarShape(W / 2 + (i - 1) * 54, top + 74 - (i === 1 ? 5 : 0), i === 1 ? 22 : 19, (R.mask >> i) & 1, Math.max(0.01, kk));
+    }
+    skyGoalTexts(st.def).forEach((txt, j) => {
+      const got = (R.mask >> j) & 1, before = (R.prev >> j) & 1, s = (got ? "✓ " : "· ") + txt + (got && !before ? "  NEW" : "");
+      ctx.textAlign = "left"; ctx.fillStyle = got ? "#3f9a48" : "#a898a8";
+      fitFont(s, W - 100, 11.5, false, 8.5); ctx.fillText(s, 46, top + 116 + j * 20);
+    });
+    ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(11, false);
+    ctx.fillText("Best ★ " + skyStars(st.ss.k) + " / 3  ·  Time " + fmtClock(st.time), W / 2, top + 184);
+    ctx.fillStyle = C.heart; font(20, true);
+    ctx.fillText("♥ +" + R.hearts, W / 2 - (R.seeds ? 40 : 0), top + 212);
+    if (R.seeds) { drawSeedIcon(W / 2 + 34, top + 212, 2); ctx.fillStyle = "#3f8a32"; font(18, true); ctx.textAlign = "left"; ctx.fillText("+" + R.seeds, W / 2 + 44, top + 212); ctx.textAlign = "center"; }
+    if (R.friend) { ctx.fillStyle = "#e0508a"; font(12, true); ctx.fillText("✦ " + R.friend.name + " is your friend!", W / 2, top + 240); }
+    const who = R.friend || ANIMALS.find(a => a.id === SKY_STAGES[st.ss.k].friend) || ANIMALS[0];
+    const hop = (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 5)) * 6;
+    drawSprite(who, W / 2, top + ph - 104 - hop, 1.7, false, 0, false, 5, { acc: equippedFor(who.id), heartEyes: true });
+  } else {
+    ctx.fillStyle = C.text; font(19, true); ctx.fillText("Almost sparkling!", W / 2, top + 34);
+    ctx.fillStyle = C.textSoft; font(12, false);
+    ctx.fillText("You brought back " + R.meter + "% of the color!", W / 2, top + 64);
+    ctx.fillText("Try again whenever you like ♥", W / 2, top + 84);
+    if (R.hearts) { ctx.fillStyle = C.heart; font(16, true); ctx.fillText("♥ +" + R.hearts + " for trying", W / 2, top + 114); }
+    drawSprite(ANIMALS[0], W / 2, top + 170, 1.7, false, 0, false, 5, { acc: equippedFor("cat") });
+  }
+  uiButtons = [];
+  if (t > 0.5) {
+    const by = top + ph - 62;
+    const items = [["Retry", "adv_retry", "#d0ffd8", "#70c080"], ["Map", "adv_map", "#e8d0ff", "#c090e0"]];
+    if (R.win && st.ss.k < SKY_N - 1 && !R.end) items.push(["Next ▸", "adv_next", C.btn, "#ff80b0"]);
+    if (R.win && R.end) items.push(["Story ▸", "adv_map", C.btn, "#ff80b0"]);
+    const n = items.length, gap = 8, bw = (W - 60 - gap * (n - 1)) / n;
+    items.forEach((it, j) => uiButtons.push(btn(30 + j * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
+  }
+}
+function skyHudLabel() {
+  const S = st.ss, D = SKY_STAGES[S.k];
+  return "Sky Islands · " + (S.k + 1) + "/" + SKY_N + "  ↑" + S.lift + (D.puffs ? "  ☁" + S.puff : "");
+}
+
+// ---------- art: the sky backdrop (stage + storybook pages) ----------
+function drawSkyIsle(x, y, s, flowers) {
+  ctx.fillStyle = "#8a5a3a"; ctx.beginPath(); ctx.moveTo(x - 30 * s, y); ctx.lineTo(x + 30 * s, y); ctx.lineTo(x + 8 * s, y + 26 * s); ctx.lineTo(x - 6 * s, y + 30 * s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#6a4020"; ctx.beginPath(); ctx.moveTo(x - 6 * s, y + 8 * s); ctx.lineTo(x + 14 * s, y + 8 * s); ctx.lineTo(x - 2 * s, y + 30 * s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#7ed860"; ctx.beginPath(); ctx.ellipse(x, y, 32 * s, 7 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#a8ee88"; ctx.fillRect(x - 20 * s, y - 4 * s, 16 * s, 2 * s);
+  if (flowers) for (let k = 0; k < 4; k++) { ctx.fillStyle = C.flower[k]; ctx.fillRect(x - 20 * s + k * 12 * s, y - 3 * s, 3 * s, 3 * s); }
+  ctx.fillStyle = "#4a9a3a"; ctx.fillRect(x + 14 * s, y - 16 * s, 3 * s, 14 * s); ctx.beginPath(); ctx.arc(x + 15.5 * s, y - 18 * s, 8 * s, 0, Math.PI * 2); ctx.fill();
+}
+function drawSkyBg(k) {
+  k = clamp(k == null ? 1 : k, 0, 1);
+  const calm = kind && kind.motion, tt = calm ? time * 0.2 : time;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#8fd0ff"); g.addColorStop(0.55, "#d4eeff"); g.addColorStop(1, "#fff0f8");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#fff6c8"; ctx.beginPath(); ctx.arc(W - 64, 120, 24, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 0.25 + 0.55 * k;
+  ["#ff8ab8", "#ffb070", "#ffe066", "#90e070", "#70c0ff", "#c9a0ff"].forEach((c, j) => { ctx.strokeStyle = c; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(W * 0.35, H * 0.62, 190 - j * 6, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke(); });
+  ctx.globalAlpha = 1;
+  for (let i = 0; i < 6; i++) { const x = ((i * 97 + tt * (6 + i % 3 * 3)) % (W + 120)) - 60, y = 150 + (i * 71) % Math.max(120, H - 330); drawCloudPuff(x, y, 0.8 + (i % 3) * 0.2, 0.75); }
+  drawSkyIsle(70, H * 0.42 + Math.sin(tt * 0.8) * 4, 1, true);
+  drawSkyIsle(W - 80, H * 0.56 + Math.sin(tt * 0.8 + 2) * 4, 0.85, true);
+  drawSkyIsle(W * 0.52, H * 0.30 + Math.sin(tt * 0.8 + 4) * 3, 0.6, false);
+  // rainbow bridge between the two big islands
+  ["#ff8ab8", "#ffe066", "#90e070", "#70c0ff"].forEach((c, j) => { ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(98, H * 0.42 + j * 3); ctx.quadraticCurveTo(W / 2, H * 0.40 + j * 3, W - 104, H * 0.56 + j * 3); ctx.stroke(); });
+  // cloud floor
+  for (let i = 0; i < 9; i++) drawCloudPuff(i * 46 - 10 + Math.sin(tt * 0.5 + i) * 4, H - 30 + (i % 2) * 8, 1.3, 1);
+  advGrayVeil(k);
+}
+
+// ---------- map: the Sky Islands band at the top of the storybook ----------
+function skyNodePos(k) {
+  const B = advBand(5), xs = [W - 76, W / 2, 76];
+  return { x: xs[k], y: B.y0 + B.h * (k === 1 ? 0.42 : 0.6) };
+}
+function drawSkyBand() {
+  const B = advBand(5), open = skyOpen(), done = skyState().done;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, B.y0, W, B.h + 1); ctx.clip();
+  const g = ctx.createLinearGradient(0, B.y0, 0, B.y1);
+  g.addColorStop(0, "#9fd8ff"); g.addColorStop(1, "#e6f6ff");
+  ctx.fillStyle = g; ctx.fillRect(0, B.y0, W, B.h + 1);
+  const calm = kind && kind.motion;
+  for (let i = 0; i < 5; i++) { const x = ((i * 89 + (calm ? 0 : time * 8)) % (W + 80)) - 40, y = B.y0 + 14 + (i * 23) % Math.max(10, B.h - 30); drawCloudPuff(x, y, 0.45, 0.85); }
+  const isl = [[W * 0.2, 0.55], [W * 0.78, 0.35], [W * 0.5, 0.78]];
+  for (const [x, f] of isl) { const s = Math.min(0.45, B.h / 220); ctx.save(); ctx.translate(0, Math.sin(time * 0.8 + x) * 1.5); drawSkyIsle(x, B.y0 + B.h * f, s, true); ctx.restore(); }
+  advGrayVeil(done ? 1 : open ? 0.45 : 0);
+  ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(0, B.y1, W, 1.5);
+  font(10, true);
+  const label = (done ? "✿ " : open ? "☁ " : "🔒 ") + "Sky Islands";
+  const w = ctx.measureText(label).width + 16, px = W / 2 - w / 2, py = B.y1 - 21;
+  ctx.fillStyle = done ? "#d8f0ff" : "rgba(245,242,248,0.92)"; roundRect(px, py, w, 18, 9); ctx.fill();
+  ctx.strokeStyle = done ? "#70c0ff" : "#c8c0d0"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = done ? C.text : "#8a8098"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, px + 8, py + 9.5);
+  if (!open) {
+    font(9.5, true); const t = SKY_LOCK_TEXT, tw = ctx.measureText(t).width + 14;
+    ctx.fillStyle = "rgba(255,255,255,0.85)"; roundRect(W / 2 - tw / 2, B.y0 + 6, tw, 16, 8); ctx.fill();
+    ctx.fillStyle = "#7a6a90"; ctx.textAlign = "center"; ctx.fillText(t, W / 2, B.y0 + 14.5);
+  }
+}
+function drawSkyNodes() {
+  const open = skyOpen(), Y = skyState();
+  // a rainbow bridge climbs from the castle to the first island
+  const a0 = advNodePos(ADV_N - 1), b0 = skyNodePos(0);
+  if (open) ["#ff9ec8", "#ffd66b", "#90e070", "#70c0ff"].forEach((c, k) => { ctx.strokeStyle = c; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(a0.x - 6 + k * 3, a0.y - 18); ctx.quadraticCurveTo(a0.x - 40, (a0.y + b0.y) / 2, b0.x - 6 + k * 3, b0.y + 14); ctx.stroke(); });
+  for (let k = 0; k < SKY_N - 1; k++) {
+    const a = skyNodePos(k), b = skyNodePos(k + 1);
+    const n = Math.max(3, Math.floor(Math.hypot(b.x - a.x, b.y - a.y) / 12));
+    for (let j = 1; j < n; j++) { const t = j / n; ctx.fillStyle = skyWon(k) ? "rgba(255,250,240,0.95)" : "rgba(210,205,220,0.8)"; ctx.fillRect(a.x + (b.x - a.x) * t - 2, a.y + (b.y - a.y) * t - 2, 4, 4); }
+  }
+  for (let k = 0; k < SKY_N; k++) {
+    const p = skyNodePos(k), won = skyWon(k), op = skyStageOpen(k), rad = k === SKY_N - 1 ? 19 : 16;
+    const next = op && !won && (k === 0 || skyWon(k - 1)), bounce = next ? Math.abs(Math.sin(time * 3)) * 3 : 0;
+    ctx.fillStyle = "rgba(60,40,70,0.18)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + rad - 1, rad * 0.9, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = won ? "#8fd0ff" : op ? "#fff" : "#d8d2de";
+    ctx.beginPath(); ctx.arc(p.x, p.y - bounce, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = won ? "#fff" : op ? "#70c0ff" : "#b8b0c0"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    if (!op) { ctx.fillStyle = "#9a90a8"; font(12, true); ctx.fillText("🔒", p.x, p.y + 1); }
+    else if (k === SKY_N - 1) drawSprite(ANIMALS.find(a => a.id === "stormsprite"), p.x, p.y - bounce, 0.95, false, 0, !won, 7, null);
+    else { ctx.fillStyle = won ? "#fff" : C.text; font(14, true); ctx.fillText("☁" + (k + 1), p.x, p.y + 1 - bounce); }
+    if (op || won) for (let s = 0; s < 3; s++) drawStarShape(p.x + (s - 1) * 11, p.y + rad + 7, 5, (Y.gm[k] >> s) & 1, 1);
+    uiButtons.push({ x: p.x - 26, y: p.y - 26, w: 52, h: 60, id: "sky_node_" + k });
+  }
+}
+function drawSkyCard(k) {
+  const S = SKY_STAGES[k], who = ANIMALS.find(a => a.id === S.friend);
+  ctx.fillStyle = "rgba(30,40,70,0.4)"; ctx.fillRect(0, 0, W, H);
+  const ph = 318, top = Math.round(H / 2 - ph / 2);
+  solidPanel(28, top, W - 56, ph);
+  uiButtons = [];
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#4a90d0"; font(11, true); ctx.fillText("Sky Islands · Stage " + (k + 1) + " / " + SKY_N, W / 2, top + 26);
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText(S.name, W / 2, top + 52);
+  ctx.fillStyle = "#e6f4ff"; roundRect(W / 2 - 60, top + 68, 120, 24, 12); ctx.fill();
+  ctx.strokeStyle = "#8fd0ff"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(12, true); ctx.fillText(S.mod, W / 2, top + 80);
+  ctx.fillStyle = C.textSoft; fitFont(S.hint, W - 90, 11, false, 8.5); ctx.fillText(S.hint, W / 2, top + 106);
+  const have = skyState().gm[k] || 0;
+  skyGoalTexts(S).forEach((g, j) => { drawStarShape(58, top + 134 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 130, 11.5, false, 8.5); ctx.fillText(g, 74, top + 135 + j * 24); });
+  ctx.textAlign = "center"; ctx.fillStyle = "#3f8a32"; font(11, true);
+  const rw = "Rewards: Bloom Seeds" + (who && !unlocked[who.id] ? " + a new friend!" : " · " + (who ? who.name + " ♥" : ""));
+  fitFont(rw, W - 90, 11, true, 8.5); ctx.fillText(rw, W / 2, top + 214);
+  uiButtons.push(btn(44, top + ph - 64, (W - 100) / 2, 48, "Close", { id: "sky_close", size: 14, bg: "#fff", border: "#d0b0c0" }));
+  uiButtons.push(btn(56 + (W - 100) / 2, top + ph - 64, (W - 100) / 2, 48, "Play ▸", { id: "sky_play", size: 15 }));
+}
+function skyAction(id) {
+  if (id.startsWith("sky_node_")) {
+    const k = +id.slice(9);
+    if (!skyOpen()) { toast(SKY_LOCK_TEXT, C.textSoft); if (typeof sfxNope === "function") sfxNope(); return true; }
+    if (!skyStageOpen(k)) { toast("Finish " + SKY_STAGES[k - 1].name + " first", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return true; }
+    skySel = k; advSel = null; advTreasOpen = false; return true;
+  }
+  if (id === "sky_close") { skySel = null; return true; }
+  if (id === "sky_play") { const k = skySel; skySel = null; if (k != null) skyStartStage(k); return true; }
+  return false;
+}
+{ const f = v16Action; v16Action = function (id) { if (id && skyAction(id)) return true; return f.apply(this, arguments); }; }
+{ const f = openAdvMap; openAdvMap = function () { skySel = null; const r = f.apply(this, arguments); if (scene === "advmap" && skyOpen()) qBump("skymap"); return r; }; }
+{ const f = closeAdvMap; closeAdvMap = function () { skySel = null; return f.apply(this, arguments); }; }
+
+// ---------- story pages ----------
+ADV_CUTS.sky_intro = [
+  { art: "sky:0", text: "High above the castle, a rainbow bridge shimmered up into the clouds." },
+  { art: "sky:1", text: "Up top were the Sky Islands: floating gardens where the wind hums soft songs." },
+  { art: "sky:2", text: "Some islands had gone gray and drowsy. Time to bring the colors back, one hug at a time!" },
+];
+ADV_CUTS.sky_storm = [
+  { art: "sky:3", text: "On the highest cloud sat a little Storm Sprite, rumbling tiny thunder all alone." },
+  { art: "sky:3", text: "“Nobody wants to play with a storm,” it sniffled. Maybe a few gentle hugs would help." },
+];
+ADV_CUTS.sky_end = [
+  { art: "sky:4", text: "After three soft hugs, the Storm Sprite giggled, and a tiny rainbow popped out!" },
+  { art: "sky:5", text: "“Can I come play in your meadow?” Of course! Its rumbles were just shy hellos. ♥" },
+];
+function drawSkyCutArt(n, x, y, w, h, t, cx, gy) {
+  const hop = k => (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 4 + k)) * 4;
+  const A = id => ANIMALS.find(a => a.id === id);
+  const storm = A("stormsprite");
+  if (n === 0) {
+    ["#ff8ab8", "#ffb070", "#ffe066", "#90e070", "#70c0ff", "#c9a0ff"].forEach((c, k) => { ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + 30, gy + 10 - k * 5); ctx.quadraticCurveTo(cx + 40, y + 20 - k * 5, x + w + 10, y + 30 - k * 5); ctx.stroke(); });
+    drawSprite(ANIMALS[0], cx - 60, gy - hop(0), 2, false, 0, false, 1, { acc: equippedFor("cat") });
+  } else if (n === 1) {
+    drawSprite(ANIMALS[0], cx - 50, gy - hop(0), 1.8, false, 0, false, 1, { acc: equippedFor("cat"), heartEyes: true });
+    drawSprite(A("cloudlamb"), cx + 40, gy - 20 - hop(1) * 2, 1.8, false, 0, false, 2, null);
+  } else if (n === 2) {
+    drawGloomCloud({ x: cx - 80 + Math.sin(t) * 8, y: y + 40, s: 1.4, phase: 0 });
+    drawGloomCloud({ x: cx + 30 + Math.sin(t + 2) * 8, y: y + 60, s: 1.1, phase: 1 });
+    drawSprite(ANIMALS[0], cx - 40, gy - hop(0), 1.8, false, 0, false, 1, { acc: equippedFor("cat") });
+  } else if (n === 3) {
+    drawCloudPuff(cx, gy + 6, 1.6, 1);
+    drawSprite(storm, cx, gy - 30, 2.6, false, 0, true, 1, null);
+    ctx.fillStyle = "#7ec8ff";
+    for (let k = 0; k < 5; k++) ctx.fillRect(cx - 20 + k * 10, gy - 4 + ((t * 30 + k * 7) % 20), 2, 4);
+    ctx.fillStyle = "#5a5070"; font(14, true); ctx.textAlign = "center"; ctx.fillText("rumble…", cx + 86, y + 30);
+  } else if (n === 4) {
+    ["#ff8ab8", "#ffe066", "#90e070", "#70c0ff"].forEach((c, k) => { ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, gy - 30, 70 - k * 5, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); });
+    drawSprite(storm, cx, gy - 26 - hop(0), 2.6, false, 0, false, 1, { heartEyes: true });
+    drawSprite(ANIMALS[0], cx - 80, gy - hop(1), 1.6, false, 0, false, 2, { acc: equippedFor("cat"), heartEyes: true });
+    for (let k = 0; k < 4; k++) drawHeart(cx + Math.cos(t * 1.4 + k * 1.6) * 60, gy - 50 + Math.sin(t * 1.4 + k * 1.6) * 20, 5, C.heart);
+  } else {
+    const ids = ["cat", "cloudlamb", "stormsprite", "kitekitten"];
+    ids.forEach((id, k) => { const a = A(id); if (a) drawSprite(a, x + 46 + k * ((w - 92) / 3), gy - hop(k), 1.5, false, 0, false, k, { heartEyes: true, acc: equippedFor(id) }); });
+    for (let k = 0; k < 5; k++) drawSparkle(cx + Math.cos(t * 2 + k * 1.3) * 90, y + 40 + Math.sin(t * 2 + k * 1.3) * 20, 3, "#fff4b0");
+  }
+}
+
+// ---------- test/debug hooks ----------
+v16Api.normalizeHc16 = normalizeHc16; // expose the sky-aware version
+const v161Api = {
+  get sky() { return skyState(); },
+  skyOpen, skyStageOpen, skyStartStage, skyFinish, skyTotalStars, skyFriendCount,
+  SKY_STAGES, SKY_FRIENDS, SKY_IDS, SKY_DECOR, SKY_HEART_HATS, SKY_SEED_HATS,
+  get skySel() { return skySel; },
 };
 
 // ===================== BOOT =====================
@@ -18606,6 +19282,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     openBand, openBooth, openWishes, openHome, partyAction, BAND_SONG,
     normalizeV12, v12Snapshot, marketOpen, marketFriend, rollWeather, prepMail, openBoat, tapSky, v12Action, DYE_COLS, COAT_COST, MARKET_HATS, MARKET_DEN, MARKET_FRIENDS, LULLABY_SONG,
     v16: v16Api,
+    v161: v161Api,
     drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
