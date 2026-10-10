@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.1-region">
+<meta name="hc-version" content="16.2-twists">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.1 — Sky Islands region update
+// Happy Critters v16.2 — twists update
 
 const W = 360;
 let H = 540;
@@ -5628,6 +5628,7 @@ function load() {
     if (typeof normalizeHc15 === "function") hc15 = normalizeHc15(d.hc15);
     if (typeof normalizeHc154 === "function") hc154 = normalizeHc154(d.hc154);
     if (typeof normalizeHc16 === "function") hc16 = normalizeHc16(d.hc16);
+    if (typeof normalizeHc162 === "function") hc162 = normalizeHc162(d.hc162);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -5653,6 +5654,7 @@ function save() {
       hc15,
       hc154,
       hc16: (typeof hc16 !== "undefined" ? hc16 : null),
+      hc162: (typeof hc162 !== "undefined" ? hc162 : null),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -9516,18 +9518,18 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 16;
-const APP_LABEL = "v16.1";
+const APP_VERSION = 17;
+const APP_LABEL = "v16.2";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "Sky Islands & Bloom Seeds",
-  pals: ["cloudlamb", "stormsprite", "kitekitten", "skywhale"],
+  sub: "Twists, Games & Festivals",
+  pals: ["bunny", "cloudlamb", "kitekitten", "skywhale"],
   items: [
-    "Sky Islands: 3 new stages at the top of the Storybook map.",
-    "8 sky friends to meet, and a sulky Storm Sprite to hug.",
-    "New hats and Yard decor, for hearts or Bloom Seeds.",
-    "Daily Quests in Goals and Collections in the Album.",
-    "Second Spring: a remixed storybook after the story.",
+    "Daily Twists: a gentle new surprise in the meadow each day.",
+    "Two new arcade games in Games: Critter Stack & Firefly Catch.",
+    "Goal Ladders in Goals: Bronze, Silver, Gold and Rainbow tiers.",
+    "Weekly Bloom Festival in Goals > Quests, with festival hats.",
+    "Twists can be turned off any time in Settings.",
   ],
 };
 
@@ -11846,6 +11848,7 @@ function mgAction(id) {
 
 // ---------- arcade hub ----------
 function drawArcadePreview(game, cx, cy) {
+  if (typeof isV162Game === "function" && isV162Game(game)) { drawV162Preview(game, cx, cy); return; }
   if (game === "memory") {
     ctx.save(); ctx.translate(cx - 12, cy); ctx.rotate(-0.15);
     ctx.fillStyle = "#ff9ec8"; roundRect(-14, -18, 28, 36, 6); ctx.fill(); ctx.strokeStyle = "#e0608f"; ctx.lineWidth = 2; ctx.stroke();
@@ -11885,12 +11888,16 @@ function drawArcade() {
     uiButtons.push(btn(W - 110, y + 8, 78, 40, "Go ▸", { id: "adventure", size: 14, bg: "#fff", border: "#a888e0" }));
   }
   if (typeof drawPartyGamesRow === "function") drawPartyGamesRow();
-  uiButtons.push(btn(22, 184, W - 44, 44, "Endless Meadow", { id: "v15_farm", size: 14, bg: "#ffe0f0", border: "#e090b0" }));
+  { // v16.2: Endless Meadow shares its row with the page switch for the two newer games
+    const hw = (W - 44 - 8) / 2;
+    uiButtons.push(btn(22, 184, hw, 44, "Endless Meadow", { id: "v15_farm", size: 13, bg: "#ffe0f0", border: "#e090b0" }));
+    uiButtons.push(btn(30 + hw, 184, hw, 44, arcPage ? "◂ Classic games" : "✦ New games", { id: "v162_arcpage", size: 13, bg: "#fff4c8", border: "#e0c060" }));
+  }
   const top = 236, bottom = H - 76, n = 3, gap = 8;
   const ch = Math.min(150, (bottom - top - gap * (n - 1)) / n);
   const A = arcade;
-  ARC_GAMES.forEach((g, i) => {
-    const info = ARC_INFO[g], y = top + i * (ch + gap);
+  (arcPage ? V162_GAMES : ARC_GAMES).forEach((g, i) => {
+    const info = ARC_INFO[g], y = top + i * (ch + gap), A = v162ArcStats(g);
     ctx.fillStyle = info.col; roundRect(22, y, W - 44, ch, 14); ctx.fill();
     ctx.strokeStyle = info.border; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = "rgba(255,255,255,0.6)"; roundRect(30, y + 8, 64, 64, 10); ctx.fill();
@@ -11900,7 +11907,7 @@ function drawArcade() {
     ctx.fillStyle = C.textSoft; fitFont(info.blurb, W - 150, 11, false, 8.5); ctx.fillText(info.blurb, 104, y + 38);
     const best = g === "memory" ? (A.memBest.some(Boolean) ? "Best: " + A.memBest.map(b => b || "–").join(" / ") + " moves" : "No wins yet") : (A.best[g] ? "Best: " + A.best[g] : "No score yet");
     ctx.fillText(best + "  " + "★".repeat(A.stars[g]) + "☆".repeat(3 - A.stars[g]), 104, y + 55);
-    const ready = dailyReady(g);
+    const ready = A === arcade ? dailyReady(g) : A.daily[g] !== todayKey();
     ctx.fillStyle = ready ? "#e05a90" : "#3f9a48"; font(10, true);
     ctx.textAlign = "right";
     ctx.fillText(ready ? "✦ Daily +" + ARC_DAILY + " ♥" : "✓ Daily done", W - 32, y + 20);
@@ -11918,6 +11925,12 @@ function drawArcade() {
       uiButtons.push(btn(W - 158, by, 124, 44, "Play ▸", { id: "arc_" + g, size: 15, bg: "#fff", border: info.border }));
     }
   });
+  if (arcPage) {
+    const y = top + 2 * (ch + gap) + 10;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = C.textSoft; font(12, false);
+    ctx.fillText("Best scores climb the Goal Ladders in Goals ✦", W / 2, y + 10);
+    ctx.fillText("First milestone in each game: +2 Bloom Seeds 🌱", W / 2, y + 30);
+  }
   panelFooter();
   // goal toasts held back during a round show here once you're out
   updateParticles(frameDt);
@@ -11926,7 +11939,7 @@ function drawArcade() {
 function arcadeAction(id) {
   if (id.startsWith("arc_memory_")) { startMg("memory", +id.slice(11)); return; }
   if (id.startsWith("arc_locked_")) { const t = +id.slice(11); toast("Win " + MEM_TIERS[t - 1].name + " first to unlock", C.textSoft); return; }
-  if (id === "arc_bubble" || id === "arc_treats") startMg(id.slice(4));
+  if (id === "arc_bubble" || id === "arc_treats" || id === "arc_stack" || id === "arc_firefly") startMg(id.slice(4));
 }
 
 // ---------- sounds ----------
@@ -14623,6 +14636,7 @@ function drawKindSettings() {
     ["seasons", (SEASON_INFO[currentSeason()] || SEASON_INFO.spring).icon + "  Time & Seasons", "#f8e4f2", "#e0a0c0"],
     ["v12_wx", "☂  Weather: " + (typeof wxLabel === "function" ? wxLabel() : "Auto"), "#e7f4ff", "#80b0e0"],
     ["v12_lull", "♫  Lullaby: " + (v12 && v12.lullaby ? "On" : "Off"), (v12 && v12.lullaby) ? "#e8e4ff" : "#f5e6ee", (v12 && v12.lullaby) ? "#9080e0" : "#d0b0c0"],
+    ["v162_twists", "☀  Daily Twists: " + (typeof hc162 !== "undefined" && hc162 && hc162.twOff ? "Off" : "On"), (typeof hc162 !== "undefined" && hc162 && hc162.twOff) ? "#f5e6ee" : "#fff4d0", (typeof hc162 !== "undefined" && hc162 && hc162.twOff) ? "#d0b0c0" : "#e0b040"],
     ["tut_replay", "Replay the tutorial", "#f5e6ee", "#d0b0c0"],
     ["whatsnew", "What's new", "#fff0b0", "#e0c060"],
   ];
@@ -17997,7 +18011,7 @@ function v16DrawQuests() {
   const Q = hc16.q;
   const top = 122, bottom = H - 74;
   const cardH = 84;
-  const total = 30 + Q.list.length * (cardH + 8) + 96 + 40;
+  const total = 30 + Q.list.length * (cardH + 8) + 96 + 40 + (typeof festCardH === "function" ? festCardH() : 0);
   setListExtent(top, bottom, total);
   listClip(top, bottom);
   let y = top + 4 - listScroll;
@@ -18045,6 +18059,7 @@ function v16DrawQuests() {
   ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
   ctx.fillText(Q.rerolled ? "Reroll used today" : "One free reroll a day", W / 2, y + 8);
   ctx.fillText("New quests at midnight", W / 2, y + 24);
+  if (typeof drawFestCard === "function") drawFestCard(y + 40, top, bottom);
   ctx.restore();
   drawScrollbar(top, bottom);
   panelFooter();
@@ -19214,6 +19229,891 @@ const v161Api = {
   get skySel() { return skySel; },
 };
 
+// ===================== v16.2 — Daily Twists, two new arcade games, tiered ladders, Bloom Festival =====================
+// All new state lives in hc162 (normalized on load), so older saves migrate without loss.
+
+const isNum = v => typeof v === "number" && isFinite(v);
+function blankArc162() {
+  return { plays: { stack: 0, firefly: 0 }, best: { stack: 0, firefly: 0 }, stars: { stack: 0, firefly: 0 }, daily: { stack: "", firefly: "" },
+    day: "", dayEarned: { stack: 0, firefly: 0 }, mile: { stack: false, firefly: false } };
+}
+function blankHc162() {
+  return { twOff: false, tw: null, arc: blankArc162(), tiers: {}, quests: 0, fest: null, festOwn: {}, festDone: 0, seen: false };
+}
+let hc162 = blankHc162();
+function normalizeHc162(d) {
+  const o = blankHc162();
+  if (!isObj(d)) return o;
+  o.twOff = !!d.twOff;
+  if (isObj(d.tw) && typeof d.tw.day === "string" && typeof d.tw.id === "string") o.tw = { day: d.tw.day.slice(0, 12), id: d.tw.id.slice(0, 16) };
+  if (isObj(d.arc)) {
+    const a = d.arc;
+    for (const g of ["stack", "firefly"]) {
+      if (isObj(a.plays)) o.arc.plays[g] = Math.floor(numOr0(a.plays[g]));
+      if (isObj(a.best)) o.arc.best[g] = Math.floor(numOr0(a.best[g]));
+      if (isObj(a.stars)) o.arc.stars[g] = Math.min(3, Math.floor(numOr0(a.stars[g])));
+      if (isObj(a.daily) && typeof a.daily[g] === "string") o.arc.daily[g] = a.daily[g].slice(0, 12);
+      if (isObj(a.dayEarned)) o.arc.dayEarned[g] = Math.floor(numOr0(a.dayEarned[g]));
+      if (isObj(a.mile)) o.arc.mile[g] = !!a.mile[g];
+    }
+    if (typeof a.day === "string") o.arc.day = a.day.slice(0, 12);
+  }
+  if (isObj(d.tiers)) for (const k in d.tiers) if (typeof k === "string" && k.length < 24) o.tiers[k] = Math.min(4, Math.floor(numOr0(d.tiers[k])));
+  o.quests = Math.floor(numOr0(d.quests));
+  if (isObj(d.fest) && typeof d.fest.week === "string") {
+    const f = d.fest;
+    o.fest = { week: f.week.slice(0, 10), theme: Math.min(3, Math.floor(numOr0(f.theme))), step: Math.min(5, Math.floor(numOr0(f.step))), n: Math.floor(numOr0(f.n)), paid: !!f.paid };
+  }
+  if (isObj(d.festOwn)) for (const k in d.festOwn) if (d.festOwn[k] === true && k.length < 24) o.festOwn[k] = true;
+  o.festDone = Math.floor(numOr0(d.festDone));
+  o.seen = !!d.seen;
+  return o;
+}
+function ensureHc162() { if (!hc162 || !hc162.arc) hc162 = normalizeHc162(hc162); return hc162; }
+
+// ---------- 1. Daily Meadow Twists ----------
+// One gentle modifier per local day, picked by date (and remembered for that day). Bonuses are small
+// and mostly in hearts, so the 5–9 minute single-tap Joy pacing barely moves (see test/v162.mjs).
+const TWISTS = [
+  { id: "bunny", name: "Bunny Day", icon: "🐰", text: "Bunnies hop by more often and pay +50% hearts" },
+  { id: "golden", name: "Golden Hour", icon: "✦", text: "Shiny friends show up more often" },
+  { id: "breezy", name: "Breezy", icon: "≋", text: "A soft breeze nudges everyone sideways" },
+  { id: "sleepy", name: "Sleepy Meadow", icon: "☾", text: "Friends nap more; a hug wakes them for +10 ♥" },
+  { id: "confetti", name: "Confetti Day", icon: "✿", text: "Confetti (and +5 ♥) on every 5× combo" },
+  { id: "gifts", name: "Double Gifts", icon: "🎁", text: "Today's daily gift pays double (up to +400 ♥)" },
+  { id: "stars", name: "Star Shower", icon: "★", text: "Tap falling stars for +8 ♥" },
+  { id: "rainbow", name: "Rainbow Day", icon: "🌈", text: "Cheering up sad friends pays +25% hearts" },
+  { id: "bighugs", name: "Big Hugs", icon: "♥", text: "Your hug combo lasts a little longer" },
+  { id: "parade", name: "Friend Parade Day", icon: "♪", text: "Parade friends pay +50% hearts" },
+  { id: "petals", name: "Petal Day", icon: "❀", text: "Petting a happy friend pays +1 ♥" },
+  { id: "kindclouds", name: "Kind Clouds", icon: "☁", text: "Shooing a gloom cloud pays +5 ♥" },
+];
+const TWIST_BY_ID = {};
+for (const t of TWISTS) TWIST_BY_ID[t.id] = t;
+let twDayOverride = null; // tests only
+function twistDay() { return twDayOverride || todayKey(); }
+function twistIndex(day) { return Math.floor(v16Rng("twist" + day)() * TWISTS.length); }
+function twistPickIdx(day, depth) {
+  let i = twistIndex(day);
+  if (depth <= 0) return i;
+  // never the same twist two days running
+  const t = new Date(day + "T12:00:00").getTime();
+  if (isFinite(t) && twistPickIdx(todayKey(new Date(t - 86400000)), depth - 1) === i) i = (i + 1) % TWISTS.length;
+  return i;
+}
+function twistPick(day) { return TWISTS[twistPickIdx(day, 8)].id; }
+let twCache = { k: "", id: null };
+function twistId() {
+  ensureHc162();
+  if (hc162.twOff) return null;
+  if (typeof window !== "undefined" && window.__HC_TEST && !twDayOverride) {
+    // test runs stay identical every real day unless a test asks for a twist
+    const c = window.__HC_CLOCK || {};
+    if (c.twist && TWIST_BY_ID[c.twist]) return c.twist;
+    if (c.twist !== "auto") return null;
+  }
+  const day = twistDay();
+  if (twCache.k === day && hc162.tw && hc162.tw.day === day) return twCache.id;
+  if (!hc162.tw || hc162.tw.day !== day || !TWIST_BY_ID[hc162.tw.id]) { hc162.tw = { day, id: twistPick(day) }; saveSoon(); }
+  twCache = { k: day, id: hc162.tw.id };
+  return twCache.id;
+}
+const tw = id => twistId() === id;
+function twistInfo() { const id = twistId(); return id ? TWIST_BY_ID[id] : null; }
+const TW_BUNNIES = ["bunny", "breezebunny"];
+// spawn tweaks: deterministic (no extra random draws), applied to the friend that just arrived
+{
+  const f = spawnCritter;
+  spawnCritter = function () {
+    const n0 = critters.length;
+    const r = f.apply(this, arguments);
+    const id = twistId();
+    if (id && critters.length > n0) {
+      const c = critters[critters.length - 1];
+      if (id === "bunny" && !c.shiny && c.animal.id !== "rainbow" && c.id % 3 === 0) {
+        const opts = TW_BUNNIES.filter(b => unlocked[b]);
+        if (opts.length) c.animal = ANIMALS.find(a => a.id === opts[c.id % opts.length]) || c.animal;
+      } else if (id === "golden" && !c.shiny && !c.sad && c.animal.id !== "rainbow" && c.id % 14 === 0) {
+        c.shiny = true; c.scale = Math.max(c.scale, 2.05);
+      } else if (id === "breezy") c.vx *= 1.12;
+    }
+    return r;
+  };
+}
+{
+  const f = updateCritter;
+  updateCritter = function (c, dt) {
+    f.call(this, c, dt);
+    if (c.state === "float" && !c.parade && c.idle !== "nap" && twistId() === "breezy") c.x += Math.sin(time * 0.9 + c.id) * ((kind && kind.motion) ? 4 : 10) * dt;
+  };
+}
+{
+  const f = startIdle;
+  startIdle = function (c) {
+    f.call(this, c);
+    if (c.idle !== "nap" && twistId() === "sleepy" && c.id % 2 === 0) { c.idle = "nap"; c.idleDur = 6; }
+  };
+}
+function twBonus(c, n, label) {
+  if (n <= 0) return;
+  joy += n; scoreSession += n;
+  addFloat({ x: c ? c.x : W / 2, y: (c ? c.y : H / 2) - 66, text: "+" + n + " " + label, life: 1.0, vy: -26, color: "#c08000", size: 11 });
+}
+{
+  const f = hugCritter;
+  hugCritter = function (c, moodScale, payScale) {
+    const id = twistId();
+    if (!id || !c || c.state !== "float") return f.apply(this, arguments);
+    const s0 = scoreSession, wasNap = c.idle === "nap", wasSad = c.sad, par = c.parade;
+    const r = f.apply(this, arguments);
+    const pts = Math.max(0, scoreSession - s0);
+    if (id === "bunny" && TW_BUNNIES.includes(c.animal.id)) twBonus(c, Math.min(80, Math.floor(pts * 0.5)), "🐰");
+    else if (id === "sleepy" && wasNap) twBonus(c, 10, "☾");
+    else if (id === "rainbow" && wasSad) twBonus(c, Math.min(60, Math.floor(pts * 0.25)), "🌈");
+    else if (id === "parade" && par) twBonus(c, Math.min(80, Math.floor(pts * 0.5)), "♪");
+    else if (id === "confetti" && combo > 0 && combo % 5 === 0) { twBonus(c, 5, "✿"); spawnConfetti((kind && kind.motion) ? 6 : 18); }
+    if (id === "bighugs") comboTimer = COMBO_WINDOW * 1.3;
+    return r;
+  };
+}
+{ const f = petCritter; petCritter = function (c) { const r = f.apply(this, arguments); if (twistId() === "petals") { joy += 1; } return r; }; }
+{ const f = shooGloom; shooGloom = function (gc) { const live = gc && !gc.dead; const r = f.apply(this, arguments); if (live && twistId() === "kindclouds" && scene === "play") twBonus({ x: gc.x + 16 * (gc.s || 1), y: gc.y + 40 }, 5, "☁"); return r; }; }
+{ const f = openGift; openGift = function () { const j0 = joy; const r = f.apply(this, arguments); if (twistId() === "gifts" && joy > j0) { const extra = Math.min(400, joy - j0); joy += extra; toast("Double Gifts! +" + extra + " ♥", "#c08000"); } return r; }; }
+// Star Shower: little stars drift down; a tap that misses every friend can catch one
+const twStars = [];
+let twStarT = 4, twRng = v16Rng("stars");
+function updateTwist(dt) {
+  if (twistId() !== "stars" || scene !== "play") { if (twStars.length) twStars.length = 0; return; }
+  twStarT -= dt;
+  if (twStarT <= 0 && twStars.length < 2) { twStars.push({ x: 30 + twRng() * (W - 60), y: 96, vy: 26 + twRng() * 12, t: 0 }); twStarT = 6 + twRng() * 3; }
+  for (const s of twStars) { s.t += dt; s.y += s.vy * dt * ((kind && kind.motion) ? 0.6 : 1); if (s.y > H - 110) s.dead = true; }
+  prune(twStars, notDead);
+}
+function twistTapStar(p) {
+  for (const s of twStars) if (!s.dead && dist2(p.x, p.y, s.x, s.y) < 30 * 30) {
+    s.dead = true; prune(twStars, notDead);
+    joy += 8; spawnSparkles(s.x, s.y, 10); if (typeof sfxChime === "function") sfxChime(6);
+    addFloat({ x: s.x, y: s.y - 14, text: "+8 ★", life: 0.9, vy: -30, color: "#d0a000", size: 13 });
+    return true;
+  }
+  return false;
+}
+{ const f = tapFirefly; tapFirefly = function (p) { if (twistTapStar(p)) return true; return f.apply(this, arguments); }; }
+{ const f = updatePlay; updatePlay = function (dt) { const r = f.apply(this, arguments); updateTwist(dt); return r; }; }
+function drawTwistWorld() {
+  const id = twistId();
+  if (id === "stars") for (const s of twStars) {
+    ctx.fillStyle = "rgba(255,240,170,0.35)"; ctx.beginPath(); ctx.arc(s.x, s.y, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffd23a"; drawStarShape(s.x, s.y, 8 * (1 + Math.sin(s.t * 8) * 0.12), 1, 1);
+  }
+  if (id === "rainbow") {
+    ctx.save(); ctx.globalAlpha = 0.28;
+    ["#ff8ab8", "#ffb070", "#ffe066", "#90e070", "#70c0ff", "#c9a0ff"].forEach((c, j) => { ctx.strokeStyle = c; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(W / 2, H * 0.55, 230 - j * 6, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); });
+    ctx.restore();
+  }
+  if (id === "petals" || id === "breezy") {
+    const n = (kind && kind.motion) ? 4 : 10;
+    for (let i = 0; i < n; i++) {
+      const x = ((i * 83 + time * (id === "breezy" ? 40 : 14)) % (W + 20)) - 10, y = 110 + ((i * 61 + time * 18) % Math.max(100, H - 260));
+      ctx.fillStyle = id === "petals" ? (i % 2 ? "#ffc0dc" : "#fff0f6") : "rgba(255,255,255,0.8)";
+      if (id === "petals") { ctx.fillRect(x, y, 3, 2); ctx.fillRect(x + 1, y + 2, 2, 1); } else ctx.fillRect(x, y, 8, 1.5);
+    }
+  }
+}
+{ const f = drawGift; drawGift = function () { const r = f.apply(this, arguments); if (scene === "play" || scene === "pause") drawTwistWorld(); return r; }; }
+// the twist's name as one small line in the HUD (no new buttons)
+{
+  const f = drawHUD;
+  drawHUD = function () {
+    const r = f.apply(this, arguments);
+    const t = twistInfo();
+    if (t) {
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#b07a10"; fitFont(t.icon + " " + t.name, 128, 10.5, true, 8);
+      ctx.fillText(t.icon + " " + t.name, W / 2, 26);
+    }
+    return r;
+  };
+}
+function toggleTwists() { ensureHc162(); hc162.twOff = !hc162.twOff; twStars.length = 0; toast(hc162.twOff ? "Daily Twists off" : "Daily Twists on", C.textSoft); save(); }
+
+// ---------- actions + API (extended by the sections below) ----------
+const V162_ACTIONS = [];
+function v162Action(id) {
+  if (id === "v162_twists") { toggleTwists(); return true; }
+  for (const h of V162_ACTIONS) if (h(id)) return true;
+  return false;
+}
+{ const f = v16Action; v16Action = function (id) { if (id && v162Action(id)) return true; return f.apply(this, arguments); }; }
+const v162Api = {
+  get hc162() { return hc162; },
+  normalizeHc162, twistId, twistPick, TWISTS, toggleTwists,
+  setTwistDay(k) { twDayOverride = k; twCache.k = ""; },
+  get twStars() { return twStars; },
+};
+
+// ===================== v16.2 — two more arcade games: Critter Stack + Firefly Catch =====================
+// They plug into the same mg / scene "mg" flow as the classic games (intro countdown, II pause, result card,
+// Again / Arcade), so Close from the Games hub still goes back wherever you came from (title or meadow).
+// Their stats live in hc162.arc (see g19-v162.js), so the classic arcade save is untouched.
+const V162_GAMES = ["stack", "firefly"];
+ARC_INFO.stack = { name: "Critter Stack", blurb: "Tap to drop · build a wobbly tower", col: "#e0f4ff", border: "#80c0e8" };
+ARC_INFO.firefly = { name: "Firefly Catch", blurb: "Tap fireflies on the glow beat", col: "#e4e0ff", border: "#9a90e0" };
+const ST_BH = 28, ST_SC = 1.5, ST_TOL = 26, ST_PERFECT = 6, ST_SWING_Y = 150, ST_MAX = 60;
+const STK_STARS = [0, 10, 25];
+const FF_ROUND = 40, FF_BEAT = 0.75, FF_PERFECT = 0.12, FF_GOOD = 0.24;
+const FF_STARS = [0, 500, 1000];
+const V162_PER_HEART = { stack: 3, firefly: 10 }; // stack pays 3 ♥ per critter, firefly 1 ♥ per 10 points
+const V162_MILE = { stack: 12, firefly: 500 };       // first time past this = +2 Bloom Seeds (once ever)
+let arcPage = 0;
+const isV162Game = g => g === "stack" || g === "firefly";
+function v162Stars(g, score) { const t = g === "stack" ? STK_STARS : FF_STARS; return score >= t[2] ? 3 : score >= t[1] ? 2 : 1; }
+function v162Base(g, score) { const s = Math.max(0, score); return Math.min(ARC_SCORE_CAP, Math.floor(g === "stack" ? s * V162_PER_HEART.stack : s / V162_PER_HEART.firefly)); }
+function v162Reward(g, base, today) {
+  const a = ensureHc162().arc;
+  if (a.day !== today) { a.day = today; a.dayEarned = { stack: 0, firefly: 0 }; }
+  const room = Math.max(0, ARC_DAY_CAP - a.dayEarned[g]);
+  const hearts = Math.max(0, Math.min(base, room));
+  a.dayEarned[g] += hearts;
+  let daily = 0;
+  if (a.daily[g] !== today) { daily = ARC_DAILY; a.daily[g] = today; }
+  return { hearts, daily, capped: hearts < base };
+}
+const stackBaseY = () => H - 112;
+function stackCritter() { const c = arcCritter(); return c; }
+
+{ // ---- startMg: init the new games, leave the classic ones alone ----
+  const o = startMg;
+  startMg = function (game, tier) {
+    if (!isV162Game(game)) return o(game, tier);
+    ensureHc162();
+    mg = { game, tier: 0, state: "intro", t: 0, time: 0, paused: false, score: 0, combo: 0, comboT: 0, best: 0,
+      critter: arcCritter(), sadT: 0, happyT: 0, result: null, pops: 0, oops: 0, gold: 0, caught: 0 };
+    scene = "mg";
+    particles.length = 0; floatTexts.length = 0;
+    weekBump("arcade");
+    setMusicMode(game === "stack" ? "treats" : "memory");
+    if (game === "stack") { mg.tower = []; mg.cur = stackCritter(); mg.ph = 0; mg.fall = null; mg.lives = 3; mg.wob = 0; mg.cam = 0; mg.perfects = 0; mg.tumbles = []; mg.endT = 0; }
+    else { mg.flies = []; mg.spawnT = 0.3; mg.perfects = 0; mg.goods = 0; mg.maxCombo = 0; }
+    return true;
+  };
+}
+
+// ---------- Critter Stack ----------
+function stackSwingX() { return W / 2 + Math.sin(mg.ph) * (W / 2 - 64); }
+function stackDrop() {
+  if (!mg || mg.game !== "stack" || mg.state !== "play" || mg.paused || mg.fall || mg.lives <= 0 || mg.endT > 0) return false;
+  mg.fall = { x: stackSwingX(), wy: ST_SWING_Y - mg.cam, vy: 0, a: mg.cur };
+  mg.cur = stackCritter();
+  sfxTick();
+  return true;
+}
+function stackLand() {
+  const f = mg.fall, n = mg.tower.length;
+  const sup = n ? mg.tower[n - 1].x : W / 2;
+  const tol = n ? ST_TOL : 52; // the grassy base is wider
+  const off = f.x - sup;
+  mg.fall = null;
+  const wy = stackBaseY() - ST_BH * (n + 0.5), sy = wy + mg.cam;
+  if (Math.abs(off) <= tol) {
+    const perfect = Math.abs(off) <= ST_PERFECT;
+    const x = perfect ? sup : f.x;
+    mg.tower.push({ x, a: f.a, sq: 0.35 });
+    mg.score = mg.tower.length;
+    if (perfect) {
+      mg.perfects++; mg.combo++; mg.wob *= 0.5;
+      addFloat({ x, y: sy - 18, text: "Perfect!", life: 0.9, vy: -30, color: "#ff70a8", size: 13 });
+      spawnSparkles(x, sy, kind.motion ? 3 : 7);
+      sfxChime(Math.min(12, mg.combo));
+    } else {
+      mg.combo = 0; mg.wob = clamp(mg.wob + off / tol, -3, 3);
+      sfxCatch(mg.tower.length);
+    }
+    spawnHearts(x, sy - 6, kind.motion ? 1 : 2, false);
+    buzz("hug");
+    if (mg.tower.length >= ST_MAX) mg.endT = 0.6;
+  } else {
+    mg.combo = 0; mg.lives--;
+    mg.tumbles.push({ x: f.x, y: sy, vx: off > 0 ? 70 : -70, vy: -120, r: 0, a: f.a, life: 1.4 });
+    addFloat({ x: clamp(f.x, 40, W - 40), y: sy - 20, text: mg.lives > 0 ? "Whoops!" : "Tumble!", life: 0.9, vy: -30, color: "#8a7aa0", size: 13 });
+    sfxOops(); buzz("shoo");
+    if (mg.lives <= 0) mg.endT = 1.0;
+  }
+}
+function stackUpdate(dt) {
+  if (mg.state !== "play") return;
+  mg.time += dt;
+  const n = mg.tower.length;
+  mg.ph += dt * (1.5 + Math.min(2, n * 0.08));
+  for (const b of mg.tower) b.sq = Math.max(0, b.sq - dt * 2.5);
+  if (mg.fall) {
+    const f = mg.fall;
+    f.vy += 1500 * dt; f.wy += f.vy * dt;
+    if (f.wy >= stackBaseY() - ST_BH * (n + 0.5)) stackLand();
+  }
+  for (const t of mg.tumbles) { t.vy += 600 * dt; t.x += t.vx * dt; t.y += t.vy * dt; t.r += (t.vx > 0 ? 3 : -3) * dt; t.life -= dt; }
+  prune(mg.tumbles, t => t.life > 0);
+  const want = Math.max(0, 300 - (stackBaseY() - mg.tower.length * ST_BH));
+  mg.cam += (want - mg.cam) * Math.min(1, dt * 4);
+  if (mg.endT > 0) { mg.endT -= dt; if (mg.endT <= 0) finishRound(); }
+}
+function stackWobble() {
+  const n = mg.tower.length;
+  const amp = Math.min(0.07, 0.006 + Math.abs(mg.wob) * 0.012 + n * 0.0012) * (kind.motion ? 0.3 : 1);
+  return Math.sin(time * 2.3) * amp + mg.wob * 0.004;
+}
+function drawStackBg() {
+  const k = clamp(mg.cam / 900, 0, 1);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, k > 0.5 ? "#b8b0f0" : "#a8dcff"); g.addColorStop(1, k > 0.5 ? "#ffd8e8" : "#e8f8ff");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // drifting pixel clouds (parallax with the camera)
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  for (let i = 0; i < 6; i++) {
+    const cy = ((i * 173 + mg.cam * 0.4) % (H + 80)) - 40, cx = ((i * 97 + (kind.motion ? 0 : time * 6)) % (W + 80)) - 40;
+    ctx.fillRect(Math.round(cx), Math.round(cy), 44, 10); ctx.fillRect(Math.round(cx) + 8, Math.round(cy) - 6, 24, 8);
+  }
+  // grassy base
+  const by = stackBaseY() + mg.cam;
+  if (by < H + 20) {
+    ctx.fillStyle = "#8ad070"; ctx.fillRect(0, by + 40, W, H);
+    ctx.fillStyle = "#c8a070"; roundRect(W / 2 - 62, by, 124, 40, 8); ctx.fill();
+    ctx.fillStyle = "#7cc860"; roundRect(W / 2 - 66, by - 4, 132, 14, 6); ctx.fill();
+    ctx.fillStyle = "#5aa848"; for (let x = W / 2 - 60; x < W / 2 + 60; x += 12) ctx.fillRect(x, by + 8, 6, 3);
+  }
+}
+function drawStackGame() {
+  drawStackBg();
+  const base = stackBaseY() + mg.cam;
+  ctx.save();
+  ctx.translate(W / 2, base); ctx.rotate(stackWobble()); ctx.translate(-W / 2, -base);
+  mg.tower.forEach((b, i) => {
+    const y = base - ST_BH * (i + 0.5);
+    if (y < -30 || y > H + 30) return;
+    drawSprite(b.a, b.x, y - 4, ST_SC, false, 0, false, 7 + i, { acc: equippedFor(b.a.id), sq: b.sq || 0 });
+  });
+  ctx.restore();
+  for (const t of mg.tumbles) { ctx.globalAlpha = clamp(t.life, 0, 1); drawSprite(t.a, t.x, t.y, ST_SC, false, 0, true, 3, { rot: t.r }); ctx.globalAlpha = 1; }
+  if (mg.fall) drawSprite(mg.fall.a, mg.fall.x, mg.fall.wy + mg.cam - 4, ST_SC, false, 0, false, 5, { acc: equippedFor(mg.fall.a.id) });
+  if (mg.state !== "result" && mg.lives > 0 && !mg.fall) {
+    const x = stackSwingX();
+    ctx.strokeStyle = "rgba(120,100,140,0.5)"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x, ST_SWING_Y + 20); ctx.lineTo(x, Math.min(H, base - ST_BH * mg.tower.length)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#fff8e8"; ctx.strokeStyle = "#e0b060"; ctx.lineWidth = 2;
+    roundRect(x - 24, ST_SWING_Y - 40, 48, 10, 5); ctx.fill(); ctx.stroke();
+    drawSprite(mg.cur, x, ST_SWING_Y - 6, ST_SC, false, 0, false, 9, { acc: equippedFor(mg.cur.id) });
+  }
+  drawParticles();
+  drawMgHud("Height " + mg.tower.length, "Critter Stack", "♥".repeat(Math.max(0, mg.lives)) + "♡".repeat(3 - Math.max(0, mg.lives)) + (mg.perfects ? "  ✦" + mg.perfects : ""));
+  if (mg.state === "play" && mg.tower.length === 0 && !mg.fall && mg.lives === 3) {
+    ctx.fillStyle = C.textSoft; font(13, true); ctx.textAlign = "center";
+    ctx.fillText("Tap anywhere to drop!", W / 2, ST_SWING_Y + 48);
+  }
+}
+
+// ---------- Firefly Catch ----------
+function ffBeatDist(t) { const ph = (t % FF_BEAT) / FF_BEAT; return Math.min(ph, 1 - ph) * FF_BEAT; }
+function ffSpawn() {
+  if (mg.flies.length >= 7) return;
+  mg.flies.push({ x: 40 + Math.random() * (W - 80), y: 140 + Math.random() * (H - 330), seed: Math.random() * 6.28, age: 0, life: 4.6 + Math.random() * 1.2 });
+}
+function ffPos(f) { const m = kind.motion ? 0.4 : 1; return { x: f.x + Math.sin(f.age * 0.9 + f.seed) * 14 * m, y: f.y + Math.cos(f.age * 1.3 + f.seed) * 9 * m }; }
+function ffTap(p) {
+  if (!mg || mg.game !== "firefly" || mg.state !== "play" || mg.paused) return false;
+  let best = null, bd = 34 * 34;
+  for (const f of mg.flies) { if (f.gone) continue; const q = ffPos(f), d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2; if (d < bd) { bd = d; best = f; } }
+  if (!best) return false;
+  const d = ffBeatDist(mg.time), q = ffPos(best);
+  let pts, label, col;
+  if (d <= FF_PERFECT) { pts = 15; label = "Perfect"; col = "#ffe070"; mg.combo++; mg.perfects++; }
+  else if (d <= FF_GOOD) { pts = 8; label = "Good"; col = "#c8f0a0"; mg.combo++; mg.goods++; }
+  else { pts = 3; label = "Caught"; col = "#d8d0ff"; mg.combo = 0; }
+  const mult = Math.min(3, 1 + Math.floor(mg.combo / 8));
+  mg.score += pts * mult; mg.caught++;
+  mg.maxCombo = Math.max(mg.maxCombo, mg.combo);
+  best.gone = true;
+  addFloat({ x: q.x, y: q.y - 14, text: label + " +" + pts * mult, life: 0.8, vy: -34, color: col, size: 12 });
+  particles.push({ kind: "ring", x: q.x, y: q.y, life: 0.4, max: 0.4, size: 8, color: col, t: 0, grow: kind.motion ? 30 : 80, lw: 2 });
+  sfxCatch(Math.min(14, mg.combo)); buzz("pet");
+  return true;
+}
+function ffUpdate(dt) {
+  for (const f of mg.flies) f.age += dt;
+  prune(mg.flies, f => !f.gone && f.age < f.life);
+  if (mg.state !== "play") return;
+  const prevBeat = Math.floor(mg.time / FF_BEAT);
+  mg.time += dt;
+  if (Math.floor(mg.time / FF_BEAT) !== prevBeat && mg.time < FF_ROUND) mg.beatT = 0.18;
+  if (mg.beatT > 0) mg.beatT -= dt;
+  mg.spawnT -= dt;
+  if (mg.spawnT <= 0 && mg.time < FF_ROUND - 1) { ffSpawn(); mg.spawnT = 0.7 + Math.random() * 0.4; }
+  if (mg.time >= FF_ROUND) { mg.flies.length = 0; finishRound(); }
+}
+function drawFireflyBg() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#1c2050"); g.addColorStop(0.7, "#3a3470"); g.addColorStop(1, "#4a3a6a");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 40; i++) {
+    const x = (i * 89) % W, y = 70 + (i * 53) % (H * 0.55);
+    ctx.fillStyle = "rgba(255,250,220," + (0.35 + 0.3 * Math.sin(i + (kind.motion ? 0 : time * 1.5))) + ")";
+    ctx.fillRect(x, y, 2, 2);
+  }
+  ctx.fillStyle = "#fff4c8"; ctx.beginPath(); ctx.arc(W - 70, 120, 18, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#1c2050"; ctx.beginPath(); ctx.arc(W - 62, 114, 16, 0, Math.PI * 2); ctx.fill();
+  // grass silhouette
+  ctx.fillStyle = "#24304a";
+  ctx.fillRect(0, H - 120, W, 120);
+  for (let x = 0; x < W; x += 8) ctx.fillRect(x, H - 120 - ((x * 7) % 13), 4, 14);
+}
+function drawFireflyGame() {
+  drawFireflyBg();
+  const d = mg.state === "play" ? ffBeatDist(mg.time) : 1, glow = clamp(1 - d / 0.22, 0, 1);
+  for (const f of mg.flies) {
+    const q = ffPos(f), fade = Math.min(1, f.age / 0.4, (f.life - f.age) / 0.6);
+    const r = kind.motion ? 20 : 15 + glow * 10;
+    const x = Math.round(q.x), y = Math.round(q.y);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    const hg = ctx.createRadialGradient(x, y + 2, 1, x, y + 2, r);
+    hg.addColorStop(0, "rgba(255,240,120," + fade * (0.7 + glow * 0.3) + ")"); hg.addColorStop(0.45, "rgba(255,220,90," + fade * (0.25 + glow * 0.35) + ")"); hg.addColorStop(1, "rgba(255,200,60,0)");
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(x, y + 2, r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = "rgba(230,240,255,0.9)"; ctx.fillRect(x - 9, y - 8, 6, 4); ctx.fillRect(x + 3, y - 8, 6, 4);
+    ctx.fillStyle = "#5a4a6a"; ctx.fillRect(x - 3, y - 8, 6, 6);
+    ctx.fillStyle = glow > 0.4 ? "#fffbd0" : "#ffe868"; ctx.fillRect(x - 4, y - 2, 8, 7);
+    ctx.globalAlpha = 1;
+  }
+  // the jar + beat ring: catch when the ring meets the jar
+  const jx = W / 2, jy = H - 70;
+  if (mg.state === "play") {
+    const ph = (mg.time % FF_BEAT) / FF_BEAT;
+    ctx.lineWidth = 3;
+    if (kind.motion) { ctx.strokeStyle = "rgba(255,240,150," + (0.3 + glow * 0.7) + ")"; ctx.beginPath(); ctx.arc(jx, jy, 34, 0, Math.PI * 2); ctx.stroke(); }
+    else { ctx.strokeStyle = "rgba(255,240,150," + (0.35 + 0.5 * ph) + ")"; ctx.beginPath(); ctx.arc(jx, jy, 34 + (1 - ph) * 40, 0, Math.PI * 2); ctx.stroke(); }
+  }
+  ctx.fillStyle = "rgba(200,230,255,0.35)"; roundRect(jx - 22, jy - 26, 44, 52, 10); ctx.fill();
+  ctx.strokeStyle = "#c8e0ff"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#c89060"; ctx.fillRect(jx - 18, jy - 32, 36, 8);
+  const lit = Math.min(12, Math.floor(mg.caught / 3));
+  for (let i = 0; i < lit; i++) { ctx.fillStyle = "rgba(255,240,140," + (0.6 + glow * 0.4) + ")"; ctx.fillRect(jx - 14 + (i % 4) * 8, jy + 14 - Math.floor(i / 4) * 10, 4, 4); }
+  drawSprite(mg.critter, jx - 64, jy + 6, 1.6, false, 0, false, 4, { acc: equippedFor(mg.critter.id) });
+  drawParticles();
+  const left = mg.time < FF_ROUND ? Math.ceil(FF_ROUND - mg.time) : 0;
+  drawMgHud("♥ " + mg.score, "Firefly Catch", left + "s · " + mg.caught + " caught");
+  drawRoundBar(mg.time / FF_ROUND);
+  if (mg.combo >= 8 && mg.state === "play") {
+    const mult = Math.min(3, 1 + Math.floor(mg.combo / 8));
+    ctx.fillStyle = "rgba(255,250,245,0.92)"; roundRect(W / 2 - 54, 83, 108, 26, 13); ctx.fill();
+    ctx.fillStyle = "#7a5ad0"; font(13, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("Glow ×" + mult + " · " + mg.combo, W / 2, 96);
+  }
+}
+
+// ---------- shared: intro, update, draw, result ----------
+function drawV162Intro() {
+  const k = mg.t, info = ARC_INFO[mg.game], n = 3 - Math.floor(k / 0.6);
+  ctx.fillStyle = "rgba(40,20,50,0.25)"; ctx.fillRect(0, 0, W, H);
+  const top = H / 2 - 90;
+  solidPanel(40, top, W - 80, 150);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText(info.name, W / 2, top + 30);
+  ctx.fillStyle = C.textSoft; font(12, false);
+  ctx.fillText(mg.game === "stack" ? "Tap to drop each friend" : "Tap fireflies as they glow", W / 2, top + 58);
+  ctx.fillText(mg.game === "stack" ? "Line them up · 3 tumbles and done" : "Glow beat = bonus · 40 seconds", W / 2, top + 76);
+  const sc = kind.motion ? 1 : 1 + (1 - (k % 0.6) / 0.6) * 0.3;
+  ctx.save(); ctx.translate(W / 2, top + 116); ctx.scale(sc, sc);
+  ctx.fillStyle = C.heart; font(28, true); ctx.fillText(n > 0 ? String(n) : "Go!", 0, 0);
+  ctx.restore();
+}
+{
+  const o = updateMg;
+  updateMg = function (dt) {
+    if (!mg || !isV162Game(mg.game)) return o(dt);
+    if (mg.paused) return;
+    mg.t += dt;
+    if (mg.state === "intro") {
+      if (Math.floor((mg.t - dt) / 0.6) !== Math.floor(mg.t / 0.6) && mg.t < 1.8) sfxTick();
+      if (mg.t >= 1.8) { mg.state = "play"; mg.t = 0; sfxGo(); }
+    }
+    if (mg.game === "stack") stackUpdate(dt); else ffUpdate(dt);
+    if (mg.state === "result") mg.rt = (mg.rt || 0) + dt;
+    updateParticles(dt);
+  };
+}
+{
+  const o = drawMg;
+  drawMg = function () {
+    if (!mg || !isV162Game(mg.game)) return o();
+    if (mg.game === "stack") drawStackGame(); else drawFireflyGame();
+    if (mg.state === "intro") drawV162Intro();
+    if (mg.state === "result") drawV162Result();
+    else if (mg.paused) drawMgPause();
+  };
+}
+{
+  const o = mgDown;
+  mgDown = function (p) {
+    if (!mg || !isV162Game(mg.game)) return o(p);
+    if (mg.paused || mg.state !== "play" || p.y < 70) return;
+    if (mg.game === "stack") stackDrop(); else ffTap(p);
+  };
+}
+function v162Finish() {
+  const g = mg.game, a = ensureHc162().arc, today = todayKey();
+  const stars = v162Stars(g, mg.score);
+  const newBest = mg.score > a.best[g] && a.best[g] > 0;
+  if (mg.score > a.best[g]) a.best[g] = mg.score;
+  a.stars[g] = Math.max(a.stars[g], stars);
+  a.plays[g]++;
+  const base = v162Base(g, mg.score);
+  const r = v162Reward(g, base, today);
+  joy += r.hearts + r.daily;
+  let seeds = 0;
+  if (!a.mile[g] && mg.score >= V162_MILE[g]) { a.mile[g] = true; seeds = 2; earnSeeds(2, ARC_INFO[g].name + " milestone"); }
+  mg.result = { stars, base, hearts: r.hearts, daily: r.daily, capped: r.capped, newBest, seeds };
+  mg.state = "result"; mg.rt = 0;
+  sfxVictory(); buzz("unlock");
+  spawnConfetti(kind.motion ? 12 : 30);
+  if (typeof qBump === "function") qBump("arcade");
+  checkAchievements();
+  save();
+}
+{
+  const o = finishRound;
+  finishRound = function () {
+    if (!mg || mg.state === "result") return;
+    if (isV162Game(mg.game)) return v162Finish();
+    return o();
+  };
+}
+function drawV162Result() {
+  const R = mg.result, t = mg.rt || 0, A = hc162.arc;
+  ctx.fillStyle = "rgba(40,20,50," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
+  const ph = 372, top = Math.round(H / 2 - ph / 2);
+  const e = kind.motion ? 1 : easeOutBack(Math.min(1, t / 0.4));
+  ctx.save();
+  ctx.translate(W / 2, top + ph / 2); ctx.scale(0.85 + 0.15 * e, 0.85 + 0.15 * e); ctx.translate(-W / 2, -(top + ph / 2));
+  solidPanel(24, top, W - 48, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(21, true); ctx.fillText(mg.game === "stack" ? "What a tower!" : "A jar full of glow!", W / 2, top + 32);
+  for (let i = 0; i < 3; i++) {
+    const st = t - 0.35 - i * 0.22;
+    const k = st <= 0 ? 0 : easeOutBack(Math.min(1, st / 0.3));
+    if (st > 0 && st - frameDt <= 0 && i < R.stars) sfxStar(i);
+    drawStarShape(W / 2 + (i - 1) * 56, top + 80 - (i === 1 ? 6 : 0), i === 1 ? 24 : 20, i < R.stars, Math.max(0.01, k));
+  }
+  ctx.fillStyle = C.textSoft; font(13, false);
+  let y = top + 128;
+  ctx.fillText(mg.game === "stack" ? "Height " + mg.score + " · " + mg.perfects + " perfect" : "Score " + mg.score + " · " + mg.caught + " fireflies", W / 2, y);
+  ctx.fillText("Best: " + A.best[mg.game], W / 2, y + 20);
+  if (R.newBest) {
+    ctx.save(); ctx.translate(W - 70, top + 62); ctx.rotate(0.25);
+    ctx.fillStyle = "#ff6b9d"; roundRect(-34, -11, 68, 22, 11); ctx.fill();
+    ctx.fillStyle = "#fff"; font(11, true); ctx.fillText("New best!", 0, 1);
+    ctx.restore();
+  }
+  const hop = kind.motion ? 0 : Math.abs(Math.sin(t * 6)) * 8;
+  drawSprite(mg.critter, W / 2, top + 268 - hop, 2.0, false, 0, false, 11, { acc: equippedFor(mg.critter.id), heartEyes: true });
+  y += 56;
+  ctx.fillStyle = C.heart; font(24, true);
+  ctx.fillText("♥ +" + Math.floor((R.hearts + R.daily) * Math.min(1, t / 0.9)), W / 2, y);
+  font(11, false); ctx.fillStyle = C.textSoft;
+  const parts = [];
+  if (R.hearts) parts.push(R.hearts + " for the round");
+  if (R.daily) parts.push(R.daily + " daily bonus ✦");
+  if (parts.length) ctx.fillText(parts.join(" + "), W / 2, y + 24);
+  if (R.seeds) { ctx.fillStyle = "#3f9a48"; font(12, true); ctx.fillText("🌱 First milestone! +" + R.seeds + " Bloom Seeds", W / 2, y + 42); }
+  else if (R.capped) ctx.fillText("Today's round hearts are all collected, play just for fun!", W / 2, y + 42);
+  ctx.restore();
+  uiButtons = [];
+  const by = top + ph - 66, gap = 8, bw = (W - 64 - gap) / 2;
+  if (t > 0.5) [["Again", "mg_again", C.btn, "#ff80b0"], ["Arcade", "mg_arcade", "#e8d0ff", "#c090e0"]]
+    .forEach((it, i) => uiButtons.push(btn(32 + i * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
+}
+
+// ---------- Games hub: second page with the new games ----------
+function drawV162Preview(game, cx, cy) {
+  if (game === "stack") {
+    const a = ANIMALS[0], b = ANIMALS[1] || a, c = ANIMALS[2] || a;
+    drawSprite(c, cx + 2, cy + 14, 0.9, false, 0, false, 1, null);
+    drawSprite(b, cx - 3, cy - 2, 0.9, false, 0, false, 2, null);
+    drawSprite(a, cx + 1, cy - 18, 0.9, false, 0, false, 3, null);
+  } else {
+    ctx.fillStyle = "#2a2a5a"; roundRect(cx - 28, cy - 28, 56, 56, 8); ctx.fill();
+    for (const [dx, dy] of [[-12, -10], [10, -14], [2, 8], [-14, 12], [14, 10]]) {
+      ctx.fillStyle = "rgba(255,246,160,0.45)"; ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff8c0"; ctx.fillRect(cx + dx - 2, cy + dy - 2, 4, 4);
+    }
+  }
+}
+function v162ArcStats(g) { return isV162Game(g) ? ensureHc162().arc : arcade; }
+{
+  const o = openArcade;
+  openArcade = function () { arcPage = 0; return o(); };
+}
+V162_ACTIONS.push(id => {
+  if (id === "v162_arcpage") { arcPage = arcPage ? 0 : 1; listScroll = 0; return true; }
+  return false;
+});
+Object.assign(v162Api, { isV162Game, v162Stars, v162Base, stackDrop, stackSwingX, ffTap, ffBeatDist, ffPos, FF_BEAT, FF_ROUND, V162_MILE, STK_STARS, FF_STARS,
+  stackBaseY, ST_BH });
+Object.defineProperty(v162Api, "arcPage", { get() { return arcPage; }, enumerable: true });
+
+// ===================== v16.2 — Goal Ladders (tiered lifetime goals) =====================
+// A third Goals tab. Little Goals stay as the first steps (unchanged, so old saves keep their ticks);
+// each ladder starts where the matching Little Goals stop, so nothing pays twice for the same thing.
+// Tiers are claimed with a button and stored as a count in hc162.tiers[id], so each pays exactly once.
+const TIER_NAMES = ["Bronze", "Silver", "Gold", "Rainbow"];
+const TIER_COLS = ["#d08a4a", "#b8c4d8", "#ffcc33", "rainbow"];
+const TIER_PAY = [[50, 1], [120, 2], [300, 3], [600, 4]]; // [hearts, seeds]
+function arcPlaysAll() { let n = 0; for (const g of ARC_GAMES) n += arcade.plays[g] || 0; const a = ensureHc162().arc; return n + a.plays.stack + a.plays.firefly; }
+function skyStarsSafe() { try { return typeof skyTotalStars === "function" ? skyTotalStars() : 0; } catch (e) { return 0; } }
+function colsDone() { ensureHc16(); return COLLECTIONS.filter(s => hc16.col && hc16.col[s.id]).length; }
+const LADDERS = [
+  { id: "hugs", name: "Hug Hero", icon: "♥", unit: "hugs", val: () => totalHugs, t: [500, 1500, 5000, 15000] },
+  { id: "friends", name: "Friend Finder", icon: "✿", unit: "friends", val: () => Object.keys(unlocked).filter(k => unlocked[k]).length, t: [8, 16, 28, 40] },
+  { id: "combo", name: "Combo Champ", icon: "×", unit: "best combo", val: () => highCombo, t: [25, 35, 50, 75] },
+  { id: "cheer", name: "Sunny Helper", icon: "☀", unit: "sad pals cheered", val: () => sadCheered, t: [75, 150, 400, 1000] },
+  { id: "arcade", name: "Arcade Pal", icon: "◆", unit: "games played", val: arcPlaysAll, t: [10, 30, 100, 300] },
+  { id: "story", name: "Storyteller", icon: "★", unit: "storybook stars", val: () => advTotalStars(adv), t: [12, 25, 38, 45] },
+  { id: "sky", name: "Sky Sailor", icon: "☁", unit: "Sky Island stars", val: skyStarsSafe, t: [2, 4, 6, 9] },
+  { id: "quests", name: "Quest Keeper", icon: "✔", unit: "quests claimed", val: () => ensureHc162().quests, t: [5, 20, 60, 150] },
+  { id: "seeds", name: "Seed Saver", icon: "🌱", unit: "seeds earned", val: () => (ensureHc16(), hc16.seedsEarned), t: [25, 75, 200, 500] },
+  { id: "sets", name: "Collector", icon: "▣", unit: "collections", val: colsDone, t: [2, 5, 9, 14] },
+  { id: "stack", name: "Tower Builder", icon: "▲", unit: "Critter Stack best", val: () => ensureHc162().arc.best.stack, t: [10, 20, 35, 50] },
+  { id: "firefly", name: "Glow Catcher", icon: "✧", unit: "Firefly Catch best", val: () => ensureHc162().arc.best.firefly, t: [400, 800, 1200, 1600] },
+];
+const LADDER_BY_ID = {};
+for (const L of LADDERS) LADDER_BY_ID[L.id] = L;
+function ladderVal(L) { try { return Math.max(0, Math.floor(L.val() || 0)); } catch (e) { return 0; } }
+function ladderClaimed(id) { return ensureHc162().tiers[id] || 0; }
+function ladderReached(L) { const v = ladderVal(L); let n = 0; while (n < 4 && v >= L.t[n]) n++; return n; }
+function ladderReady(L) { return ladderReached(L) > ladderClaimed(L.id); }
+function laddersClaimable() { return LADDERS.some(ladderReady); }
+function laddersTiersDone() { return LADDERS.reduce((n, L) => n + ladderClaimed(L.id), 0); }
+function claimLadder(id) {
+  const L = LADDER_BY_ID[id];
+  if (!L || !ladderReady(L)) return false;
+  const k = ladderClaimed(id);
+  hc162.tiers[id] = k + 1;
+  const [h, s] = TIER_PAY[k];
+  joy += h;
+  toast(TIER_NAMES[k] + " · " + L.name + "! +" + h + " ♥", C.heart);
+  earnSeeds(s, TIER_NAMES[k] + " tier");
+  if (typeof sfxChime === "function") sfxChime(4 + k * 2);
+  buzz("unlock");
+  if (!kind.motion && k >= 2) spawnConfetti(20);
+  save();
+  return true;
+}
+{ // count claimed daily quests for the Quest Keeper ladder (and the festival)
+  const o = claimQuest;
+  claimQuest = function (i) {
+    const r = o(i);
+    if (r) { ensureHc162().quests++; if (typeof festBump === "function") festBump("quest"); saveSoon(); }
+    return r;
+  };
+}
+function drawTierPip(x, y, k, on) {
+  const r = 7;
+  if (!on) { ctx.fillStyle = "#e8e0ea"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#d0c4d4"; ctx.lineWidth = 1.5; ctx.stroke(); return; }
+  if (TIER_COLS[k] === "rainbow") {
+    const cols = ["#ff7a9a", "#ffb84a", "#ffe45a", "#7ad87a", "#6ab8ff", "#b48aff"];
+    cols.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r, i * Math.PI / 3, (i + 1) * Math.PI / 3); ctx.closePath(); ctx.fill(); });
+  } else { ctx.fillStyle = TIER_COLS[k]; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+  ctx.strokeStyle = "rgba(90,60,40,0.55)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.75)"; ctx.fillRect(x - 3, y - 4, 2, 2);
+}
+function drawLadders() {
+  const top = 122, bottom = H - 74, rowH = 82;
+  setListExtent(top, bottom, 34 + LADDERS.length * rowH + 30);
+  listClip(top, bottom);
+  let y = top + 4 - listScroll;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = C.textSoft; font(11, false);
+  ctx.fillText("Lifetime ladders pick up where Little Goals stop", W / 2, y + 10);
+  y += 28;
+  for (const L of LADDERS) {
+    if (y > bottom || y + rowH < top) { y += rowH; continue; }
+    const got = ladderClaimed(L.id), reach = ladderReached(L), v = ladderVal(L), ready = reach > got;
+    ctx.fillStyle = got >= 4 ? "rgba(255,240,200,0.9)" : ready ? "rgba(255,246,214,0.95)" : "rgba(255,245,250,0.9)";
+    roundRect(24, y, W - 48, rowH - 8, 12); ctx.fill();
+    ctx.strokeStyle = ready ? "#e0b040" : C.panelBorder; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.textAlign = "center"; ctx.fillStyle = "#c06090"; font(16, true); ctx.fillText(L.icon, 44, y + 22);
+    ctx.textAlign = "left"; ctx.fillStyle = C.text; font(13, true); ctx.fillText(L.name, 62, y + 20);
+    for (let k = 0; k < 4; k++) drawTierPip(W - 112 + k * 20, y + 20, k, k < got);
+    const nextT = got < 4 ? L.t[got] : L.t[3];
+    const prevT = got > 0 ? L.t[got - 1] : 0;
+    const bx = 36, bw = W - 170, by = y + 38;
+    const f = got >= 4 ? 1 : clamp((v - prevT) / Math.max(1, nextT - prevT), 0, 1);
+    ctx.fillStyle = "rgba(60,50,70,0.14)"; roundRect(bx, by, bw, 9, 4.5); ctx.fill();
+    ctx.fillStyle = got >= 4 ? "#ffb84a" : ready ? "#e0b040" : "#ff9ec8"; roundRect(bx, by, Math.max(9, bw * f), 9, 4.5); ctx.fill();
+    ctx.fillStyle = C.textSoft; font(10, false);
+    const line = got >= 4 ? "All tiers done ✓ · " + v + " " + L.unit : Math.min(v, nextT) + " / " + nextT + " " + L.unit + " → " + TIER_NAMES[got];
+    fitFont(line, bw + 10, 10, false, 8); ctx.fillText(line, bx, by + 22);
+    if (ready) listBtn(W - 112, y + 30, 78, 44, "Claim", { id: "v162_lclaim_" + L.id, size: 13, r: 10, bg: "#ffe08a", border: "#e0a040" }, top, bottom);
+    else if (got < 4) { ctx.textAlign = "right"; ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText("+" + TIER_PAY[got][0] + " ♥ · +" + TIER_PAY[got][1] + " 🌱", W - 34, y + 48); }
+    y += rowH;
+  }
+  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText("Bronze +50 ♥ · Silver +120 · Gold +300 · Rainbow +600, plus seeds", W / 2, y + 10);
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+// three tabs in Goals: Goals · Quests (daily + festival) · Ladders
+v16GoalsTabs = function () {
+  ensureHc16();
+  const dot = questsClaimable() || (typeof festClaimable === "function" && festClaimable());
+  v16TabRow([["goals", "Goals", "v16_gtab_goals"], ["quests", "Quests" + (dot ? " •" : ""), "v16_gtab_quests"], ["ladders", "Ladders" + (laddersClaimable() ? " •" : ""), "v162_gtab_ladders"]], goalsTab, 70);
+};
+{
+  const o = drawAchievements;
+  drawAchievements = function () {
+    if (goalsTab !== "ladders") return o();
+    panelHeader("Goal Ladders", laddersTiersDone() + " / " + LADDERS.length * 4 + " tiers");
+    v16GoalsTabs();
+    drawLadders();
+  };
+}
+V162_ACTIONS.push(id => {
+  if (id === "v162_gtab_ladders") { goalsTab = "ladders"; listScroll = 0; listMax = 0; return true; }
+  if (id.startsWith("v162_lclaim_")) { claimLadder(id.slice(12)); return true; }
+  return false;
+});
+if (typeof v16Api !== "undefined") v16Api.claimQuest = claimQuest; // the v16 api captured the unwrapped one
+Object.assign(v162Api, { setHugs(n) { totalHugs = n; }, LADDERS, ladderVal, ladderReached, ladderClaimed, ladderReady, claimLadder, laddersClaimable, TIER_PAY });
+
+// ===================== v16.2 — Weekly Bloom Festival =====================
+// Each ISO week has a themed festival (4 themes rotate) with a 5-step track in Goals > Quests.
+// Steps are sequential and counted from the same events as daily quests. Finishing pays once per week
+// and gives that theme's festival-only hat (4 in total); a hat you already own turns into extra hearts.
+Object.assign(ACC_ART, {
+  festblossom: { rows: ["p.w.p.w.p", "pgpgygpgp", ".g.g.g.g."], cmap: { p: "#ff9ec8", w: "#ffffff", y: "#ffd23a", g: "#5ab850" }, at: (hx, top) => [hx - 4.5, top - 2] },
+  festlantern: { rows: ["..k..", ".rrr.", "rryrr", "rryrr", ".rrr.", "..y.."], cmap: { r: "#ff7a5a", y: "#ffe08a", k: "#6a4020" }, at: (hx, top) => [hx + 3, top - 6] },
+  festharvest: { rows: ["......gr..", "..yyyyyrr.", "..ybbbby..", "yyyyyyyyyy"], cmap: { y: "#e8c060", b: "#d0603a", g: "#5ab850", r: "#ff5a5a" }, at: (hx, top) => [hx - 5, top - 4] },
+  feststar: { rows: ["...y...", "..yoy..", "s.yyy.s", "sssssss"], cmap: { y: "#ffe066", o: "#fff6b0", s: "#b8a8ff" }, at: (hx, top) => [hx - 3.5, top - 4] },
+});
+const FEST_THEMES = [
+  { id: "blossom", name: "Blossom Festival", icon: "✿", col: "#ffd0e4", border: "#ff90b8", hat: "festblossom", hatName: "Blossom Garland",
+    steps: [{ ev: "hug", need: 40, text: "Hug 40 friends" }, { ev: "pet", need: 10, text: "Pet happy friends 10 times" }, { ev: "yard", need: 1, text: "Visit the Yard" },
+      { ev: "bubble", need: 3, text: "Pop 3 heart bubbles in the Yard" }, { ev: "quest", need: 2, text: "Claim 2 daily quests" }] },
+  { id: "lantern", name: "Lantern Festival", icon: "♦", col: "#ffe4c4", border: "#f0a060", hat: "festlantern", hatName: "Paper Lantern Clip",
+    steps: [{ ev: "hug", need: 40, text: "Hug 40 friends" }, { ev: "shoo", need: 8, text: "Shoo 8 gloom clouds" }, { ev: "arcade", need: 2, text: "Play 2 arcade games" },
+      { ev: "cheer", need: 5, text: "Cheer up 5 sad friends" }, { ev: "quest", need: 2, text: "Claim 2 daily quests" }] },
+  { id: "harvest", name: "Harvest Festival", icon: "❦", col: "#f6e4c0", border: "#d0a050", hat: "festharvest", hatName: "Harvest Straw Hat",
+    steps: [{ ev: "hug", need: 50, text: "Hug 50 friends" }, { ev: "yard", need: 1, text: "Visit the Yard" }, { ev: "pet", need: 10, text: "Pet happy friends 10 times" },
+      { ev: "adv", need: 1, text: "Play a Storybook stage" }, { ev: "quest", need: 2, text: "Claim 2 daily quests" }] },
+  { id: "starlight", name: "Starlight Festival", icon: "✦", col: "#e4e0ff", border: "#a090e0", hat: "feststar", hatName: "Starlight Tiara",
+    steps: [{ ev: "hug", need: 40, text: "Hug 40 friends" }, { ev: "combo", need: 10, max: true, text: "Reach a 10× hug combo" }, { ev: "arcade", need: 2, text: "Play 2 arcade games" },
+      { ev: "cheer", need: 5, text: "Cheer up 5 sad friends" }, { ev: "quest", need: 2, text: "Claim 2 daily quests" }] },
+];
+const FEST_PAY = [150, 3]; // hearts, seeds (an already-owned hat adds +150 ♥ instead)
+for (const T of FEST_THEMES) if (!ACCESSORIES.some(a => a.id === T.hat)) ACCESSORIES.push({ id: T.hat, name: T.hatName, short: T.hatName.split(" ").pop(), festival: true });
+{ // festival hats are wearable once won (like season / storybook hats)
+  const o = accAvailable;
+  accAvailable = function (id, animalId) {
+    const a = ACCESSORIES.find(x => x.id === id);
+    if (a && a.festival) return !!ownedAcc[a.id];
+    return o(id, animalId);
+  };
+}
+let festWeekOverride = null;
+function festWeek() { const w = isoWeek(festWeekOverride || weekNow()); return { key: w.key, theme: ((w.y * 53 + w.w) % 4 + 4) % 4 }; }
+function festState() {
+  ensureHc162();
+  const w = festWeek();
+  if (!hc162.fest || hc162.fest.week !== w.key) hc162.fest = { week: w.key, theme: w.theme, step: 0, n: 0, paid: false };
+  return hc162.fest;
+}
+function festTheme() { return FEST_THEMES[festState().theme] || FEST_THEMES[0]; }
+function festDone() { return festState().step >= 5; }
+function festClaimable() { const f = festState(); return f.step >= 5 && !f.paid; }
+function festBump(ev, amt) {
+  const f = festState();
+  if (f.step >= 5) return false;
+  const st = festTheme().steps[f.step];
+  if (!st || st.ev !== ev) return false;
+  if (st.max) f.n = Math.max(f.n, Math.floor(amt || 0)); else f.n += (amt == null ? 1 : Math.max(0, amt));
+  if (f.n >= st.need) {
+    f.step++; f.n = 0;
+    if (f.step >= 5) softHintSafe(festTheme().name + " track complete! Claim it in Goals ✿", "#4a9a3a");
+    else softHintSafe("Festival step done! " + f.step + " / 5", "#4a9a3a");
+    if (typeof sfxChime === "function") sfxChime(5);
+  }
+  saveSoon();
+  return true;
+}
+{
+  const o = qBump;
+  qBump = function (ev, arg, amt) { const r = o.apply(this, arguments); try { festBump(ev, ev === "combo" ? amt : undefined); } catch (e) {} return r; };
+  if (typeof v16Api !== "undefined") v16Api.qBump = qBump;
+}
+function claimFest() {
+  const f = festState();
+  if (f.step < 5 || f.paid) return false;
+  const T = festTheme();
+  f.paid = true;
+  hc162.festDone++;
+  let h = FEST_PAY[0];
+  if (!ownedAcc[T.hat]) { ownedAcc[T.hat] = true; hc162.festOwn[T.hat] = true; toast("New festival hat: " + T.hatName + "!", "#a050c0"); }
+  else h += 150;
+  joy += h;
+  toast(T.name + "! +" + h + " ♥", C.heart);
+  earnSeeds(FEST_PAY[1], "festival");
+  if (typeof sfxUnlock === "function") sfxUnlock();
+  if (!kind.motion) spawnConfetti(30);
+  save();
+  return true;
+}
+const FEST_CARD_H = 214;
+function festCardH() { return FEST_CARD_H + 12; }
+function drawFestCard(y, top, bottom) {
+  const f = festState(), T = festTheme(), x = 24, w = W - 48, h = FEST_CARD_H;
+  ctx.fillStyle = T.col; roundRect(x, y, w, h, 14); ctx.fill();
+  ctx.strokeStyle = T.border; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(15, true); ctx.fillText(T.icon + " " + T.name, x + 12, y + 20);
+  ctx.fillStyle = C.textSoft; font(10, false); ctx.fillText("Weekly Bloom Festival · new theme each Monday", x + 12, y + 38);
+  // 5-step track
+  const tx0 = x + 30, tx1 = x + w - 30, ty = y + 66;
+  ctx.strokeStyle = "rgba(90,70,100,0.25)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(tx0, ty); ctx.lineTo(tx1, ty); ctx.stroke();
+  if (f.step > 0) { ctx.strokeStyle = T.border; ctx.beginPath(); ctx.moveTo(tx0, ty); ctx.lineTo(tx0 + (tx1 - tx0) * Math.min(1, f.step / 4), ty); ctx.stroke(); }
+  for (let i = 0; i < 5; i++) {
+    const cx = tx0 + (tx1 - tx0) * i / 4, done = i < f.step, cur = i === f.step;
+    ctx.fillStyle = done ? T.border : cur ? "#fff" : "#f0e8f0";
+    ctx.beginPath(); ctx.arc(cx, ty, cur ? 12 : 10, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = done || cur ? T.border : "#d0c4d4"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.textAlign = "center"; ctx.fillStyle = done ? "#fff" : C.text; font(11, true); ctx.fillText(done ? "✓" : String(i + 1), cx, ty + 1);
+  }
+  ctx.textAlign = "left";
+  if (f.step < 5) {
+    const st = T.steps[f.step];
+    ctx.fillStyle = C.text; font(13, true); fitFont("Step " + (f.step + 1) + ": " + st.text, w - 24, 13, true, 9); ctx.fillText("Step " + (f.step + 1) + ": " + st.text, x + 12, y + 98);
+    const bx = x + 12, bw = w - 90, by = y + 112;
+    ctx.fillStyle = "rgba(60,50,70,0.14)"; roundRect(bx, by, bw, 10, 5); ctx.fill();
+    ctx.fillStyle = T.border; roundRect(bx, by, Math.max(10, bw * Math.min(1, f.n / st.need)), 10, 5); ctx.fill();
+    ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText(Math.min(f.n, st.need) + " / " + st.need, bx + bw + 8, by + 5);
+  } else {
+    ctx.fillStyle = f.paid ? "#3f9a48" : C.text; font(13, true);
+    ctx.fillText(f.paid ? "Festival complete ✓ See you next week!" : "All 5 steps done! Claim your reward", x + 12, y + 104);
+  }
+  // reward preview: a friend wearing this week's hat
+  const pal = ANIMALS.find(a => a.id === "bunny") || ANIMALS[0];
+  ctx.fillStyle = "rgba(255,255,255,0.65)"; roundRect(x + 12, y + 134, 64, 66, 10); ctx.fill();
+  drawSprite(pal, x + 44, y + 166, 2.0, false, 0, false, 3, { acc: T.hat });
+  ctx.fillStyle = C.text; font(12, true); ctx.fillText((ownedAcc[T.hat] ? "✓ " : "") + T.hatName, x + 86, y + 150);
+  ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText("Festival-only hat · +" + FEST_PAY[0] + " ♥ · +" + FEST_PAY[1] + " seeds", x + 86, y + 168);
+  if (festClaimable()) listBtn(x + w - 98, y + 156, 86, 44, "Claim", { id: "v162_fclaim", size: 13, r: 10, bg: "#ffe08a", border: "#e0a040" }, top, bottom);
+  else { ctx.fillStyle = C.textSoft; font(10, false); ctx.fillText(hc162.festDone ? "Festivals finished: " + hc162.festDone : "Finish the track to win it", x + 86, y + 186); }
+}
+V162_ACTIONS.push(id => {
+  if (id === "v162_fclaim") { claimFest(); return true; }
+  return false;
+});
+Object.assign(v162Api, { FEST_THEMES, festState, festTheme, festBump, claimFest, festClaimable,
+  setFestWeek(d) { festWeekOverride = d; }, drawFestCard, accOptions, SHOP_ACCS });
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -19241,7 +20141,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
         adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps,
-        hc15, farm, hc154, hc16 };
+        hc15, farm, hc154, hc16, hc162 };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -19283,6 +20183,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     normalizeV12, v12Snapshot, marketOpen, marketFriend, rollWeather, prepMail, openBoat, tapSky, v12Action, DYE_COLS, COAT_COST, MARKET_HATS, MARKET_DEN, MARKET_FRIENDS, LULLABY_SONG,
     v16: v16Api,
     v161: v161Api,
+    v162: v162Api,
     drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
