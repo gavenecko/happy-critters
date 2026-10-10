@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.2-twists">
+<meta name="hc-version" content="16.3-tides">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.2 — twists update
+// Happy Critters v16.3 — tides update
 
 const W = 360;
 let H = 540;
@@ -5629,6 +5629,7 @@ function load() {
     if (typeof normalizeHc154 === "function") hc154 = normalizeHc154(d.hc154);
     if (typeof normalizeHc16 === "function") hc16 = normalizeHc16(d.hc16);
     if (typeof normalizeHc162 === "function") hc162 = normalizeHc162(d.hc162);
+    if (typeof normalizeHc163 === "function") hc163 = normalizeHc163(d.hc163);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -5655,6 +5656,7 @@ function save() {
       hc154,
       hc16: (typeof hc16 !== "undefined" ? hc16 : null),
       hc162: (typeof hc162 !== "undefined" ? hc162 : null),
+      hc163: (typeof hc163 !== "undefined" ? hc163 : null),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -9518,18 +9520,18 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 17;
-const APP_LABEL = "v16.2";
+const APP_VERSION = 18;
+const APP_LABEL = "v16.3";
 const WHATS_NEW = {
   title: "What's new ★",
-  sub: "Twists, Games & Festivals",
-  pals: ["bunny", "cloudlamb", "kitekitten", "skywhale"],
+  sub: "Coral Cove & Cozy Yards",
+  pals: ["starpup", "coralpuff", "jellybun", "octopus"],
   items: [
-    "Daily Twists: a gentle new surprise in the meadow each day.",
-    "Two new arcade games in Games: Critter Stack & Firefly Catch.",
-    "Goal Ladders in Goals: Bronze, Silver, Gold and Rainbow tiers.",
-    "Weekly Bloom Festival in Goals > Quests, with festival hats.",
-    "Twists can be turned off any time in Settings.",
+    "Coral Cove: tides, bubbles & a shy pufferfish",
+    "Six sea friends in the Cove and the Shop",
+    "Four new secret friends, with soft hints",
+    "Yard Style: Meadow, Beach & Snowy + cozy gifts",
+    "13 yard pieces, layering & 8 tiny-home treats",
   ],
 };
 
@@ -10132,7 +10134,7 @@ function normalizeGarden(g) {
   if (Array.isArray(g.items)) {
     for (const it of g.items) {
       if (!isObj(it) || !DECOR_BY_ID[it.id]) continue;
-      const item = { id: it.id, c: isInt(it.c) ? it.c : 0, row: isInt(it.row) ? it.row : 0, rot: DECOR_BY_ID[it.id].rot && isInt(it.rot) ? ((it.rot % 4) + 4) % 4 : 0, f: it.f ? 1 : 0 };
+      const item = { id: it.id, c: isInt(it.c) ? it.c : 0, row: isInt(it.row) ? it.row : 0, rot: DECOR_BY_ID[it.id].rot && isInt(it.rot) ? ((it.rot % 4) + 4) % 4 : 0, f: it.f ? 1 : 0, z: isInt(it.z) && it.z >= -1 && it.z <= 1 && !DECOR_BY_ID[it.id].ground ? it.z : 0 };
       // anything that no longer fits goes safely back to storage (never lost)
       if (fits(item, item.c, item.row, item.rot, out.items)) out.items.push(item);
       else out.inv[item.id] = (out.inv[item.id] || 0) + 1;
@@ -10150,7 +10152,7 @@ function normalizeGarden(g) {
 }
 function serializeGarden() {
   return {
-    items: garden.items.map(it => ({ id: it.id, c: it.c, row: it.row, rot: it.rot, f: it.f })),
+    items: garden.items.map(it => ({ id: it.id, c: it.c, row: it.row, rot: it.rot, f: it.f, z: it.z || 0 })),
     inv: garden.inv, visits: garden.visits, bubbles: garden.bubbles, pets: garden.pets,
     awayCollected: garden.awayCollected, placedEver: garden.placedEver, welcomed: garden.welcomed, pending: garden.pending,
   };
@@ -10179,8 +10181,10 @@ function itemDims(id, rot) { const d = DECOR_BY_ID[id]; return rot & 1 ? [d.fh, 
 function fits(it, c, row, rot, list) {
   const [w, h] = itemDims(it.id, rot);
   if (c < 0 || row < 0 || c + w > G_COLS || row + h > G_ROWS) return false;
+  const gr = !!DECOR_BY_ID[it.id].ground;
   for (const o of list || garden.items) {
     if (o === it) continue;
+    if (!!DECOR_BY_ID[o.id].ground !== gr) continue; // v16.3 layering: ground pieces (rugs, paths) sit under everything
     const [ow, oh] = itemDims(o.id, o.rot);
     if (c < o.c + ow && o.c < c + w && row < o.row + oh && o.row < row + h) return false;
   }
@@ -10502,8 +10506,8 @@ function drawGardenBg() {
 function drawDecorItem(it, x0, y0) {
   const d = DECOR_BY_ID[it.id], art = getDecorArt(d);
   const R = itemRect(it);
-  // soft ground shadow
-  ctx.fillStyle = "rgba(40,60,30,0.16)";
+  // soft ground shadow (flat ground pieces have none)
+  ctx.fillStyle = d.ground ? "rgba(0,0,0,0)" : "rgba(40,60,30,0.16)";
   ctx.beginPath(); ctx.ellipse(R.x + R.w / 2, R.y + R.h - 3, R.w * 0.46, Math.min(8, R.h * 0.22), 0, 0, Math.PI * 2); ctx.fill();
   if (d.id === "lantern") {
     const [lx, ly] = artToScreen(it, 6, 7);
@@ -10619,7 +10623,8 @@ function drawGarden() {
   }
   // depth-sorted items + visitors
   gDrawList.length = 0;
-  for (const it of garden.items) { const R = itemRect(it); gDrawList.push({ k: R.y + R.h, it, v: null }); }
+  // layers: ground pieces first, then everything by depth (nudged by the item's Layer setting)
+  for (const it of garden.items) { const R = itemRect(it); gDrawList.push({ k: DECOR_BY_ID[it.id].ground ? R.y - 1e6 : R.y + R.h + (it.z || 0) * G_CELL * 2.5, it, v: null }); }
   for (const v of visitors) {
     let k = v.y;
     if (v.state === "act" && v.item) { const R = itemRect(v.item); k = R.y + R.h + 0.5; }
@@ -10671,14 +10676,16 @@ function drawGardenHUD() {
     const items = [];
     if (d.rot) items.push(["↻ Turn", "g_rot", "#d0e8ff", "#80b0e0"]);
     items.push(["⇋ Flip", "g_flip", "#e8d0ff", "#c090e0"]);
+    if (!d.ground) items.push([gSel.z > 0 ? "⇅ Front" : gSel.z < 0 ? "⇅ Back" : "⇅ Layer", "v163_layer", "#fff0c8", "#e0b040"]);
     items.push(["Store", "g_store", "#ffe8b0", "#e0c060"]);
     items.push(["✓ Done", "g_done", C.btn, "#ff80b0"]);
-    const gap = 6, bw = (W - 16 - gap * (items.length - 1)) / items.length;
-    items.forEach((b, i) => uiButtons.push(btn(8 + i * (bw + gap), by, bw, 44, b[0], { id: b[1], size: 13, bg: b[2], border: b[3] })));
+    const gap = 5, bw = (W - 16 - gap * (items.length - 1)) / items.length;
+    items.forEach((b, i) => uiButtons.push(btn(8 + i * (bw + gap), by, bw, 44, b[0], { id: b[1], size: items.length > 4 ? 12 : 13, bg: b[2], border: b[3] })));
   } else {
-    uiButtons.push(btn(8, by, 86, 44, "◂ Back", { id: "close", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
-    uiButtons.push(btn(100, by, 108, 44, "Postcard", { id: "postcard", size: 13, bg: "#fff0f8", border: "#e090b0" }));
-    uiButtons.push(btn(214, by, W - 222, 44, "✿ Decor", { id: "decor", size: 14, bg: "#d0ffd8", border: "#70c080" }));
+    uiButtons.push(btn(8, by, 72, 44, "◂ Back", { id: "close", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
+    uiButtons.push(btn(85, by, 86, 44, "Postcard", { id: "postcard", size: 13, bg: "#fff0f8", border: "#e090b0" }));
+    uiButtons.push(btn(176, by, 76, 44, "Style", { id: "v163_style", size: 13, bg: "#e0f4ff", border: "#80b8e0" }));
+    uiButtons.push(btn(257, by, W - 265, 44, "✿ Decor", { id: "decor", size: 14, bg: "#d0ffd8", border: "#70c080" }));
   }
 }
 
@@ -10785,13 +10792,14 @@ function gardenAction(id) {
 // ---------- garden input ----------
 function itemAt(p) {
   // topmost first (reverse depth order); hit the footprint or the visible art above it
-  let best = null, bk = -1;
+  let best = null, bk = -1e9;
   for (const it of garden.items) {
     const R = itemRect(it), d = DECOR_BY_ID[it.id];
     const artTop = it.rot ? R.y : Math.min(R.y, R.y + R.h - d.ah * G_U);
     const artL = it.rot ? R.x : Math.min(R.x, R.x + R.w / 2 - d.aw * G_U / 2);
     const artW = it.rot ? R.w : Math.max(R.w, d.aw * G_U);
-    if (pointIn(p.x, p.y, artL, artTop, artW, R.y + R.h - artTop) && R.y + R.h > bk) { best = it; bk = R.y + R.h; }
+    const key = R.y + R.h + (d.ground ? -1e5 : (it.z || 0) * G_CELL * 2.5);
+    if (pointIn(p.x, p.y, artL, artTop, artW, R.y + R.h - artTop) && key > bk) { best = it; bk = key; }
   }
   return best;
 }
@@ -13106,7 +13114,7 @@ function advUpdateWorld(dt) {
     if (g.life < -8) g.dead = true;
     if (playing) {
       advGain(-ADV_GAIN.drain * dt);
-      for (const c of st.pals) if (!c.rescue && c.state === "float" && !c.sad && dist2(c.x, c.y, lingCX(g), g.y) < 62 * 62 && Math.random() < dt * 0.9) c.sad = true;
+      for (const c of st.pals) if (!c.rescue && !c.tideSafe && c.state === "float" && !c.sad && dist2(c.x, c.y, lingCX(g), g.y) < 62 * 62 && Math.random() < dt * 0.9) c.sad = true;
       if (split && !g.small && g.age > 5.5 && st.lings.length < 7) {
         g.dead = true; st.splits++;
         advSpawnLing(g.x - 8, g.y - 6, g.s * 0.7, true); advSpawnLing(g.x + 8, g.y + 6, g.s * 0.7, true);
@@ -13339,7 +13347,7 @@ function drawAdvStage() {
   if (!st) return;
   const R = ADV_REGIONS[st.r];
   if (st.def.finale) { drawAdvFinale(); return; }
-  if (st.ss && st.ss.mode === "sky") drawSkyBg(st.meter / 100); else drawAdvBg(st.r, st.meter / 100);
+  if (st.ss && st.ss.mode === "sky") drawSkyBg(st.meter / 100); else if (st.ss && st.ss.mode === "coral") drawCoralBg(st.meter / 100); else drawAdvBg(st.r, st.meter / 100);
   drawAdvPuddles();
   const order = st.pals.slice().sort((a, b) => a.baseY - b.baseY);
   for (const c of order) drawAdvPal(c);
@@ -13360,6 +13368,7 @@ function drawAdvStage() {
   if (st.state === "play" || st.state === "intro") {
     if (st.ss && (st.hint > 0 || st.state === "intro")) { const M = ssModInfo(); advPill(M.hint, 86, M.col, M.bd); }
     else if (st.hint > 0 || st.state === "intro") advPill(R.hint, 86, R.pill, R.accent);
+    else if (st.def.rescue && !st.rescued && st.ss && st.ss.mode === "coral") advPill("Gently hug the grumpy pufferfish (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#dff8f6", "#5fd0d4");
     else if (st.def.rescue && !st.rescued && st.ss && st.ss.mode === "sky") advPill("Hug the sulky Storm Sprite (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#eef0ff", "#a0a8e0");
     else if (st.def.rescue && !st.rescued) advPill("Find & hug the shy " + ADV_REGIONS[st.r].critter.replace("leopard", "snow leopard") + " (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#fff6d8", "#e0c060");
     else if (st.meter >= 100 && st.def.rescue && !st.rescued) advPill("So colorful! Now find the shy friend", 86, "#fff6d8", "#e0c060");
@@ -13691,7 +13700,7 @@ function closeAdvMap() {
   else scene = "title";
 }
 function advBand(r) {
-  const top = 78, bot = H - 76, bh = (bot - top) / (typeof SKY_STAGES !== "undefined" ? 6 : 5); // band 5 = Sky Islands
+  const top = 78, bot = H - 76, bh = (bot - top) / (typeof CORAL_STAGES !== "undefined" ? 7 : typeof SKY_STAGES !== "undefined" ? 6 : 5); // band 5 = Sky Islands, 6 = Coral Cove
   return { y0: bot - (r + 1) * bh, y1: bot - r * bh, h: bh };
 }
 function advNodePos(i) {
@@ -13919,7 +13928,7 @@ function drawCutArt(art, x, y, w, h, t) {
   const sc = w / W;
   const bgR = kind === "region" ? n : kind === "friend" ? n : kind === "king" || kind === "grouphug" ? 4 : 0;
   const bgK = kind === "graymeadow" || kind === "thieves" ? 0.1 : kind === "region" ? 0.2 : kind === "king" ? 0.15 + n * 0.1 : 1;
-  ctx.save(); ctx.translate(x, y + h - H * sc); ctx.scale(sc, sc); if (kind === "sky") drawSkyBg(1); else drawAdvBg(bgR, bgK); ctx.restore();
+  ctx.save(); ctx.translate(x, y + h - H * sc); ctx.scale(sc, sc); if (kind === "sky") drawSkyBg(1); else if (kind === "coral") drawCoralBg(1); else drawAdvBg(bgR, bgK); ctx.restore();
   const cx = x + w / 2, gy = y + h - 34;
   const hop = k => Math.abs(Math.sin(t * 5 + k)) * 5;
   if (kind === "graymeadow") {
@@ -13969,6 +13978,8 @@ function drawCutArt(art, x, y, w, h, t) {
     drawSprite(ANIMALS.find(q => q.id === "bat"), cx + 80, gy - 30 - hop(2) * 2, 1.5, false, 0, false, 3, null);
   } else if (kind === "sky") {
     drawSkyCutArt(n, x, y, w, h, t, cx, gy);
+  } else if (kind === "coral") {
+    drawCoralCutArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "kingflower" && typeof drawKingFlowerArt === "function") {
     drawKingFlowerArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "theend") {
@@ -20114,6 +20125,1109 @@ V162_ACTIONS.push(id => {
 Object.assign(v162Api, { FEST_THEMES, festState, festTheme, festBump, claimFest, festClaimable,
   setFestWeek(d) { festWeekOverride = d; }, drawFestCard, accOptions, SHOP_ACCS });
 
+// v16.3 Coral Cove friends + secret friends: pixel art (generated by hc-art/gen163.py)
+SPRITE_FRAMES["coralpuff"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001110000000000", "00000000p01jjj10p0000000", "0000000011jjjjj110000000", "00000p01ooooooooo10p0000", "0111101ooooxoooooo100000", "1jjjj1oooooooooxooo10000", "1jjj1oooxooooooooooo1000", "1jj11oooooooooHooooo1p00", "1jjjjoooihooooihooooo100", "1j1jjooHiiNNNNiiooooo100", "1j1jjoooiiNNNNiiNoooo100", "1jjjjoggNNNNNNNNggooo100", "1jj11ooNNN1NN1NNNNoo1p00", "1jjj1ooNNNN11NNNNNoo1000", "1jjjj1oNNNNNNNNNNNo10000", "0111p01oNNNNNNNNNo100000", "0000001jjjjjNNjjjj1p0000", "0000001jjjjjoojjjj100000", "000000011111p11111000000", "000000000000000000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001110000000000", "00000000p01jjj10p0000000", "0000000011jjjjj110000000", "00000p01ooooooooo10p0000", "0111101ooooxoooooo100000", "1jjjj1oooooooooxooo10000", "1jjj1oooxooooooooooo1000", "1jj11oooooooooHooooo1p00", "1jjjjoooooooooooooooo100", "1j1jjooHooNNNNNoooooo100", "1j1jjooo11NNNN11Noooo100", "1jjjjoggNNNNNNNNggooo100", "1jj11ooNNN1NN1NNNNoo1p00", "1jjj1ooNNNN11NNNNNoo1000", "1jjjj1oNNNNNNNNNNNo10000", "0111p01oNNNNNNNNNo100000", "0000001jjjjjNNjjjj1p0000", "0000001jjjjjoojjjj100000", "000000011111p11111000000", "000000000000000000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001110000000000", "00000000p01jjj10p0000000", "0000000011jjjjj110000000", "00000p01ooooooooo10p0000", "0111101ooooxoooooo100000", "1jjjj1oooooooooxooo10000", "1jjj1oooxooooooooooo1000", "1jj11oooooooooHooooo1p00", "1jjjjoooihooooihooooo100", "1j1jjooHiiNNNNiiooooo100", "1j1jjoooiiNNNNiiNoooo100", "1jjjjooNkNNNNNNNNNooo100", "1jj11ooNkNN11NNNNNoo1p00", "1jjj1ooNNN1NN1NNNNoo1000", "1jjjj1oNNNNNNNNNNNo10000", "0111p01oNNNNNNNNNo100000", "0000001jjjjjNNjjjj1p0000", "0000001jjjjjoojjjj100000", "000000011111p11111000000", "000000000000000000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001110000000000", "00000000p01jjj10p0000000", "0000000011jjjjj110000000", "00000p01ooooooooo10p0000", "0111101ooooxoooooo100000", "1jjjj1oooooooooxooo10000", "1jjj1oooxooooooooooo1000", "1jj11oooooooooHooooo1p00", "1jjjjoooihooooihooooo100", "1j1jjooHiiNNNNiiooooo100", "1j1jjoooiiNNNNiiNoooo100", "1jjjjooNkNNNNNNNNNooo100", "1jj11ooNkNN11NNNNNoo1p00", "1jjj1ooNNN1NN1NNNNoo1000", "1jjjj1oNNNNNNNNNNNo10000", "0111p01oNNNNNNNNNo100000", "0000001jjjjjNNjjjj1p0000", "0000001jjjjjoojjjj100000", "000000011111p11111000000", "000000000000000000000000", "000000000000000000000000"]),
+};
+ANCHOR["coralpuff"] = [12, 5, 11.5, 3, 18];
+SPRITE_FRAMES["seahorse"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000M00000000000", "00000000000M1M0000000000", "0000000000M1LL1100000000", "0000000001LLLLLL10000000", "000000001LMLLLLLL1000000", "000000001LLihLLih1100000", "00000001MLLiiLLiiLL11000", "000000001LLLLLLLLLLLL100", "00000000MLggLLLLggLLL100", "000000111LLLL1LL11111000", "000001EMLLLqqq1100000000", "00001EEELLLaaaLL10000000", "00001EEMLLqqqqqL10000000", "00001EEELLaaaaaL10000000", "000001EMLLqqqqqL10000000", "0000001LLLaaaaaL10000000", "00000001LLLqqqL100000000", "00000001LLLLq1LL10000000", "0000001LLLLLL1LL10000000", "0000001LLLLLLLL100000000", "00000001LLLLLLL100000000", "00000000111LLLL100000000", "000000000001111000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000M00000000000", "00000000000M1M0000000000", "0000000000M1LL1100000000", "0000000001LLLLLL10000000", "000000001LMLLLLLL1000000", "000000001LLLLLLLL1100000", "00000001MLL11LL11LL11000", "000000001LLLLLLLLLLLL100", "00000000MLggLLLLggLLL100", "000000111LLLL1LL11111000", "000001EMLLLqqq1100000000", "00001EEELLLaaaLL10000000", "00001EEMLLqqqqqL10000000", "00001EEELLaaaaaL10000000", "000001EMLLqqqqqL10000000", "0000001LLLaaaaaL10000000", "00000001LLLqqqL100000000", "00000001LLLLq1LL10000000", "0000001LLLLLL1LL10000000", "0000001LLLLLLLL100000000", "00000001LLLLLLL100000000", "00000000111LLLL100000000", "000000000001111000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000M00000000000", "00000000000M1M0000000000", "0000000000M1LL1100000000", "0000000001LLLLLL10000000", "000000001LMLLLLLL1000000", "000000001LLihLLih1100000", "00000001MLLiiLLiiLL11000", "000000001LLkLLLLLLLLL100", "00000000MLLkLLLLLLLLL100", "000000111LLLLL1111111000", "000001EMLLLqq1L110000000", "00001EEELLLaaaLL10000000", "00001EEMLLqqqqqL10000000", "00001EEELLaaaaaL10000000", "000001EMLLqqqqqL10000000", "0000001LLLaaaaaL10000000", "00000001LLLqqqL100000000", "00000001LLLLq1LL10000000", "0000001LLLLLL1LL10000000", "0000001LLLLLLLL100000000", "00000001LLLLLLL100000000", "00000000111LLLL100000000", "000000000001111000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000M00000000000", "00000000000M1M0000000000", "0000000000M1LL1100000000", "0000000001LLLLLL10000000", "000000001LMLLLLLL1000000", "000000001LLihLLih1100000", "00000001MLLiiLLiiLL11000", "000000001LLkLLLLLLLLL100", "00000000MLLkLLLLLLLLL100", "000000111LLLLL1111111000", "000001EMLLLqq1L110000000", "00001EEELLLaaaLL10000000", "00001EEMLLqqqqqL10000000", "00001EEELLaaaaaL10000000", "000001EMLLqqqqqL10000000", "0000001LLLaaaaaL10000000", "00000001LLLqqqL100000000", "00000001LLLLq1LL10000000", "0000001LLLLLL1LL10000000", "0000001LLLLLLLL100000000", "00000001LLLLLLL100000000", "00000000111LLLL100000000", "000000000001111000000000"]),
+};
+ANCHOR["seahorse"] = [13, 3, 6.5, 2, 11];
+SPRITE_FRAMES["jellybun"] = {
+  idle: parseGrid(["000000011000000110000000", "0000001JJ100001JJ1000000", "0000001JJ100001JJ1000000", "000001JgJJ1001JgJJ100000", "000001JgJJ1001JgJJ100000", "000001JJJJ1111JJJJ100000", "000001JJJJJJJJJJJJ100000", "0000001JJIIJJJJJJ1000000", "000001JJIJJJJJJJJJ100000", "00001JJJJJJJJJJJJJJ10000", "0001JJJJihJJJJihJJJJ1000", "0001JJJJiiJJJJiiJJJJ1000", "0001JJJJiiJJJJiiJJJJ1000", "0001JJggJJ1JJ1JJggJJ1000", "0001JJJJJJJ11JJJJJJJ1000", "0001JJJJJJJJJJJJJJJJ1000", "0000AAAAAAAAAAAAAAAA0000", "000000A1tJJAJJJt10A00000", "00000A00t111A11t0A000000", "00000A000t00A0t00A000000", "000000A00t0A00t000A00000", "000000A0t00A000t00A00000", "00000A00t000A00t0A000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000011000000110000000", "0000001JJ100001JJ1000000", "0000001JJ100001JJ1000000", "000001JgJJ1001JgJJ100000", "000001JgJJ1001JgJJ100000", "000001JJJJ1111JJJJ100000", "000001JJJJJJJJJJJJ100000", "0000001JJIIJJJJJJ1000000", "000001JJIJJJJJJJJJ100000", "00001JJJJJJJJJJJJJJ10000", "0001JJJJJJJJJJJJJJJJ1000", "0001JJJJJJJJJJJJJJJJ1000", "0001JJJJ11JJJJ11JJJJ1000", "0001JJggJJ1JJ1JJggJJ1000", "0001JJJJJJJ11JJJJJJJ1000", "0001JJJJJJJJJJJJJJJJ1000", "0000AAAAAAAAAAAAAAAA0000", "000000A1tJJAJJJt10A00000", "00000A00t111A11t0A000000", "00000A000t00A0t00A000000", "000000A00t0A00t000A00000", "000000A0t00A000t00A00000", "00000A00t000A00t0A000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000011000000110000000", "0000001JJ100001JJ1000000", "0000001JJ100001JJ1000000", "000001JgJJ1001JgJJ100000", "000001JgJJ1001JgJJ100000", "000001JJJJ1111JJJJ100000", "000001JJJJJJJJJJJJ100000", "0000001JJIIJJJJJJ1000000", "000001JJIJJJJJJJJJ100000", "00001JJJJJJJJJJJJJJ10000", "0001JJJJihJJJJihJJJJ1000", "0001JJJJiiJJJJiiJJJJ1000", "0001JJJJiiJJJJiiJJJJ1000", "0001JJJJkJJ11JJJJJJJ1000", "0001JJJJkJ1JJ1JJJJJJ1000", "0001JJJJJJJJJJJJJJJJ1000", "0000AAAAAAAAAAAAAAAA0000", "000000A1tJJAJJJt10A00000", "00000A00t111A11t0A000000", "00000A000t00A0t00A000000", "000000A00t0A00t000A00000", "000000A0t00A000t00A00000", "00000A00t000A00t0A000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000011000000110000000", "0000001JJ100001JJ1000000", "0000001JJ100001JJ1000000", "000001JgJJ1001JgJJ100000", "000001JgJJ1001JgJJ100000", "000001JJJJ1111JJJJ100000", "000001JJJJJJJJJJJJ100000", "0000001JJIIJJJJJJ1000000", "000001JJIJJJJJJJJJ100000", "00001JJJJJJJJJJJJJJ10000", "0001JJJJihJJJJihJJJJ1000", "0001JJJJiiJJJJiiJJJJ1000", "0001JJJJiiJJJJiiJJJJ1000", "0001JJJJkJJ11JJJJJJJ1000", "0001JJJJkJ1JJ1JJJJJJ1000", "0001JJJJJJJJJJJJJJJJ1000", "0000AAAAAAAAAAAAAAAA0000", "000000A1tJJAJJJt10A00000", "00000A00t111A11t0A000000", "00000A000t00A0t00A000000", "000000A00t0A00t000A00000", "000000A0t00A000t00A00000", "00000A00t000A00t0A000000", "000000000000000000000000"]),
+};
+ANCHOR["jellybun"] = [11.5, 4, 11, 3, 16];
+SPRITE_FRAMES["starpup"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000001000000000000", "00000000001x100000000000", "00000000001x100000000000", "0000000001xHx10000000000", "0000000001xxx10000000000", "0000111001xxH10001110000", "0001ppp11xxxxx101ppp1000", "0001ppp11xxxxx111ppp1000", "001xpppxxxxxxxxxxppp1000", "01xxHppxxxxxxxxxxppHx100", "001xpppxihxxxxihxppp1000", "0001pppxiixxxxiixppp1000", "00001xxxxxxxxxxxxx110000", "000001xggxxiixxxgg000000", "000001xxxx1xx1xxx1000000", "000001xxxxx11xxxx1000000", "000001xxxxxxxxxxx1000000", "000001xxxxx1xxxxx1000000", "000001xHx11011xxH1000000", "00001xH110000011xH100000", "00001x10000000001x100000", "000001000000000001000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000001000000000000", "00000000001x100000000000", "00000000001x100000000000", "0000000001xHx10000000000", "0000000001xxx10000000000", "0000111001xxH10001110000", "0001ppp11xxxxx101ppp1000", "0001ppp11xxxxx111ppp1000", "001xpppxxxxxxxxxxppp1000", "01xxHppxxxxxxxxxxppHx100", "001xpppxxxxxxxxxxppp1000", "0001pppx11xxxx11xppp1000", "00001xxxxxxxxxxxxx110000", "000001xggxxiixxxgg000000", "000001xxxx1xx1xxx1000000", "000001xxxxx11xxxx1000000", "000001xxxxxxxxxxx1000000", "000001xxxxx1xxxxx1000000", "000001xHx11011xxH1000000", "00001xH110000011xH100000", "00001x10000000001x100000", "000001000000000001000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000001000000000000", "00000000001x100000000000", "00000000001x100000000000", "0000000001xHx10000000000", "0000000001xxx10000000000", "0000111001xxH10001110000", "0001ppp11xxxxx101ppp1000", "0001ppp11xxxxx111ppp1000", "001xpppxxxxxxxxxxppp1000", "01xxHppxxxxxxxxxxppHx100", "001xpppxihxxxxihxppp1000", "0001pppxiixxxxiixppp1000", "00001xxxkxxxxxxxxx110000", "000001xxkxxiixxxx1000000", "000001xxxxx11xxxx1000000", "000001xxxx1xx1xxx1000000", "000001xxxxxxxxxxx1000000", "000001xxxxx1xxxxx1000000", "000001xHx11011xxH1000000", "00001xH110000011xH100000", "00001x10000000001x100000", "000001000000000001000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000001000000000000", "00000000001x100000000000", "00000000001x100000000000", "0000000001xHx10000000000", "0000000001xxx10000000000", "0000111001xxH10001110000", "0001ppp11xxxxx101ppp1000", "0001ppp11xxxxx111ppp1000", "001xpppxxxxxxxxxxppp1000", "01xxHppxxxxxxxxxxppHx100", "001xpppxihxxxxihxppp1000", "0001pppxiixxxxiixppp1000", "00001xxxkxxxxxxxxx110000", "000001xxkxxiixxxx1000000", "000001xxxxx11xxxx1000000", "000001xxxx1xx1xxx1000000", "000001xxxxxxxxxxx1000000", "000001xxxxx1xxxxx1000000", "000001xHx11011xxH1000000", "00001xH110000011xH100000", "00001x10000000001x100000", "000001000000000001000000", "000000000000000000000000"]),
+};
+ANCHOR["starpup"] = [11.5, 3, 11, 3, 17];
+SPRITE_FRAMES["seaotter"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001100000000000", "000011101116611101110000", "000166616666666616661000", "000166666666666666661000", "00001166ih6666ih66110000", "00000166ii5555ii66100000", "000001765555555567100000", "000001gg55588555gg100000", "00000166r515515r66100000", "000001665551155566100000", "000000165555555561000000", "000000166633336661000000", "000001777643436777100000", "000001777543435777100000", "000001666555555666100000", "000001665555555566100000", "000001666555555666100000", "000000166555555661000000", "000000016666666610000000", "000aqqaq11111111qqaqq000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001100000000000", "000011101116611101110000", "000166616666666616661000", "000166666666666666661000", "000011666666666666110000", "000001661155551166100000", "000001765555555567100000", "000001gg55588555gg100000", "00000166r515515r66100000", "000001665551155566100000", "000000165555555561000000", "000000166633336661000000", "000001777643436777100000", "000001777543435777100000", "000001666555555666100000", "000001665555555566100000", "000001666555555666100000", "000000166555555661000000", "000000016666666610000000", "000aqqaq11111111qqaqq000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001100000000000", "000011101116611101110000", "000166616666666616661000", "000166666666666666661000", "00001166ih6666ih66110000", "00000166ii5555ii66100000", "00000176k555555567100000", "00000166k558855566100000", "00000166r551155r66100000", "000001665515515566100000", "000000165555555561000000", "000000166633336661000000", "000001777643436777100000", "000001777543435777100000", "000001666555555666100000", "000001665555555566100000", "000001666555555666100000", "000000166555555661000000", "000000016666666610000000", "000aqqaq11111111qqaqq000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001100000000000", "000011101116611101110000", "000166616666666616661000", "000166666666666666661000", "00001166ih6666ih66110000", "00000166ii5555ii66100000", "00000176k555555567100000", "00000166k558855566100000", "00000166r551155r66100000", "000001665515515566100000", "000000165555555561000000", "000000166633336661000000", "000001777643436777100000", "000001777543435777100000", "000001666555555666100000", "000001665555555566100000", "000001666555555666100000", "000000166555555661000000", "000000016666666610000000", "000aqqaq11111111qqaqq000", "000000000000000000000000"]),
+};
+ANCHOR["seaotter"] = [11.5, 4, 7.5, 3, 14];
+SPRITE_FRAMES["octopus"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000001111111100000000", "00000001BBBBBBJB10000000", "0000001BJBBBBBBBB1000000", "000001BBBBBBBBBBBB100000", "00001BBBBBBBBBBBJBB10000", "00001BJBBBBBBBBBBBB10000", "00001BBBBBBBBBBBBBB10000", "00001BBBihBBBBihBBB10000", "00001BBBiiBBBBiiBBB10000", "00001BBBiiBBBBiiBBB10000", "00001BggBB1BB1BBggB10000", "0001BBBBBBB11BBBBBBB1000", "00001BBBBBBBBBBBBBB11000", "0001BBBBBBBBBBBBBB1BB100", "0001BB1BBBBBBBBBBB1BB100", "0001BB1BB1BB1BB1BB1BB100", "00001BB1BB1BBB1BB1BB1000", "00001BB1BB1BBB1BB1BB1000", "00001AB1AB1AAB1AB1AB1000", "000001101101110110110000", "000000000000000000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000001111111100000000", "00000001BBBBBBJB10000000", "0000001BJBBBBBBBB1000000", "000001BBBBBBBBBBBB100000", "00001BBBBBBBBBBBJBB10000", "00001BJBBBBBBBBBBBB10000", "00001BBBBBBBBBBBBBB10000", "00001BBBBBBBBBBBBBB10000", "00001BBBBBBBBBBBBBB10000", "00001BBB11BBBB11BBB10000", "00001BggBB1BB1BBggB10000", "0001BBBBBBB11BBBBBBB1000", "00001BBBBBBBBBBBBBB11000", "0001BBBBBBBBBBBBBB1BB100", "0001BB1BBBBBBBBBBB1BB100", "0001BB1BB1BB1BB1BB1BB100", "00001BB1BB1BBB1BB1BB1000", "00001BB1BB1BBB1BB1BB1000", "00001AB1AB1AAB1AB1AB1000", "000001101101110110110000", "000000000000000000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000001111111100000000", "00000001BBBBBBJB10000000", "0000001BJBBBBBBBB1000000", "000001BBBBBBBBBBBB100000", "00001BBBBBBBBBBBJBB10000", "00001BJBBBBBBBBBBBB10000", "00001BBBBBBBBBBBBBB10000", "00001BBBihBBBBihBBB10000", "00001BBBiiBBBBiiBBB10000", "00001BBBiiBBBBiiBBB10000", "00001BBBkBB11BBBBBB10000", "0001BBBBkB1BB1BBBBBB1000", "00001BBBBBBBBBBBBBB11000", "0001BBBBBBBBBBBBBB1BB100", "0001BB1BBBBBBBBBBB1BB100", "0001BB1BB1BB1BB1BB1BB100", "00001BB1BB1BBB1BB1BB1000", "00001BB1BB1BBB1BB1BB1000", "00001AB1AB1AAB1AB1AB1000", "000001101101110110110000", "000000000000000000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000001111111100000000", "00000001BBBBBBJB10000000", "0000001BJBBBBBBBB1000000", "000001BBBBBBBBBBBB100000", "00001BBBBBBBBBBBJBB10000", "00001BJBBBBBBBBBBBB10000", "00001BBBBBBBBBBBBBB10000", "00001BBBihBBBBihBBB10000", "00001BBBiiBBBBiiBBB10000", "00001BBBiiBBBBiiBBB10000", "00001BBBkBB11BBBBBB10000", "0001BBBBkB1BB1BBBBBB1000", "00001BBBBBBBBBBBBBB11000", "0001BBBBBBBBBBBBBB1BB100", "0001BB1BBBBBBBBBBB1BB100", "0001BB1BB1BB1BB1BB1BB100", "00001BB1BB1BBB1BB1BB1000", "00001BB1BB1BBB1BB1BB1000", "00001AB1AB1AAB1AB1AB1000", "000001101101110110110000", "000000000000000000000000", "000000000000000000000000"]),
+};
+ANCHOR["octopus"] = [11.5, 2, 10, 3, 15];
+SPRITE_FRAMES["sunhog"] = {
+  idle: parseGrid(["000000000000011100000000", "0000000000011lll11000000", "00000000001lllllll100000", "00000000001lllllll100000", "0000000001lllnsslll10000", "0000000001lllssslll10000", "0000000001lllssnlll10000", "00000010181lllllll100000", "00000181888lllllll810000", "0000188818888lll18881000", "000181888888888888818100", "001888888888888888888810", "000188888555888888888100", "001888855555558888888810", "0188855ih555ih5588888881", "0018855ii555ii5588888810", "000185555555555588888100", "00018gg555555gg588888100", "000075551551555588881000", "000015555115555588810000", "000001155555558888100000", "000001777555877711000000", "000000111111111100000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000011100000000", "0000000000011lll11000000", "00000000001lllllll100000", "00000000001lllllll100000", "0000000001lllnsslll10000", "0000000001lllssslll10000", "0000000001lllssnlll10000", "00000010181lllllll100000", "00000181888lllllll810000", "0000188818888lll18881000", "000181888888888888818100", "001888888888888888888810", "000188888555888888888100", "001888855555558888888810", "018885555555555588888881", "001885511555115588888810", "000185555555555588888100", "00018gg555555gg588888100", "000075551551555588881000", "000015555115555588810000", "000001155555558888100000", "000001777555877711000000", "000000111111111100000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000011100000000", "0000000000011lll11000000", "00000000001lllllll100000", "00000000001lllllll100000", "0000000001lllnsslll10000", "0000000001lllssslll10000", "0000000001lllssnlll10000", "00000010181lllllll100000", "00000181888lllllll810000", "0000188818888lll18881000", "000181888888888888818100", "001888888888888888888810", "000188888555888888888100", "001888855555558888888810", "0188855ih555ih5588888881", "0018855ii555ii5588888810", "0001855k5555555588888100", "0001885k5555555588888100", "000075555115555588881000", "000015551551555588810000", "000001155555558888100000", "000001777555877711000000", "000000111111111100000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000011100000000", "0000000000011lll11000000", "00000000001lllllll100000", "00000000001lllllll100000", "0000000001lllnsslll10000", "0000000001lllssslll10000", "0000000001lllssnlll10000", "00000010181lllllll100000", "00000181888lllllll810000", "0000188818888lll18881000", "000181888888888888818100", "001888888888888888888810", "000188888555888888888100", "001888855555558888888810", "0188855ih555ih5588888881", "0018855ii555ii5588888810", "0001855k5555555588888100", "0001885k5555555588888100", "000075555115555588881000", "000015551551555588810000", "000001155555558888100000", "000001777555877711000000", "000000111111111100000000", "000000000000000000000000"]),
+};
+ANCHOR["sunhog"] = [10, 10, 14.5, 2.5, 19];
+SPRITE_FRAMES["pocketdragon"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "00000000N000000N00000000", "00000000N011110N00000000", "0000000011EFFE1100010000", "00011111EEEFEEEE101u1000", "001uuuuEEEEEEEEEE1uuu100", "01uuuuEEEEEEEEEEEEuuuu10", "01uuuuEEihEEEEihEEuuuu10", "01uuuuEEiiEEEEiiEEuuuuu1", "01uuuuEEiiEEEEiiEEuuuu10", "01uuuuggEE1EE1EEgguuuu10", "001uuuuEEEE11EEEE1uuu100", "00011111EEEEEEEE101u1000", "0000001EEEEmmEEEE1010000", "0000001EEmmHmmmEE1000000", "000001EEEmmmmmmEEE100000", "0000001EEmmHmmmEE1000000", "0000001EEmmmmmmEEE100000", "00000001EEmHmmEEEEE11000", "0000001EEEEEEEEE11EEE100", "00000001111111110011EEF0", "000000000000000000001100"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "00000000N000000N00000000", "00000000N011110N00000000", "0000000011EFFE1100010000", "00011111EEEFEEEE101u1000", "001uuuuEEEEEEEEEE1uuu100", "01uuuuEEEEEEEEEEEEuuuu10", "01uuuuEEEEEEEEEEEEuuuu10", "01uuuuEEEEEEEEEEEEuuuuu1", "01uuuuEE11EEEE11EEuuuu10", "01uuuuggEE1EE1EEgguuuu10", "001uuuuEEEE11EEEE1uuu100", "00011111EEEEEEEE101u1000", "0000001EEEEmmEEEE1010000", "0000001EEmmHmmmEE1000000", "000001EEEmmmmmmEEE100000", "0000001EEmmHmmmEE1000000", "0000001EEmmmmmmEEE100000", "00000001EEmHmmEEEEE11000", "0000001EEEEEEEEE11EEE100", "00000001111111110011EEF0", "000000000000000000001100"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "00000000N000000N00000000", "00000000N011110N00000000", "0000000011EFFE1100010000", "00011111EEEFEEEE101u1000", "001uuuuEEEEEEEEEE1uuu100", "01uuuuEEEEEEEEEEEEuuuu10", "01uuuuEEihEEEEihEEuuuu10", "01uuuuEEiiEEEEiiEEuuuuu1", "01uuuuEEiiEEEEiiEEuuuu10", "01uuuuEEkEE11EEEEEuuuu10", "001uuuuEkE1EE1EEE1uuu100", "00011111EEEEEEEE101u1000", "0000001EEEEmmEEEE1010000", "0000001EEmmHmmmEE1000000", "000001EEEmmmmmmEEE100000", "0000001EEmmHmmmEE1000000", "0000001EEmmmmmmEEE100000", "00000001EEmHmmEEEEE11000", "0000001EEEEEEEEE11EEE100", "00000001111111110011EEF0", "000000000000000000001100"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "00000000N000000N00000000", "00000000N011110N00000000", "0000000011EFFE1100010000", "00011111EEEFEEEE101u1000", "001uuuuEEEEEEEEEE1uuu100", "01uuuuEEEEEEEEEEEEuuuu10", "01uuuuEEihEEEEihEEuuuu10", "01uuuuEEiiEEEEiiEEuuuuu1", "01uuuuEEiiEEEEiiEEuuuu10", "01uuuuEEkEE11EEEEEuuuu10", "001uuuuEkE1EE1EEE1uuu100", "00011111EEEEEEEE101u1000", "0000001EEEEmmEEEE1010000", "0000001EEmmHmmmEE1000000", "000001EEEmmmmmmEEE100000", "0000001EEmmHmmmEE1000000", "0000001EEmmmmmmEEE100000", "00000001EEmHmmEEEEE11000", "0000001EEEEEEEEE11EEE100", "00000001111111110011EEF0", "000000000000000000001100"]),
+};
+ANCHOR["pocketdragon"] = [11.5, 5, 10, 3, 15];
+SPRITE_FRAMES["glowfrog"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000011zz11000011zz110000", "0001zihzzz1001zzihzz1000", "0001ziizzz1001zziizz1000", "0001ziizzz1111zziizz1000", "0001zzzzzzzzzzzzzzzz1000", "00001zzzczzzzzzczzz10000", "00001zzzzzzzzzzzzzz10000", "0001zcggzz1zz1zzggcz1000", "0001zzzzzzm11mzzzzzz1000", "0001zzzzmmmmmmmmzzzz1000", "0001zzzmmmmm9mmmmzzz1000", "0001zzzmmmm9mmmmmzzz1000", "00011zzmmmmmmmmmmzz11000", "001zzzzzmm9mm9mmzzzzz100", "01zzzzzzzzmmmmzzzzzzzz10", "001zzz111111111111zzz100", "000111000000000000111000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000011zz11000011zz110000", "0001zzzzzz1001zzzzzz1000", "0001zzzzzz1001zzzzzz1000", "0001z11zzz1111zz11zz1000", "0001zzzzzzzzzzzzzzzz1000", "00001zzzczzzzzzczzz10000", "00001zzzzzzzzzzzzzz10000", "0001zcggzz1zz1zzggcz1000", "0001zzzzzzm11mzzzzzz1000", "0001zzzzmmmmmmmmzzzz1000", "0001zzzmmmmm9mmmmzzz1000", "0001zzzmmmm9mmmmmzzz1000", "00011zzmmmmmmmmmmzz11000", "001zzzzzmm9mm9mmzzzzz100", "01zzzzzzzzmmmmzzzzzzzz10", "001zzz111111111111zzz100", "000111000000000000111000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000011zz11000011zz110000", "0001zihzzz1001zzihzz1000", "0001ziizzz1001zziizz1000", "0001ziizzz1111zziizz1000", "0001zkzzzzzzzzzzzzzz1000", "00001kzzczzzzzzczzz10000", "00001zzzzzzzzzzzzzz10000", "0001zczzzzz11zzzzzcz1000", "0001zzzzzz1mm1zzzzzz1000", "0001zzzzmmmmmmmmzzzz1000", "0001zzzmmmmm9mmmmzzz1000", "0001zzzmmmm9mmmmmzzz1000", "00011zzmmmmmmmmmmzz11000", "001zzzzzmm9mm9mmzzzzz100", "01zzzzzzzzmmmmzzzzzzzz10", "001zzz111111111111zzz100", "000111000000000000111000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000011zz11000011zz110000", "0001zihzzz1001zzihzz1000", "0001ziizzz1001zziizz1000", "0001ziizzz1111zziizz1000", "0001zkzzzzzzzzzzzzzz1000", "00001kzzczzzzzzczzz10000", "00001zzzzzzzzzzzzzz10000", "0001zczzzzz11zzzzzcz1000", "0001zzzzzz1mm1zzzzzz1000", "0001zzzzmmmmmmmmzzzz1000", "0001zzzmmmmm9mmmmzzz1000", "0001zzzmmmm9mmmmmzzz1000", "00011zzmmmmmmmmmmzz11000", "001zzzzzmm9mm9mmzzzzz100", "01zzzzzzzzmmmmzzzzzzzz10", "001zzz111111111111zzz100", "000111000000000000111000", "000000000000000000000000"]),
+};
+ANCHOR["glowfrog"] = [11.5, 5, 8, 5.5, 13];
+SPRITE_FRAMES["snowpenguin"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000011110000000000", "0000000011DDDD1100000000", "00000001DDDDDDDD10000000", "0000001DDDDDDDDDD1000000", "000001DDihhhhhihDD100000", "000001DDiihhhhiiDD100000", "00001DDDhhhxxhhhDDD10000", "0001DDDgghhxxhhggDDD1000", "0001DDDDhh1xh1hhDDDD1000", "0001DDDDhhh11hhhDDDD1000", "0001DDDDhhhhhhhhDDDD1000", "0001DDGGGGGGGGGGGGDD1000", "00001DvGvGvGvGvGvGD10000", "0001IIIqDhhhhhhGGIII1000", "001IIIIIIIhhhhIGGIIqI100", "01IIqIIIIIIIIIIGGIIIII10", "001IIIIIIIIIIIIqIIIII100", "0001IIIIIqIIIIIIIIII1000", "00001IIIIIIIIIIIIII10000", "00000111IIIIIIII11100000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000011110000000000", "0000000011DDDD1100000000", "00000001DDDDDDDD10000000", "0000001DDDDDDDDDD1000000", "000001DDDDhhhhDDDD100000", "000001DD11hhhh11DD100000", "00001DDDhhhxxhhhDDD10000", "0001DDDgghhxxhhggDDD1000", "0001DDDDhh1xh1hhDDDD1000", "0001DDDDhhh11hhhDDDD1000", "0001DDDDhhhhhhhhDDDD1000", "0001DDGGGGGGGGGGGGDD1000", "00001DvGvGvGvGvGvGD10000", "0001IIIqDhhhhhhGGIII1000", "001IIIIIIIhhhhIGGIIqI100", "01IIqIIIIIIIIIIGGIIIII10", "001IIIIIIIIIIIIqIIIII100", "0001IIIIIqIIIIIIIIII1000", "00001IIIIIIIIIIIIII10000", "00000111IIIIIIII11100000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000011110000000000", "0000000011DDDD1100000000", "00000001DDDDDDDD10000000", "0000001DDDDDDDDDD1000000", "000001DDihhhhhihDD100000", "000001DDiihhhhiiDD100000", "00001DDDkhhxxhhhDDD10000", "0001DDDDkhhxxhhhDDDD1000", "0001DDDDhhh11hhhDDDD1000", "0001DDDDhh1hh1hhDDDD1000", "0001DDDDhhhhhhhhDDDD1000", "0001DDGGGGGGGGGGGGDD1000", "00001DvGvGvGvGvGvGD10000", "0001IIIqDhhhhhhGGIII1000", "001IIIIIIIhhhhIGGIIqI100", "01IIqIIIIIIIIIIGGIIIII10", "001IIIIIIIIIIIIqIIIII100", "0001IIIIIqIIIIIIIIII1000", "00001IIIIIIIIIIIIII10000", "00000111IIIIIIII11100000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000011110000000000", "0000000011DDDD1100000000", "00000001DDDDDDDD10000000", "0000001DDDDDDDDDD1000000", "000001DDihhhhhihDD100000", "000001DDiihhhhiiDD100000", "00001DDDkhhxxhhhDDD10000", "0001DDDDkhhxxhhhDDDD1000", "0001DDDDhhh11hhhDDDD1000", "0001DDDDhh1hh1hhDDDD1000", "0001DDDDhhhhhhhhDDDD1000", "0001DDGGGGGGGGGGGGDD1000", "00001DvGvGvGvGvGvGD10000", "0001IIIqDhhhhhhGGIII1000", "001IIIIIIIhhhhIGGIIqI100", "01IIqIIIIIIIIIIGGIIIII10", "001IIIIIIIIIIIIqIIIII100", "0001IIIIIqIIIIIIIIII1000", "00001IIIIIIIIIIIIII10000", "00000111IIIIIIII11100000"]),
+};
+ANCHOR["snowpenguin"] = [11.5, 4.5, 8.5, 3, 14];
+
+// ===================== v16.3 — Coral Cove region, six sea friends, four more secret friends =====================
+// New state lives in hc163 (normalized on load), so older saves migrate without loss.
+
+// ---------- state ----------
+const CORAL_N = 3;
+function blankCoral() { return { gm: [0, 0, 0], best: [0, 0, 0], runs: 0, wins: 0, ride: 0, tide: 0, done: false }; }
+function blankSec163() { return { sunHugs: 0, snowHugs: 0, stackBest: 0, glowBest: 0, hints: {}, set2: false }; }
+function blankYard163() { return { theme: "meadow", tier: 0, best: 0 }; }
+function blankHc163() { return { coral: blankCoral(), sec: blankSec163(), yard: blankYard163(), seen: false }; }
+let hc163 = blankHc163();
+const YARD_THEMES = ["meadow", "beach", "snowy"];
+function normalizeHc163(d) {
+  const o = blankHc163();
+  if (!isObj(d)) return o;
+  if (isObj(d.coral)) {
+    const c = d.coral;
+    if (Array.isArray(c.gm)) for (let i = 0; i < CORAL_N; i++) o.coral.gm[i] = Math.floor(numOr0(c.gm[i])) & 7;
+    if (Array.isArray(c.best)) for (let i = 0; i < CORAL_N; i++) o.coral.best[i] = Math.max(0, numOr0(c.best[i]));
+    for (const k of ["runs", "wins", "ride", "tide"]) o.coral[k] = Math.max(0, Math.floor(numOr0(c[k])));
+    o.coral.done = !!c.done;
+  }
+  if (isObj(d.sec)) {
+    const s = d.sec;
+    o.sec.sunHugs = Math.min(99, Math.max(0, Math.floor(numOr0(s.sunHugs))));
+    o.sec.snowHugs = Math.min(99, Math.max(0, Math.floor(numOr0(s.snowHugs))));
+    o.sec.stackBest = Math.min(999, Math.max(0, Math.floor(numOr0(s.stackBest))));
+    o.sec.glowBest = Math.min(999, Math.max(0, Math.floor(numOr0(s.glowBest))));
+    if (isObj(s.hints)) for (const k of ["sun", "dragon", "glow", "snow"]) if (s.hints[k] === true) o.sec.hints[k] = true;
+    o.sec.set2 = !!s.set2;
+  }
+  if (isObj(d.yard)) {
+    if (YARD_THEMES.includes(d.yard.theme)) o.yard.theme = d.yard.theme;
+    o.yard.tier = Math.min(10, Math.max(0, Math.floor(numOr0(d.yard.tier))));
+    o.yard.best = Math.max(0, Math.floor(numOr0(d.yard.best)));
+  }
+  o.seen = !!d.seen;
+  return o;
+}
+function ensureHc163() { if (!hc163 || !hc163.coral || !hc163.sec || !hc163.yard) hc163 = normalizeHc163(hc163); return hc163; }
+// ---------- six Coral Cove friends ----------
+// coralK = befriended in that Coral Cove stage (counts toward "Unlock every friend", like the Sky stage friends);
+// the rest sit in the Shop just above the Sky shop friends (max 12500) and below the rares (25000+).
+const CORAL_FRIENDS = [
+  { id: "starpup", name: "Starfish Pup", cost: 0, coralK: 0, bio: "Five little arms, two floppy ears. Waves with all of them." },
+  { id: "seahorse", name: "Seahorse", cost: 14000, bio: "Curls its tail around kelp to nap. Hums tiny bubble songs." },
+  { id: "octopus", name: "Little Octopus", cost: 0, coralK: 1, bio: "Eight soft arms, eight soft hugs. Shy, then very cuddly." },
+  { id: "jellybun", name: "Jelly Bun", cost: 17500, bio: "Half jellyfish, half bunny, all wiggle. Glows when happy." },
+  { id: "seaotter", name: "Sea Otter Pup", cost: 21000, bio: "Floats on its back with a favorite pink shell." },
+  { id: "coralpuff", name: "Coral Pufferfish", cost: 0, coralK: 2, bio: "Used to puff up when nervous. Now it puffs up to say hi." },
+];
+for (const f of CORAL_FRIENDS) if (!ANIMALS.some(a => a.id === f.id)) {
+  const a = Object.assign({ coral: true }, f);
+  if (f.coralK != null) a.skyK = f.coralK; // story-only friend: not sold, shows its story hint
+  ANIMALS.push(a);
+}
+const CORAL_IDS = CORAL_FRIENDS.map(f => f.id);
+{ const f = skyStoryText; skyStoryText = function (a) { if (a && a.coral) return "✦ Befriend in Coral Cove"; return f.apply(this, arguments); }; }
+function coralFriendsHave() { return CORAL_IDS.filter(id => unlocked[id]).length; }
+
+// ---------- four more secret friends (not sold, not needed for "Unlock every friend") ----------
+const SECRET163 = [
+  { id: "sunhog", name: "Sunflower Hedgehog", cost: 0, secret: true, lock: "A secret friend on a sunny twist day", bio: "Wears its favorite sunflower every single day." },
+  { id: "pocketdragon", name: "Pocket Dragon", cost: 0, secret: true, lock: "A secret friend who likes tall towers", bio: "Small enough for a pocket. Brave enough for anything." },
+  { id: "glowfrog", name: "Glow Frog", cost: 0, secret: true, lock: "A secret friend in the firefly glow", bio: "Its spots light up when it giggles." },
+  { id: "snowpenguin", name: "Snowball Penguin", cost: 0, secret: true, lock: "A secret friend in the snow", bio: "Rolled in on a snowball and decided to stay." },
+];
+for (const f of SECRET163) if (!ANIMALS.some(a => a.id === f.id)) ANIMALS.push(Object.assign({}, f));
+const SECRET163_IDS = SECRET163.map(f => f.id);
+Object.assign(SECRET_HELLO, {
+  sunhog: "Sunflower Hedgehog rolled in! ♥",
+  pocketdragon: "Pocket Dragon hopped out of a pocket! ♥",
+  glowfrog: "Glow Frog lit up and hopped in! ♥",
+  snowpenguin: "Snowball Penguin slid in! ♥",
+});
+function hint163(k, text, color) {
+  const S = ensureHc163().sec;
+  if (S.hints[k]) return false;
+  S.hints[k] = true;
+  softHint(text, color);
+  saveSoon();
+  return true;
+}
+// Sunflower Hedgehog: 10 hugs on a Rainbow Day or Petal Day twist. Snowball Penguin: 10 hugs while it snows.
+{
+  const f = noteRainHug;
+  noteRainHug = function () {
+    const r = f.apply(this, arguments);
+    const S = ensureHc163().sec, tw = typeof twistId === "function" ? twistId() : null;
+    if (!unlocked.sunhog && (tw === "rainbow" || tw === "petals")) {
+      hint163("sun", "Sunny twist days make a hedgehog curious.", "#d0a000");
+      S.sunHugs = Math.min(99, S.sunHugs + 1);
+      if (S.sunHugs >= 10) unlockSecretFriend("sunhog"); else saveSoon();
+    }
+    if (!unlocked.snowpenguin && v12 && v12.wx === "snow") {
+      hint163("snow", "Snowy hugs are extra warm. Someone is watching.", "#5a90c8");
+      S.snowHugs = Math.min(99, S.snowHugs + 1);
+      if (S.snowHugs >= 10) unlockSecretFriend("snowpenguin"); else saveSoon();
+    }
+    return r;
+  };
+}
+// Pocket Dragon: stack 12 pals in Critter Stack.
+{
+  const f = stackLand;
+  stackLand = function () {
+    const r = f.apply(this, arguments);
+    if (mg && mg.tower) {
+      const n = mg.tower.length, S = ensureHc163().sec;
+      if (n > S.stackBest) S.stackBest = n;
+      if (!unlocked.pocketdragon && n >= 12) unlockSecretFriend("pocketdragon");
+    }
+    return r;
+  };
+}
+// Glow Frog: a 5-catch glow streak in Firefly Catch (five Good/Perfect catches in a row).
+{
+  const f = ffTap;
+  ffTap = function () {
+    const r = f.apply(this, arguments);
+    if (r && mg) {
+      const S = ensureHc163().sec;
+      if (mg.combo > S.glowBest) S.glowBest = mg.combo;
+      if (!unlocked.glowfrog && mg.combo >= 5) unlockSecretFriend("glowfrog");
+    }
+    return r;
+  };
+  if (typeof v162Api !== "undefined") v162Api.ffTap = ffTap;
+}
+{ // one soft hint the first time each game is opened
+  const f = startMg;
+  startMg = function (game) {
+    const r = f.apply(this, arguments);
+    if (game === "stack" && !unlocked.pocketdragon) hint163("dragon", "Build a tall tower. Something small loves heights.", "#3f9a68");
+    if (game === "firefly" && !unlocked.glowfrog) hint163("glow", "A glowing streak of catches wakes someone up.", "#90b020");
+    return r;
+  };
+}
+// the Secret Friends set gains the four new secrets; finishing all nine pays once more
+for (const s of COLLECTIONS) if (s.id === "secret") for (const id of SECRET163_IDS) if (!s.ids.includes(id)) s.ids.push(id);
+{
+  const f = checkCollections;
+  checkCollections = function () {
+    let paid = f.apply(this, arguments);
+    const S = ensureHc163().sec, set = COLLECTIONS.find(s => s.id === "secret");
+    if (set && !S.set2 && hc16.col.secret && set.ids.every(id => unlocked[id])) {
+      S.set2 = true; paid++;
+      toast("All nine secret friends found!", "#c08000");
+      earnSeeds(6, "Secret Friends");
+      save();
+    }
+    return paid;
+  };
+  if (typeof v16Api !== "undefined") v16Api.checkCollections = checkCollections;
+}
+
+// ---------- collections ----------
+[
+  { id: "coral", name: "Coral Friends", ids: CORAL_IDS.slice(), seeds: 10, col: "#5fd0d4" },
+  { id: "tidepool", name: "Tidepool Pals", ids: ["starpup", "octopus", "seaotter", "otter", "hermit"], seeds: 5, col: "#ff9a7a" },
+  { id: "glowy", name: "Glowy Bunch", ids: ["jellybun", "glowfrog", "firefly", "lanternmoth", "seahorse"], seeds: 5, col: "#d8ff70" },
+  { id: "pocket", name: "Pocket Pals", ids: ["pocketdragon", "sunhog", "snowpenguin", "coralpuff", "teacupmouse"], seeds: 6, col: "#ffd08a" },
+].forEach(s => { s.ids = s.ids.filter(id => ANIMALS.some(a => a.id === id)); if (!COLLECTIONS.some(c => c.id === s.id)) COLLECTIONS.push(s); });
+
+// ---------- region gate + helpers ----------
+function coralState() { ensureHc163(); return hc163.coral; }
+function coralFriendCount() { return ANIMALS.filter(a => unlocked[a.id]).length; }
+// opens after the Sky Islands finale OR once you have 25 friends
+function coralOpen() { return !!((typeof skyState === "function" && skyState().done) || coralFriendCount() >= 25); }
+function coralWon(k) { return !!(coralState().gm[k] & 1); }
+function coralStageOpen(k) { return coralOpen() && k >= 0 && k < CORAL_N && (k === 0 || coralWon(k - 1)); }
+function coralStars(k) { return popcnt3(coralState().gm[k] || 0); }
+function coralTotalStars() { let n = 0; for (let k = 0; k < CORAL_N; k++) n += coralStars(k); return n; }
+const CORAL_LOCK_TEXT = "Opens with 25 friends or after the Sky Islands";
+
+// ---------- ten Coral daily quests ----------
+[
+  { id: "coral_play", ev: "coralplay", need: () => 1, ok: () => coralOpen(), text: () => "Play a Coral Cove stage", pay: 45 },
+  { id: "coral_clear", ev: "coralclear", need: () => 1, ok: () => coralOpen(), text: () => "Clear a Coral Cove stage", pay: 60 },
+  { id: "coral_ride", ev: "coralride", need: () => 4, ok: () => coralOpen(), text: (q) => "Hug " + q.need + " pals riding bubble currents", pay: 50 },
+  { id: "coral_tide", ev: "coraltide", need: () => 5, ok: () => coralOpen() && coralWon(0), text: (q) => "Hug " + q.need + " pals safe under the tide", pay: 50 },
+  { id: "coral_cheer", ev: "coralcheer", need: () => 3, ok: () => coralOpen(), text: (q) => "Cheer up " + q.need + " sad pals in Coral Cove", pay: 50 },
+  { id: "coral_star", ev: "coralstar", need: () => 1, ok: () => coralOpen() && coralTotalStars() < CORAL_N * 3, text: () => "Earn a new Coral Cove star", pay: 60 },
+  { id: "coral_map", ev: "coralmap", need: () => 1, ok: () => coralOpen(), text: () => "Peek at Coral Cove on the map", pay: 25 },
+  { id: "coral_hug", ev: "hug", need: () => 6, ok: () => coralFriendsHave() > 0, text: (q) => "Hug Coral friends " + q.need + " times", pay: 45, match: (q, arg) => CORAL_IDS.includes(arg) },
+  { id: "coral_puff", ev: "hug", need: () => 3, ok: () => !!unlocked.coralpuff, text: (q) => "Give Coral Pufferfish " + q.need + " hugs", pay: 45, match: (q, arg) => arg === "coralpuff" },
+  { id: "coral_octo", ev: "hug", need: () => 4, ok: () => !!unlocked.octopus, text: (q) => "Hug Little Octopus " + q.need + " times", pay: 40, match: (q, arg) => arg === "octopus" },
+].forEach(q => { if (!V16_QUEST_BY_ID[q.id]) { V16_QUESTS.push(q); V16_QUEST_BY_ID[q.id] = q; } });
+// a Goal Ladder for Coral Cove stars
+if (typeof LADDERS !== "undefined" && !LADDER_BY_ID.coral) {
+  const L = { id: "coral", name: "Reef Diver", icon: "≈", unit: "Coral Cove stars", val: () => coralTotalStars(), t: [2, 4, 6, 9] };
+  LADDERS.push(L); LADDER_BY_ID.coral = L;
+}
+
+// ---------- Coral Cove: three stages on the storybook map ----------
+// Same stage engine as the storybook (st.ss with mode "coral"). Twists: bubble currents that carry pals
+// sideways (hug one mid-ride for a "Whoosh!"), and a tide that rises and falls. Gloom can't swim, so it
+// only reaches the dry part of the pool above the waterline, and pals under the water stay happy.
+const CORAL_STAGES = [
+  { name: "Tidepool Shallows", mod: "Bubble Currents", hint: "Bubble currents carry pals! Hug them mid-ride", dur: 125, par: 62, gEvery: 4.2, gMax: 3, sad: 0.24,
+    cur: true, tide: false, pat: null, x: { k: "ride", n: 5, text: "Hug 5 pals riding a current" }, friend: "starpup" },
+  { name: "Kelp Forest", mod: "Rising Tide", hint: "Gloom can't swim! Pals under the tide stay safe", dur: 130, par: 64, gEvery: 3.9, gMax: 4, sad: 0.26,
+    cur: false, tide: true, pat: "wave", x: { k: "tide", n: 6, text: "Hug 6 pals under the tide" }, friend: "octopus" },
+  { name: "Coral Castle", mod: "Shy Pufferfish", hint: "A grumpy pufferfish! Give it 3 gentle hugs", dur: 140, par: 72, gEvery: 3.8, gMax: 4, sad: 0.28,
+    cur: true, tide: true, pat: "loop", rescue: true, x: { k: "cheer", n: 6, text: "Cheer up 6 sad pals" }, friend: "coralpuff" },
+];
+let coralSel = null;
+const isCoral = () => !!(st && st.ss && st.ss.mode === "coral");
+function coralModInfo() { const S = CORAL_STAGES[st.ss.k]; return { name: S.mod, hint: S.hint, col: "#dff8f6", bd: "#5fd0d4" }; }
+function coralStartStage(k, skipCut) {
+  if (!coralStageOpen(k)) return false;
+  if (!skipCut && k === 0 && !adv.cuts.coral_intro) { startCutscene("coral_intro", () => coralStartStage(k, true)); return true; }
+  if (!skipCut && k === 2 && !adv.cuts.coral_puff) { startCutscene("coral_puff", () => coralStartStage(k, true)); return true; }
+  const S = CORAL_STAGES[k];
+  const def = { name: S.name, dur: S.dur, par: S.par, gEvery: S.gEvery, gMax: S.gMax, sad: S.sad, x: S.x, rescue: !!S.rescue };
+  st = {
+    i: 1, r: 0, def, state: "intro", t: 0, time: 0, paused: false, meter: 0, pals: [], lings: [], spawnT: 0.2,
+    gT: 2.2, combo: 0, comboT: 0, bestCombo: 0, shoo: 0, cheer: 0, fog: 0, lily: 0, gust: 0, splits: 0, missed: 0,
+    hugs: 0, result: null, rt: 0, fogs: [], puddles: [], fogT: 0, pudT: 2.5, wind: { cd: 1e9, on: 0, dir: 1 },
+    rescueC: null, rescued: false, hint: 3.2,
+    ss: { mode: "coral", k, tw: "", pat: S.pat, stars: [], starT: 0, caught: 0, starry: false,
+      cur: [], cT: 0.6, tideT: 0, tideY: 1e9, ride: 0, tide: 0, washed: 0 },
+  };
+  scene = "adv"; advSel = null; coralSel = null; if (typeof skySel !== "undefined") skySel = null; advTreasOpen = false;
+  particles.length = 0; floatTexts.length = 0; confetti.length = 0;
+  coralTideUpdate(0);
+  for (let n = 0; n < 3; n++) advSpawnPal();
+  if (S.rescue) {
+    const a = ANIMALS.find(x => x.id === "coralpuff");
+    const [y0, y1] = advYRange();
+    const c = { animal: a, x: W * 0.7, y: (y0 + y1) / 2 + 30, baseY: (y0 + y1) / 2 + 30, vx: -14, ph: 0, bob: 3, scale: 2.0, sad: true, state: "float",
+      t: 0, life: 1e9, hugs: 0, heartT: 0, rescue: true };
+    st.rescueC = c; st.pals.push(c);
+  }
+  setMusicMode("adv_r1");
+  coralState().runs++;
+  qBump("coralplay"); qBump("adv");
+  return true;
+}
+// tide: 0 = low (gloom reaches the whole pool), 1 = high (gloom squeezed up to the top edge)
+function coralTideLevel() {
+  const S = st.ss;
+  if (!CORAL_STAGES[S.k].tide) return 0;
+  return 0.5 - 0.5 * Math.cos(S.tideT * Math.PI * 2 / 16); // one gentle rise + fall every 16 seconds
+}
+function coralTideUpdate(dt) {
+  const S = st.ss, [y0, y1] = advYRange();
+  if (!CORAL_STAGES[S.k].tide) { S.tideY = 1e9; return; }
+  S.tideT += dt;
+  const lv = coralTideLevel();
+  S.tideY = y1 + 30 - (y1 - y0 + 10) * (0.12 + 0.62 * lv);
+}
+function coralSafe(c) { return !!(st && st.ss && c && c.baseY > st.ss.tideY + 6); }
+function coralWorld(dt, playing) {
+  const S = st.ss, D = CORAL_STAGES[S.k];
+  const [y0, y1] = advYRange();
+  coralTideUpdate(dt * (playing ? 1 : 0.4));
+  for (const g of st.lings) {
+    if (S.pat === "wave") g.y += Math.sin(time * 3 + g.phase) * 20 * dt;
+    else if (S.pat === "loop") { g.x += Math.cos(time * 1.5 + g.phase) * 22 * dt; g.y += Math.sin(time * 1.5 + g.phase) * 22 * dt; }
+    g.y = clamp(g.y, y0 - 40, y1 - 20);
+    // gloom can't swim: the rising tide pushes it up; if there's nowhere left to go, the tide washes it away
+    if (D.tide && g.y > S.tideY - 18) {
+      g.y = S.tideY - 18;
+      if (g.y < y0 - 44 && !g.dead) {
+        g.dead = true; S.washed++; advGain(0.6);
+        addFloat({ x: lingCX(g), y: y0 - 30, text: "Washed away! ≈", life: 0.9, vy: -20, color: "#2f9aa8", size: 12 });
+      }
+    }
+  }
+  prune(st.lings, notDead);
+  // pals under the waterline are tide-safe (gloom can't reach them)
+  for (const c of st.pals) c.tideSafe = D.tide && coralSafe(c);
+  // pals sway gently in the water
+  for (const c of st.pals) if (c.state === "float" && !c.rescue) c.x += Math.sin(time * 0.8 + c.ph * 0.1) * 5 * dt;
+  // bubble currents: a horizontal stream that carries pals sideways
+  if (D.cur && playing) {
+    S.cT -= dt;
+    if (S.cT <= 0 && S.cur.length < 2) {
+      const y = y0 + 20 + Math.random() * (y1 - y0 - 40);
+      if (S.cur.every(o => Math.abs(o.y - y) > 60)) S.cur.push({ y, h: 54, dir: Math.random() < 0.5 ? -1 : 1, t: 0, life: 7 + Math.random() * 2 });
+      S.cT = 3.2 + Math.random() * 2;
+    }
+  }
+  for (const q of S.cur) {
+    q.t += dt; if (q.t > q.life) q.dead = true;
+    const a = Math.min(1, q.t / 0.6, (q.life - q.t) / 0.6);
+    for (const c of st.pals) if (c.state === "float" && !c.rescue && Math.abs(c.baseY - q.y) < q.h / 2) {
+      c.x += q.dir * 60 * a * dt;
+      if (c.x < -10) c.x = W + 10; else if (c.x > W + 10) c.x = -10;
+    }
+  }
+  prune(S.cur, notDead);
+}
+function coralInCurrent(c) { return !!(st && st.ss && st.ss.cur.some(q => q.t > 0.3 && Math.abs(c.baseY - q.y) < q.h / 2 + 4)); }
+{
+  const f = advHug;
+  advHug = function (c) {
+    const coral = isCoral() && !!c;
+    const riding = coral && !c.rescue && c.state === "float" && coralInCurrent(c);
+    const safe = coral && !c.rescue && c.state === "float" && c.tideSafe;
+    const wasSad = coral && c.state === "float" && c.sad && !c.rescue;
+    f.apply(this, arguments);
+    if (!coral || !st) return;
+    if (riding && c.state === "happy") {
+      st.ss.ride++; advGain(0.6); qBump("coralride");
+      addFloat({ x: c.x, y: c.y - 34, text: "Whoosh! ≈", life: 0.9, vy: -40, color: "#2f9aa8", size: 13 });
+    }
+    if (safe && c.state === "happy") { st.ss.tide++; qBump("coraltide"); }
+    if (wasSad && !c.sad) qBump("coralcheer");
+  };
+}
+function coralTap(p) { return false; }
+function coralThird(def, res) {
+  if (def.x.k === "ride") return res.ride >= def.x.n;
+  if (def.x.k === "tide") return res.tide >= def.x.n;
+  return advThirdStar(def, res);
+}
+function coralGoalTexts(def) {
+  return [def.rescue ? "Bring back the color & befriend the pufferfish" : "Bring back the color", advSecondText(def), def.x.text];
+}
+function coralFinish(win) {
+  if (!st || st.state === "result") return;
+  const S = st.ss, k = S.k, def = st.def, Y = coralState();
+  const res = { win, time: st.time, bestCombo: st.bestCombo, shoo: st.shoo, cheer: st.cheer, fog: st.fog, lily: st.lily, gust: st.gust, splits: st.splits, missed: st.missed, hugs: st.hugs, ride: S.ride, tide: S.tide };
+  let mask = 0;
+  if (win) { mask = 1; if (advSecondStar(def, res)) mask |= 2; if (coralThird(def, res)) mask |= 4; }
+  const prev = Y.gm[k];
+  Y.gm[k] = prev | mask;
+  const newStars = [1, 2, 4].filter(b => (mask & b) && !(prev & b)).length;
+  let hearts = 0, seeds = 0, friend = null, end = false;
+  if (win) {
+    Y.wins++;
+    if (!Y.best[k] || st.time < Y.best[k]) Y.best[k] = Math.round(st.time * 10) / 10;
+    hearts = (!(prev & 1) ? 100 + k * 35 : 18) + newStars * 30;
+    seeds = newStars + (!(prev & 1) ? 3 : 0);
+    const id = CORAL_STAGES[k].friend;
+    if (id && !unlocked[id]) { unlocked[id] = true; albumNew = true; friend = ANIMALS.find(a => a.id === id); }
+    if (k === CORAL_N - 1 && !Y.done) { Y.done = true; seeds += 6; if (!adv.cuts.coral_end) end = true; }
+    qBump("coralclear");
+    if (newStars) qBump("coralstar", null, newStars);
+    if (typeof sfxVictory === "function") sfxVictory();
+    if (typeof spawnConfetti === "function") spawnConfetti(30);
+  } else {
+    hearts = Math.floor(st.meter / 20);
+    if (typeof sfxMiss === "function") sfxMiss();
+  }
+  Y.ride += S.ride; Y.tide += S.tide;
+  joy += hearts;
+  st.result = { win, mask, prev, stars: popcnt3(mask), hearts, seeds, friend, end, meter: Math.round(st.meter) };
+  st.state = "result"; st.rt = 0;
+  if (seeds) earnSeeds(seeds, "Coral Cove");
+  if (friend) toast(friend.name + " is your friend! ♥", C.heart);
+  if (typeof checkAchievements === "function") checkAchievements();
+  if (typeof checkCollections === "function") checkCollections();
+  save();
+}
+function coralLeave(next) {
+  const R = st && st.result;
+  st = null;
+  particles.length = 0; confetti.length = 0;
+  if (R && R.end) { startCutscene("coral_end", openAdvMap); return; }
+  if (next != null && coralStageOpen(next)) { coralStartStage(next); return; }
+  openAdvMap();
+}
+function coralDrawIntro() {
+  const k = st.t, def = st.def, S = CORAL_STAGES[st.ss.k];
+  ctx.fillStyle = "rgba(20,50,70,0.2)"; ctx.fillRect(0, 0, W, H);
+  const top = H / 2 - 110, e = easeOutBack(Math.min(1, k / 0.35));
+  ctx.save(); ctx.translate(W / 2, top + 90); ctx.scale(e, e); ctx.translate(-W / 2, -(top + 90));
+  solidPanel(34, top, W - 68, 196);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#1f8a96"; font(11, true); ctx.fillText("Coral Cove · Stage " + (st.ss.k + 1) + " / " + CORAL_N, W / 2, top + 24);
+  ctx.fillStyle = C.text; font(19, true); ctx.fillText(def.name, W / 2, top + 50);
+  ctx.fillStyle = "#dff8f6"; roundRect(W / 2 - 60, top + 66, 120, 22, 11); ctx.fill();
+  ctx.strokeStyle = "#5fd0d4"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(11, true); ctx.fillText(S.mod, W / 2, top + 77);
+  const have = coralState().gm[st.ss.k] || 0;
+  coralGoalTexts(def).forEach((g, j) => { drawStarShape(64, top + 108 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 140, 11.5, false, 8.5); ctx.fillText(g, 80, top + 109 + j * 24); });
+  ctx.restore();
+}
+function coralDrawResult() {
+  const R = st.result, t = st.rt;
+  ctx.fillStyle = "rgba(20,50,70," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
+  const ph = R.win ? 390 : 280, top = Math.round(H / 2 - ph / 2);
+  solidPanel(22, top, W - 44, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (R.win) {
+    ctx.fillStyle = C.text; font(20, true); ctx.fillText("The cove is shimmering!", W / 2, top + 30);
+    for (let i = 0; i < 3; i++) {
+      const s0 = t - 0.35 - i * 0.22, kk = s0 <= 0 ? 0 : easeOutBack(Math.min(1, s0 / 0.3));
+      if (s0 > 0 && s0 - frameDt <= 0 && (R.mask >> i) & 1 && typeof sfxStar === "function") sfxStar(i);
+      drawStarShape(W / 2 + (i - 1) * 54, top + 74 - (i === 1 ? 5 : 0), i === 1 ? 22 : 19, (R.mask >> i) & 1, Math.max(0.01, kk));
+    }
+    coralGoalTexts(st.def).forEach((txt, j) => {
+      const got = (R.mask >> j) & 1, before = (R.prev >> j) & 1, s = (got ? "✓ " : "· ") + txt + (got && !before ? "  NEW" : "");
+      ctx.textAlign = "left"; ctx.fillStyle = got ? "#3f9a48" : "#a898a8";
+      fitFont(s, W - 100, 11.5, false, 8.5); ctx.fillText(s, 46, top + 116 + j * 20);
+    });
+    ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(11, false);
+    ctx.fillText("Best ★ " + coralStars(st.ss.k) + " / 3  ·  Time " + fmtClock(st.time), W / 2, top + 184);
+    ctx.fillStyle = C.heart; font(20, true);
+    ctx.fillText("♥ +" + R.hearts, W / 2 - (R.seeds ? 40 : 0), top + 212);
+    if (R.seeds) { drawSeedIcon(W / 2 + 34, top + 212, 2); ctx.fillStyle = "#3f8a32"; font(18, true); ctx.textAlign = "left"; ctx.fillText("+" + R.seeds, W / 2 + 44, top + 212); ctx.textAlign = "center"; }
+    if (R.friend) { ctx.fillStyle = "#e0508a"; font(12, true); ctx.fillText("✦ " + R.friend.name + " is your friend!", W / 2, top + 240); }
+    const who = R.friend || ANIMALS.find(a => a.id === CORAL_STAGES[st.ss.k].friend) || ANIMALS[0];
+    const hop = (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 5)) * 6;
+    drawSprite(who, W / 2, top + ph - 104 - hop, 1.7, false, 0, false, 5, { acc: equippedFor(who.id), heartEyes: true });
+  } else {
+    ctx.fillStyle = C.text; font(19, true); ctx.fillText("Almost shimmering!", W / 2, top + 34);
+    ctx.fillStyle = C.textSoft; font(12, false);
+    ctx.fillText("You brought back " + R.meter + "% of the color!", W / 2, top + 64);
+    ctx.fillText("Try again whenever you like ♥", W / 2, top + 84);
+    if (R.hearts) { ctx.fillStyle = C.heart; font(16, true); ctx.fillText("♥ +" + R.hearts + " for trying", W / 2, top + 114); }
+    drawSprite(ANIMALS[0], W / 2, top + 170, 1.7, false, 0, false, 5, { acc: equippedFor("cat") });
+  }
+  uiButtons = [];
+  if (t > 0.5) {
+    const by = top + ph - 62;
+    const items = [["Retry", "adv_retry", "#d0ffd8", "#70c080"], ["Map", "adv_map", "#e8d0ff", "#c090e0"]];
+    if (R.win && st.ss.k < CORAL_N - 1 && !R.end) items.push(["Next ▸", "adv_next", C.btn, "#ff80b0"]);
+    if (R.win && R.end) items.push(["Story ▸", "adv_map", C.btn, "#ff80b0"]);
+    const n = items.length, gap = 8, bw = (W - 60 - gap * (n - 1)) / n;
+    items.forEach((it, j) => uiButtons.push(btn(30 + j * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
+  }
+}
+function coralHudLabel() {
+  const S = st.ss, D = CORAL_STAGES[S.k];
+  return "Coral Cove · " + (S.k + 1) + "/" + CORAL_N + (D.cur ? "  ≈" + S.ride : "") + (D.tide ? "  ⛆" + S.tide : "");
+}
+// hook the Coral stages into the Second Spring stage dispatchers
+{
+  const wrap = (name, fn) => fn;
+  const fW = ssWorld; ssWorld = function (dt, playing) { if (isCoral()) return coralWorld(dt, playing); return fW.apply(this, arguments); };
+  const fT = ssTap; ssTap = function (p) { if (isCoral()) return coralTap(p); return fT.apply(this, arguments); };
+  const fD = ssDrawExtras; ssDrawExtras = function () { if (isCoral()) return coralDrawExtras(); return fD.apply(this, arguments); };
+  const fF = ssFinish; ssFinish = function (win) { if (isCoral()) return coralFinish(win); return fF.apply(this, arguments); };
+  const fL = ssLeave; ssLeave = function (next) { if (isCoral()) return coralLeave(next); return fL.apply(this, arguments); };
+  const fI = ssDrawIntro; ssDrawIntro = function () { if (isCoral()) return coralDrawIntro(); return fI.apply(this, arguments); };
+  const fR = ssDrawResult; ssDrawResult = function () { if (isCoral()) return coralDrawResult(); return fR.apply(this, arguments); };
+  const fM = ssModInfo; ssModInfo = function () { if (isCoral()) return coralModInfo(); return fM.apply(this, arguments); };
+  const fH = ssHudLabel; ssHudLabel = function () { if (isCoral()) return coralHudLabel(); return fH.apply(this, arguments); };
+  void wrap;
+}
+
+// ---------- art: the cove backdrop (stages, map band, story pages) ----------
+function drawKelp(x, y0, h, ph, col, calm) {
+  ctx.fillStyle = col;
+  for (let k = 0; k < h; k += 4) {
+    const sw = Math.sin(ph + k * 0.08 + (calm ? 0 : time * 1.2)) * (k / h) * 7;
+    ctx.fillRect(Math.round(x + sw), Math.round(y0 - k), 4, 5);
+    if (k % 12 === 0 && k > 8) ctx.fillRect(Math.round(x + sw + (k % 24 ? 4 : -4)), Math.round(y0 - k), 4, 3);
+  }
+}
+function drawCoralTuft(x, y, s, col, hi) {
+  ctx.fillStyle = col;
+  const arms = [[-8, -14], [-3, -22], [3, -18], [8, -12], [0, -9]];
+  for (const [dx, dy] of arms) {
+    ctx.fillRect(x + dx * s - 2 * s, y + dy * s, 4 * s, -dy * s);
+    ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, 3 * s, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = hi;
+  for (const [dx, dy] of arms) ctx.fillRect(x + dx * s - 1 * s, y + dy * s - 1 * s, 2 * s, 2 * s);
+}
+function drawBubbleDot(x, y, r, a) {
+  ctx.strokeStyle = "rgba(255,255,255," + (0.75 * a) + ")"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255," + (0.8 * a) + ")"; ctx.fillRect(x - r * 0.5, y - r * 0.6, Math.max(1, r * 0.5), Math.max(1, r * 0.5));
+}
+function drawCoralBg(k) {
+  k = clamp(k == null ? 1 : k, 0, 1);
+  const calm = kind && kind.motion, tt = calm ? time * 0.2 : time;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#7fe0e8"); g.addColorStop(0.45, "#3fb8c8"); g.addColorStop(1, "#2a8aa8");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // soft light rays from the surface
+  ctx.save();
+  for (let i = 0; i < 4; i++) {
+    const x = 40 + i * 92 + Math.sin(tt * 0.3 + i) * 10;
+    ctx.fillStyle = "rgba(255,255,230," + (0.07 + 0.05 * k) + ")";
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 34, 0); ctx.lineTo(x + 90, H * 0.85); ctx.lineTo(x + 40, H * 0.85); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  // surface shimmer
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  for (let x = 0; x < W; x += 18) ctx.fillRect(x + Math.sin(tt + x) * 3, 6 + Math.sin(tt * 1.4 + x * 0.1) * 2, 10, 2);
+  // sandy floor
+  const fy = H - 96;
+  ctx.fillStyle = "#f2dca6"; ctx.beginPath(); ctx.moveTo(0, fy + 10); ctx.quadraticCurveTo(W * 0.3, fy - 12, W * 0.6, fy + 4); ctx.quadraticCurveTo(W * 0.85, fy + 14, W, fy - 4); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#e4c888"; for (let i = 0; i < 22; i++) ctx.fillRect((i * 67) % W, fy + 18 + (i * 29) % 70, 3, 2);
+  // kelp + coral
+  drawKelp(24, fy + 14, 150, 0, "#3f9a58", calm); drawKelp(46, fy + 18, 110, 2, "#5ab868", calm);
+  drawKelp(W - 30, fy + 10, 170, 1, "#3f9a58", calm); drawKelp(W - 56, fy + 16, 96, 3, "#5ab868", calm);
+  drawCoralTuft(W * 0.32, fy + 22, 1.1, k > 0.3 ? "#ff7a9a" : "#c8a8b0", "#ffd4e0");
+  drawCoralTuft(W * 0.62, fy + 26, 0.9, k > 0.5 ? "#ffa04a" : "#c8b0a0", "#ffe0b0");
+  drawCoralTuft(W * 0.84, fy + 30, 0.75, k > 0.7 ? "#c9a0ff" : "#b8b0c8", "#efe0ff");
+  // shells + a starfish on the sand
+  ctx.fillStyle = "#ffd4e0"; ctx.beginPath(); ctx.arc(W * 0.18, fy + 44, 6, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#ff9a3c"; drawStarShape(W * 0.48, fy + 48, 7, 1, 1);
+  // rising bubbles
+  const n = calm ? 5 : 12;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 73 + 20) % W + Math.sin(tt * 1.5 + i) * 4, y = H - ((i * 97 + tt * (18 + i % 4 * 6)) % (H + 20));
+    drawBubbleDot(x, y, 2 + (i % 3), 0.8);
+  }
+  // gray until the color comes back
+  if (k < 1) { ctx.fillStyle = "rgba(150,150,165," + (0.45 * (1 - k)) + ")"; ctx.fillRect(0, 0, W, H); }
+}
+function coralDrawExtras() {
+  const S = st.ss, D = CORAL_STAGES[S.k], calm = kind && kind.motion;
+  // bubble currents
+  for (const q of S.cur) {
+    const a = Math.min(1, q.t / 0.6, (q.life - q.t) / 0.6);
+    ctx.fillStyle = "rgba(220,250,255," + (0.22 * a) + ")"; ctx.fillRect(0, q.y - q.h / 2 + 10, W, q.h - 8);
+    ctx.fillStyle = "rgba(255,255,255," + (0.5 * a) + ")"; ctx.fillRect(0, q.y - q.h / 2 + 10, W, 1.5); ctx.fillRect(0, q.y + q.h / 2, W, 1.5);
+    for (let j = 0; j < 9; j++) {
+      const x = ((j * 47 + (calm ? 0 : q.t * 90) * q.dir) % (W + 20) + W + 20) % (W + 20) - 10;
+      drawBubbleDot(x, q.y + 6 + Math.sin(j * 2 + q.t * 3) * (q.h * 0.3), 2 + (j % 3), a);
+    }
+    ctx.fillStyle = "rgba(255,255,255," + (0.85 * a) + ")"; font(12, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (let j = 0; j < 3; j++) ctx.fillText(q.dir > 0 ? "»" : "«", 60 + j * 120, q.y + 6);
+  }
+  // the tide: above the waterline the pool is dry (sun-warmed, a little hazy); gloom lives up there
+  if (D.tide && S.tideY < H) {
+    const ty = S.tideY;
+    ctx.fillStyle = "rgba(255,244,214,0.38)"; ctx.fillRect(0, 70, W, Math.max(0, ty - 70));
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    for (let x = 0; x < W; x += 8) { const yy = ty + Math.sin(x * 0.08 + (calm ? 0 : time * 2.4)) * 2.5; ctx.fillRect(x, yy, 8, 2); }
+    ctx.fillStyle = "rgba(120,220,235,0.25)"; ctx.fillRect(0, ty + 2, W, 10);
+    // a small tide marker on the right edge
+    const lv = coralTideLevel();
+    ctx.fillStyle = "rgba(255,250,245,0.9)"; roundRect(W - 52, ty - 26, 46, 18, 9); ctx.fill();
+    ctx.fillStyle = "#1f7f8c"; font(10, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText((lv > 0.5 ? "▲" : "▼") + " tide", W - 29, ty - 16.5);
+  }
+}
+
+// ---------- the map band (above the Sky Islands) ----------
+function coralBand() { return advBand(6); }
+function coralNodePos(k) {
+  const B = coralBand(), xs = [76, W / 2, W - 76];
+  return { x: xs[k], y: B.y0 + B.h * (k === 1 ? 0.45 : 0.62) };
+}
+function drawCoralBand() {
+  const B = coralBand(), open = coralOpen(), done = coralState().done, calm = kind && kind.motion;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, B.y0, W, B.h + 1); ctx.clip();
+  const g = ctx.createLinearGradient(0, B.y0, 0, B.y1);
+  g.addColorStop(0, "#8fe6ea"); g.addColorStop(1, "#3fb0c4");
+  ctx.fillStyle = g; ctx.fillRect(0, B.y0, W, B.h + 1);
+  for (let i = 0; i < 3; i++) { ctx.fillStyle = "rgba(255,255,230,0.12)"; const x = 30 + i * 120; ctx.beginPath(); ctx.moveTo(x, B.y0); ctx.lineTo(x + 24, B.y0); ctx.lineTo(x + 60, B.y1); ctx.lineTo(x + 30, B.y1); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = "#f2dca6"; ctx.fillRect(0, B.y1 - 10, W, 10);
+  const s = Math.min(0.7, B.h / 130);
+  drawCoralTuft(W * 0.25, B.y1 - 6, s, "#ff7a9a", "#ffd4e0"); drawCoralTuft(W * 0.72, B.y1 - 6, s * 0.85, "#ffa04a", "#ffe0b0");
+  drawKelp(W * 0.08, B.y1 - 4, B.h * 0.6, 0, "#3f9a58", calm); drawKelp(W * 0.92, B.y1 - 4, B.h * 0.7, 2, "#5ab868", calm);
+  for (let i = 0; i < 7; i++) { const x = (i * 53 + 15) % W, y = B.y1 - ((i * 31 + (calm ? 0 : time * 14)) % B.h); drawBubbleDot(x, y, 1.5 + (i % 2), 0.8); }
+  advGrayVeil(done ? 1 : open ? 0.45 : 0);
+  ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(0, B.y1, W, 1.5);
+  font(10, true);
+  const label = (done ? "✿ " : open ? "≈ " : "🔒 ") + "Coral Cove";
+  const w = ctx.measureText(label).width + 16, px = W / 2 - w / 2, py = B.y1 - 21;
+  ctx.fillStyle = done ? "#d8f6f4" : "rgba(245,242,248,0.92)"; roundRect(px, py, w, 18, 9); ctx.fill();
+  ctx.strokeStyle = done ? "#5fd0d4" : "#c8c0d0"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = done ? C.text : "#8a8098"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, px + 8, py + 9.5);
+  if (!open) {
+    font(9.5, true); const t = CORAL_LOCK_TEXT, tw = ctx.measureText(t).width + 14;
+    ctx.fillStyle = "rgba(255,255,255,0.85)"; roundRect(W / 2 - tw / 2, B.y0 + 6, tw, 16, 8); ctx.fill();
+    ctx.fillStyle = "#7a6a90"; ctx.textAlign = "center"; ctx.fillText(t, W / 2, B.y0 + 14.5);
+  }
+}
+function drawCoralNodes() {
+  const open = coralOpen(), Y = coralState();
+  // a bubbly path climbs from the last sky island to the cove
+  if (open && typeof skyNodePos === "function") {
+    const a = skyNodePos(SKY_N - 1), b = coralNodePos(0);
+    for (let j = 1; j < 6; j++) { const t = j / 6; drawBubbleDot(a.x + (b.x - a.x) * t + Math.sin(j) * 6, a.y + (b.y - a.y) * t, 3, 0.95); }
+  }
+  for (let k = 0; k < CORAL_N - 1; k++) {
+    const a = coralNodePos(k), b = coralNodePos(k + 1);
+    const n = Math.max(3, Math.floor(Math.hypot(b.x - a.x, b.y - a.y) / 12));
+    for (let j = 1; j < n; j++) { const t = j / n; ctx.fillStyle = coralWon(k) ? "rgba(255,250,240,0.95)" : "rgba(210,205,220,0.8)"; ctx.fillRect(a.x + (b.x - a.x) * t - 2, a.y + (b.y - a.y) * t - 2, 4, 4); }
+  }
+  for (let k = 0; k < CORAL_N; k++) {
+    const p = coralNodePos(k), won = coralWon(k), op = coralStageOpen(k), rad = k === CORAL_N - 1 ? 19 : 16;
+    const next = op && !won && (k === 0 || coralWon(k - 1)), bounce = next ? Math.abs(Math.sin(time * 3)) * 3 : 0;
+    ctx.fillStyle = "rgba(20,60,70,0.18)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + rad - 1, rad * 0.9, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = won ? "#5fd0d4" : op ? "#fff" : "#d8d2de";
+    ctx.beginPath(); ctx.arc(p.x, p.y - bounce, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = won ? "#fff" : op ? "#2fa8b8" : "#b8b0c0"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    if (!op) { ctx.fillStyle = "#9a90a8"; font(12, true); ctx.fillText("🔒", p.x, p.y + 1); }
+    else if (k === CORAL_N - 1) drawSprite(ANIMALS.find(a => a.id === "coralpuff"), p.x, p.y - bounce, 0.95, false, 0, !won, 7, null);
+    else { ctx.fillStyle = won ? "#fff" : C.text; font(14, true); ctx.fillText("≈" + (k + 1), p.x, p.y + 1 - bounce); }
+    if (op || won) for (let s = 0; s < 3; s++) drawStarShape(p.x + (s - 1) * 11, p.y + rad + 7, 5, (Y.gm[k] >> s) & 1, 1);
+    uiButtons.push({ x: p.x - 26, y: p.y - 26, w: 52, h: 60, id: "coral_node_" + k });
+  }
+}
+{ // draw the band + nodes right after the Sky Islands ones
+  const fb = drawSkyBand; drawSkyBand = function () { const r = fb.apply(this, arguments); drawCoralBand(); return r; };
+  const fn = drawSkyNodes; drawSkyNodes = function () { const r = fn.apply(this, arguments); drawCoralNodes(); return r; };
+}
+function drawCoralCard(k) {
+  const S = CORAL_STAGES[k], who = ANIMALS.find(a => a.id === S.friend);
+  ctx.fillStyle = "rgba(20,50,70,0.4)"; ctx.fillRect(0, 0, W, H);
+  const ph = 318, top = Math.round(H / 2 - ph / 2);
+  solidPanel(28, top, W - 56, ph);
+  uiButtons = [];
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#1f8a96"; font(11, true); ctx.fillText("Coral Cove · Stage " + (k + 1) + " / " + CORAL_N, W / 2, top + 26);
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText(S.name, W / 2, top + 52);
+  ctx.fillStyle = "#dff8f6"; roundRect(W / 2 - 64, top + 68, 128, 24, 12); ctx.fill();
+  ctx.strokeStyle = "#5fd0d4"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(12, true); ctx.fillText(S.mod, W / 2, top + 80);
+  ctx.fillStyle = C.textSoft; fitFont(S.hint, W - 90, 11, false, 8.5); ctx.fillText(S.hint, W / 2, top + 106);
+  const have = coralState().gm[k] || 0;
+  coralGoalTexts(S).forEach((g, j) => { drawStarShape(58, top + 134 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 130, 11.5, false, 8.5); ctx.fillText(g, 74, top + 135 + j * 24); });
+  ctx.textAlign = "center"; ctx.fillStyle = "#3f8a32"; font(11, true);
+  const rw = "Rewards: Bloom Seeds" + (who && !unlocked[who.id] ? " + a new friend!" : " · " + (who ? who.name + " ♥" : ""));
+  fitFont(rw, W - 90, 11, true, 8.5); ctx.fillText(rw, W / 2, top + 214);
+  if (who) drawSprite(who, W / 2, top + 246, 1.1, false, 0, !unlocked[who.id], 3, null);
+  uiButtons.push(btn(44, top + ph - 64, (W - 100) / 2, 48, "Close", { id: "coral_close", size: 14, bg: "#fff", border: "#d0b0c0" }));
+  uiButtons.push(btn(56 + (W - 100) / 2, top + ph - 64, (W - 100) / 2, 48, "Play ▸", { id: "coral_play", size: 15 }));
+}
+function coralAction(id) {
+  if (id.startsWith("coral_node_")) {
+    const k = +id.slice(11);
+    if (!coralOpen()) { toast(CORAL_LOCK_TEXT, C.textSoft); if (typeof sfxNope === "function") sfxNope(); return true; }
+    if (!coralStageOpen(k)) { toast("Finish " + CORAL_STAGES[k - 1].name + " first", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return true; }
+    coralSel = k; advSel = null; advTreasOpen = false; if (typeof skySel !== "undefined") skySel = null; return true;
+  }
+  if (id === "coral_close") { coralSel = null; return true; }
+  if (id === "coral_play") { const k = coralSel; coralSel = null; if (k != null) coralStartStage(k); return true; }
+  if (id === "adv_retry" && isCoral() && scene === "adv") { const k = st.ss.k; st = null; coralStartStage(k); return true; }
+  return false;
+}
+{ const f = v16Action; v16Action = function (id) { if (id && coralAction(id)) return true; return f.apply(this, arguments); }; }
+// the Back button on the map also closes an open Coral card first
+{ const f = advAction; advAction = function (id) { if (id === "adv_back" && coralSel != null) { coralSel = null; return true; } return f.apply(this, arguments); }; }
+{ const f = openAdvMap; openAdvMap = function () { coralSel = null; const r = f.apply(this, arguments); if (scene === "advmap" && coralOpen()) qBump("coralmap"); return r; }; }
+{ const f = closeAdvMap; closeAdvMap = function () { coralSel = null; return f.apply(this, arguments); }; }
+// the stage card draws on top of the map; tapping outside or Back closes it first
+{ const f = drawAdvMap; drawAdvMap = function () { const r = f.apply(this, arguments); if (coralSel != null && advSel == null && !advTreasOpen) { drawCoralCard(coralSel); } return r; }; }
+{
+  const f = advPointer;
+  advPointer = function (p) { if (scene === "advmap" && coralSel != null) { coralSel = null; return; } return f.apply(this, arguments); };
+  const e = advEscape;
+  advEscape = function () { if (scene === "advmap" && coralSel != null) { coralSel = null; return true; } return e.apply(this, arguments); };
+}
+
+// ---------- story pages ----------
+ADV_CUTS.coral_intro = [
+  { art: "coral:0", text: "Past the Sky Islands, a waterfall of rainbow bubbles splashed down into the sea." },
+  { art: "coral:1", text: "Below was Coral Cove: tidepools, swaying kelp, and soft beams of sunlight." },
+  { art: "coral:2", text: "But gray gloom had settled on the reef. Gloom can't swim, so it waits where the tide is low!" },
+];
+ADV_CUTS.coral_puff = [
+  { art: "coral:3", text: "Deep in the Coral Castle, a little pufferfish puffed up big and grumpy." },
+  { art: "coral:3", text: "“Go away! I'm spiky!” it huffed. But its eyes looked lonely. Maybe a few gentle hugs?" },
+];
+ADV_CUTS.coral_end = [
+  { art: "coral:4", text: "After three gentle hugs, the pufferfish slowly un-puffed… and smiled." },
+  { art: "coral:5", text: "“I only puff up when I'm nervous,” it whispered. “Can I come visit your meadow?” Of course! ♥" },
+];
+function drawCoralCutArt(n, x, y, w, h, t, cx, gy) {
+  const hop = k => (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 4 + k)) * 4;
+  const A = id => ANIMALS.find(a => a.id === id);
+  const puff = A("coralpuff");
+  if (n === 0) {
+    for (let k = 0; k < 14; k++) drawBubbleDot(x + 40 + (k * 37) % (w - 80), y + ((k * 53 + t * 40) % h), 3 + (k % 4), 0.9);
+    drawSprite(ANIMALS[0], cx - 60, gy - hop(0), 2, false, 0, false, 1, { acc: equippedFor("cat") });
+    drawSprite(A("cloudlamb") || ANIMALS[1], cx + 50, gy - 10 - hop(1), 1.6, false, 0, false, 2, null);
+  } else if (n === 1) {
+    drawSprite(ANIMALS[0], cx - 50, gy - hop(0), 1.8, false, 0, false, 1, { acc: equippedFor("cat"), heartEyes: true });
+    drawSprite(A("starpup"), cx + 40, gy - hop(1), 1.7, false, 0, false, 2, null);
+    drawSprite(A("octopus"), cx + 100, gy - 30 - hop(2) * 2, 1.4, false, 0, false, 3, null);
+  } else if (n === 2) {
+    drawGloomCloud({ x: cx - 80 + Math.sin(t) * 8, y: y + 26, s: 1.3, phase: 0 });
+    drawGloomCloud({ x: cx + 30 + Math.sin(t + 2) * 8, y: y + 38, s: 1.0, phase: 1 });
+    ctx.fillStyle = "rgba(255,255,255,0.8)"; for (let xx = x; xx < x + w; xx += 8) ctx.fillRect(xx, y + h * 0.55 + Math.sin(xx * 0.08 + t * 2) * 2, 8, 2);
+    drawSprite(ANIMALS[0], cx - 40, gy - hop(0), 1.8, false, 0, false, 1, { acc: equippedFor("cat") });
+  } else if (n === 3) {
+    drawSprite(puff, cx, gy - 30, 2.8 + Math.sin(t * 3) * 0.08, false, 0, true, 1, null);
+    for (let k = 0; k < 6; k++) drawBubbleDot(cx - 50 + k * 20, gy - 70 - ((t * 30 + k * 13) % 50), 2 + (k % 2), 0.9);
+    ctx.fillStyle = "#1f6f7c"; font(14, true); ctx.textAlign = "center"; ctx.fillText("hmph!", cx + 86, y + 30);
+  } else if (n === 4) {
+    drawSprite(puff, cx, gy - 26 - hop(0), 2.5, false, 0, false, 1, { heartEyes: true });
+    drawSprite(ANIMALS[0], cx - 80, gy - hop(1), 1.6, false, 0, false, 2, { acc: equippedFor("cat"), heartEyes: true });
+    for (let k = 0; k < 4; k++) drawHeart(cx + Math.cos(t * 1.4 + k * 1.6) * 60, gy - 50 + Math.sin(t * 1.4 + k * 1.6) * 20, 5, C.heart);
+  } else {
+    const ids = ["cat", "starpup", "coralpuff", "octopus"];
+    ids.forEach((id, k) => { const a = A(id); if (a) drawSprite(a, x + 46 + k * ((w - 92) / 3), gy - hop(k), 1.5, false, 0, false, k, { heartEyes: true, acc: equippedFor(id) }); });
+    for (let k = 0; k < 6; k++) drawBubbleDot(cx + Math.cos(t * 2 + k * 1.3) * 90, y + 40 + Math.sin(t * 2 + k * 1.3) * 20, 3, 0.9);
+  }
+}
+
+// ===================== v16.3 — deeper Yard + tiny-home decorating =====================
+// Yard Style themes, layering (ground pieces + a Layer button), cozy-score bonus tiers, 13 new pieces,
+// and 8 new tiny-home treasures. Theme + tier progress live in hc163.yard; per-item layer is item.z.
+
+// ---------- 13 new Yard decor pieces (11 for hearts, 2 from the Seed Shop) ----------
+const C163 = { coral: "#ff7a9a", coralL: "#ffd4e0", orange: "#ffa04a", sand: "#f2dca6", sandD: "#d8b878", sea: "#5fd0d4", seaD: "#2f9aa8",
+  shell: "#fff0f4", pearl: "#f6f2ff", kelp: "#3f9a58", kelpL: "#6cc070", snow: "#ffffff", ice: "#d8ecff", wood: "#c88a52", woodD: "#9a5f34" };
+const DECOR163 = [
+  { id: "coralreef", name: "Coral Reef Rock", cat: "plants", cost: 2400, cozy: 9, fw: 2, fh: 1, aw: 24, ah: 22, act: "watch", spots: [[12, 24]],
+    paint(P) {
+      P.e(12, 18, 11, 4, "#b8a8b8"); P.e(12, 17, 9, 3, "#d0c4d0");
+      for (const [x, h, c] of [[4, 9, C163.coral], [8, 14, C163.coral], [12, 11, C163.orange], [16, 15, "#c9a0ff"], [20, 8, C163.orange]]) {
+        P.r(x - 1, 17 - h, 2, h, c); P.e(x, 17 - h, 2.2, 2.2, c); P.p(x, 16 - h, "#fff");
+        P.r(x - 3, 17 - h + 4, 2, 1, c); P.r(x + 2, 17 - h + 6, 2, 1, c);
+      }
+      P.p(6, 19, "#fff"); P.p(17, 20, C163.shell);
+    } },
+  { id: "kelpgarden", name: "Kelp Garden", cat: "plants", cost: 1200, cozy: 5, fw: 1, fh: 1, aw: 12, ah: 26, act: null, spots: [],
+    paint(P) {
+      P.e(6, 23, 6, 2.5, C163.sand);
+      for (const [x, h, c] of [[2, 18, C163.kelp], [6, 24, C163.kelpL], [9, 15, C163.kelp]]) for (let y = 0; y < h; y++) P.r(x + Math.round(Math.sin(y * 0.45) * 1.2), 22 - y, 2, 1, c);
+      P.e(4, 6, 1.4, 1.4, "rgba(255,255,255,0.9)"); P.e(9, 3, 1, 1, "rgba(255,255,255,0.9)");
+    } },
+  { id: "clamseat", name: "Clam Shell Seat", cat: "furniture", cost: 2800, cozy: 9, fw: 2, fh: 1, aw: 24, ah: 22, rot: false, act: "sit", spots: [[12, 16]],
+    paint(P) {
+      P.e(12, 7, 11, 7, "#ffb0c8"); P.e(12, 7, 9, 5.5, C163.coralL);
+      for (const x of [5, 9, 12, 15, 19]) P.r(x, 2, 1, 9, "#ff9ab8");
+      P.r(1, 12, 22, 6, "#ffb0c8"); P.r(2, 12, 20, 3, C163.shell); P.e(12, 13, 3, 2, C163.pearl); P.p(11, 12, "#fff");
+      P.r(3, 18, 2, 3, "#e090a8"); P.r(19, 18, 2, 3, "#e090a8");
+    } },
+  { id: "bubblefount", name: "Bubble Fountain", cat: "toys", cost: 4200, cozy: 12, fw: 2, fh: 2, aw: 24, ah: 30, act: "watch", spots: [[12, 32]],
+    paint(P) {
+      P.e(12, 26, 11, 4, "#9fd8e8"); P.e(12, 25, 9, 2.5, C163.sea); P.r(10, 12, 4, 13, "#e0d8f0"); P.r(10, 12, 1, 13, "#fff");
+      P.e(12, 12, 6, 2.5, "#e0d8f0"); P.e(12, 11, 4, 1.5, C163.sea);
+      for (const [x, y, r] of [[12, 6, 3], [8, 2, 2], [16, 3, 2.2], [14, 0.5, 1.4]]) { P.e(x, y, r, r, "#d8f6ff"); P.p(Math.round(x - r / 2), Math.round(y - r / 2), "#fff"); }
+    } },
+  { id: "starpath", name: "Starfish Path", cat: "plants", cost: 600, cozy: 3, fw: 2, fh: 1, aw: 24, ah: 12, rot: true, ground: true, act: null, spots: [],
+    paint(P) {
+      P.e(12, 7, 12, 4.5, C163.sand);
+      for (const [x, c] of [[5, C163.orange], [12, C163.coral], [19, "#ffd23a"]]) { P.r(x - 1, 3, 2, 7, c); P.r(x - 3, 5, 6, 2, c); P.p(x - 2, 9, c); P.p(x + 1, 9, c); P.p(x, 5, "#fff"); }
+    } },
+  { id: "tidepool", name: "Little Tidepool", cat: "plants", seed: 12, cozy: 14, fw: 2, fh: 2, aw: 24, ah: 22, rot: true, act: "splash", spots: [[8, 14], [17, 15]],
+    paint(P) {
+      P.e(12, 13, 12, 8.5, "#b8a8b8"); P.e(12, 13, 10, 7, C163.sea); P.e(12, 12, 8, 5, "#8fe6ea");
+      P.e(7, 13, 2, 1.5, C163.coral); P.e(16, 15, 1.6, 1.6, C163.orange); P.r(14, 9, 1, 4, C163.kelp); P.r(15, 8, 1, 3, C163.kelpL);
+      P.p(9, 10, "#fff"); P.p(10, 10, "#fff"); P.p(18, 11, "#fff");
+    } },
+  { id: "shelllamp", name: "Seashell Lamp", cat: "furniture", cost: 1800, cozy: 6, fw: 1, fh: 1, aw: 12, ah: 24, act: null, spots: [],
+    paint(P) {
+      P.r(5, 10, 2, 12, C163.woodD); P.r(3, 21, 6, 3, C163.woodD);
+      P.e(6, 6, 6, 5, "#ffd4e0"); for (const x of [2, 4, 6, 8, 10]) P.r(x, 3, 1, 6, "#ffb0c8"); P.e(6, 9, 3, 1.5, "#fff6d0"); P.p(6, 2, "#fff");
+    } },
+  { id: "treasure", name: "Treasure Chest", cat: "toys", cost: 3000, cozy: 7, fw: 1, fh: 1, aw: 12, ah: 16, act: "sniff", spots: [[6, 18]],
+    paint(P) {
+      P.r(0, 6, 12, 9, C163.woodD); P.r(1, 7, 10, 7, C163.wood); P.e(6, 5, 6, 3, C163.wood); P.r(0, 5, 12, 1, C163.woodD);
+      P.r(5, 0, 2, 2, "#ffd23a"); P.r(3, 1, 6, 1, "#ffe066"); P.r(0, 9, 12, 1, "#ffd23a"); P.r(5, 8, 2, 3, "#ffd23a"); P.p(2, 4, "#fff6c0"); P.p(9, 3, C163.pearl);
+    } },
+  { id: "sandcastle", name: "Sandcastle", cat: "toys", cost: 2200, cozy: 9, fw: 2, fh: 1, aw: 24, ah: 22, act: "play", spots: [[12, 24]],
+    paint(P) {
+      P.e(12, 19, 12, 3, C163.sandD); P.r(3, 10, 18, 10, C163.sand); P.r(1, 6, 6, 14, C163.sand); P.r(17, 6, 6, 14, C163.sand); P.r(9, 3, 6, 17, C163.sand);
+      for (const x of [1, 3, 5, 17, 19, 21, 9, 11, 13]) P.r(x, x > 8 && x < 15 ? 2 : 5, 1, 1, C163.sandD);
+      P.r(10, 14, 4, 6, "#c89858"); P.r(12, 0, 1, 3, C163.woodD); P.r(13, 0, 3, 2, C163.coral); P.p(4, 15, C163.shell); P.p(19, 12, C163.coral);
+    } },
+  { id: "snowfort", name: "Snow Fort", cat: "toys", cost: 2600, cozy: 9, fw: 2, fh: 1, aw: 24, ah: 20, act: "play", spots: [[12, 22]],
+    paint(P) {
+      P.e(12, 17, 12, 3, C163.ice);
+      for (let row = 0; row < 3; row++) for (let i = 0; i < 6 - row; i++) P.r(1 + row * 2 + i * 4 - (row % 2), 14 - row * 4, 4, 4, row % 2 ? C163.snow : "#eef6ff");
+      P.r(9, 2, 1, 4, C163.woodD); P.r(10, 2, 4, 2, "#70c0ff"); P.e(19, 5, 2.5, 2.5, C163.snow); P.p(18, 4, "#c8e0ff");
+    } },
+  { id: "sandrug", name: "Beach Towel", cat: "furniture", cost: 900, cozy: 4, fw: 2, fh: 2, aw: 24, ah: 22, rot: true, ground: true, act: null, spots: [],
+    paint(P) {
+      P.ef(0, 2, 24, 20, (x, y) => (y >> 2) % 2 ? "#70c0ff" : (x < 2 || x > 21) ? "#fff6c0" : "#fff");
+      P.r(0, 2, 24, 1, "#ffd23a"); P.r(0, 21, 24, 1, "#ffd23a"); P.e(17, 9, 3, 3, "#ffd23a"); P.p(16, 8, "#fff6c0");
+    } },
+  { id: "snowman", name: "Snow Pal", cat: "plants", cost: 1500, cozy: 6, fw: 1, fh: 1, aw: 12, ah: 26, act: "watch", spots: [[6, 28]],
+    paint(P) {
+      P.e(6, 20, 5.5, 5, C163.snow); P.e(6, 11, 4.2, 4, C163.snow); P.e(6, 4, 3.2, 3, C163.snow);
+      P.p(5, 3, "#2c2030"); P.p(7, 3, "#2c2030"); P.r(6, 4, 2, 1, "#ff9a3c"); P.r(2, 7, 8, 2, "#ff6b8a"); P.r(7, 9, 2, 3, "#ff6b8a");
+      P.p(6, 11, "#2c2030"); P.p(6, 14, "#2c2030"); P.r(0, 10, 2, 1, C163.woodD); P.r(10, 10, 2, 1, C163.woodD);
+    } },
+  { id: "pearlarch", name: "Pearl Arch", cat: "furniture", seed: 14, cozy: 10, fw: 2, fh: 1, aw: 24, ah: 26, act: "arch", spots: [[12, 28]],
+    paint(P) {
+      for (let a = 0; a <= 20; a++) { const t = Math.PI * a / 20, x = 12 - Math.cos(t) * 10, y = 23 - Math.sin(t) * 20; P.e(x, y, 2, 2, a % 2 ? C163.pearl : "#ffe0f0"); P.p(Math.round(x - 1), Math.round(y - 1), "#fff"); }
+      P.e(2, 24, 3, 2, C163.coral); P.e(22, 24, 3, 2, C163.coral); P.e(12, 3, 2.5, 2.5, "#ffd23a");
+    } },
+];
+for (const d of DECOR163) {
+  if (DECOR_BY_ID[d.id]) continue;
+  const item = d.seed ? Object.assign({ cost: 0, unlock: { seed: true, text: "From the Seed Shop" } }, d) : Object.assign({}, d);
+  DECOR.push(item); DECOR_BY_ID[item.id] = item;
+  if (d.seed) SEED_ITEMS.push({ id: d.id, name: d.name, kind: "decor", cost: d.seed });
+}
+
+// ---------- Yard Style themes ----------
+const YARD_THEME_INFO = {
+  meadow: { name: "Meadow", note: "Soft green grass" },
+  beach: { name: "Beach Sand", note: "Warm sand by the sea" },
+  snowy: { name: "Snowy", note: "Fresh, sparkly snow" },
+};
+function yardTheme() { ensureHc163(); return hc163.yard.theme; }
+function setYardTheme(id) {
+  if (!YARD_THEMES.includes(id)) return false;
+  ensureHc163(); hc163.yard.theme = id; gSkyKey = "";
+  toast(YARD_THEME_INFO[id].name + " yard ✿", C.heart);
+  save();
+  return true;
+}
+{
+  const f = gardenPalette;
+  gardenPalette = function () {
+    const o = f.apply(this, arguments), th = yardTheme();
+    if (th === "meadow") return o;
+    const L = dayLight(), nk = L.night * 0.45;
+    // theme ground keeps its own colour; only time-of-day light tints it (not the season green)
+    const lit = (g) => { if (L.golden > 0) g = lerpColor(g, "#c8a040", L.golden * 0.15); if (L.night > 0) g = lerpColor(g, th === "snowy" ? "#a8b4d8" : "#3e6a70", L.night * 0.5); return g; };
+    if (th === "beach") {
+      o.grass = lit("#f0d8a0");
+      o.hedge = [lerpColor("#3fa890", "#2a4a5a", nk), lerpColor("#7ad8c0", "#3a5a6a", nk)];
+      o.hill = lerpColor("#6cc8e0", "#3a5a80", L.night * 0.5);
+    } else {
+      o.grass = lit("#e8f0fa");
+      o.hedge = [lerpColor("#7aa8b8", "#2a4a5a", nk), lerpColor("#ffffff", "#c8d4f0", nk)];
+      o.hill = lerpColor("#f4f8ff", "#5a6a90", L.night * 0.5);
+      o.fence = lerpColor("#ffffff", "#c0c0e0", L.night * 0.5);
+    }
+    return o;
+  };
+}
+{ // little theme touches on the lawn
+  const f = drawGardenBg;
+  drawGardenBg = function () {
+    const r = f.apply(this, arguments), th = yardTheme(), top = gy0(), calm = kind && kind.motion;
+    if (th === "beach") {
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      for (let x = 0; x < W; x += 14) ctx.fillRect(x + (calm ? 0 : Math.sin(time + x) * 2), top - 32 + Math.sin(x * 0.2) * 2, 8, 2);
+      for (let i = 0; i < 10; i++) { ctx.fillStyle = i % 2 ? "#ffd4e0" : "#fff6e8"; ctx.fillRect((i * 97 + 30) % W, top + 20 + (i * 71) % (G_ROWS * G_CELL - 30), 3, 2); }
+    } else if (th === "snowy") {
+      for (let i = 0; i < 24; i++) { ctx.fillStyle = i % 3 ? "rgba(255,255,255,0.9)" : "rgba(200,225,255,0.9)"; ctx.fillRect((i * 61 + 11) % W, top + (i * 43) % (G_ROWS * G_CELL), 2, 2); }
+      ctx.fillStyle = "#ffffff"; for (let x = 4; x < W; x += 12) ctx.fillRect(x, top - 27, 6, 2);
+    }
+    return r;
+  };
+}
+
+// ---------- cozy score bonus tiers (each pays Bloom Seeds once) ----------
+const COZY_TIERS = [{ at: 30, seeds: 2 }, { at: 60, seeds: 3 }, { at: 100, seeds: 4 }, { at: 150, seeds: 5 }, { at: 220, seeds: 6 }, { at: 300, seeds: 8 }];
+function checkCozyTiers() {
+  const Y = ensureHc163().yard, z = gardenCozy();
+  if (z > Y.best) Y.best = z;
+  let paid = 0;
+  while (Y.tier < COZY_TIERS.length && z >= COZY_TIERS[Y.tier].at) {
+    const T = COZY_TIERS[Y.tier];
+    Y.tier++; paid += T.seeds;
+    toast("Cozy " + T.at + "! A cozy gift ✿", "#3f9a48");
+  }
+  if (paid) { earnSeeds(paid, "Cozy Yard"); save(); }
+  return paid;
+}
+{ const f = gardenChanged; gardenChanged = function () { const r = f.apply(this, arguments); checkCozyTiers(); return r; }; }
+{ const f = openGarden; openGarden = function () { yardStyleOpen = false; const r = f.apply(this, arguments); checkCozyTiers(); return r; }; }
+{ const f = leaveGarden; leaveGarden = function () { yardStyleOpen = false; return f.apply(this, arguments); }; }
+
+// ---------- the Style sheet (opens from the Yard's bottom bar) ----------
+let yardStyleOpen = false;
+function drawYardStyle() {
+  ctx.fillStyle = "rgba(40,30,50,0.35)"; ctx.fillRect(0, 0, W, H);
+  const ph = 430, top = Math.round(Math.max(66, H / 2 - ph / 2 - 10));
+  solidPanel(18, top, W - 36, ph);
+  uiButtons = [];
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText("Yard Style", W / 2, top + 26);
+  ctx.fillStyle = C.textSoft; font(11, false); ctx.fillText("Pick a ground for your yard", W / 2, top + 46);
+  const th = yardTheme(), bw = (W - 36 - 24 - 16) / 3;
+  YARD_THEMES.forEach((id, i) => {
+    const x = 30 + i * (bw + 8), y = top + 60, on = th === id;
+    const sw = id === "meadow" ? ["#88d064", "#62b850"] : id === "beach" ? ["#f0d8a0", "#6cc8e0"] : ["#eef4fc", "#c8dcf0"];
+    ctx.fillStyle = on ? "#fff4c8" : "#fff"; roundRect(x, y, bw, 92, 12); ctx.fill();
+    ctx.strokeStyle = on ? "#e0b040" : "#e0c8d8"; ctx.lineWidth = on ? 3 : 1.5; ctx.stroke();
+    ctx.fillStyle = sw[1]; ctx.fillRect(x + 10, y + 10, bw - 20, 18);
+    ctx.fillStyle = sw[0]; ctx.fillRect(x + 10, y + 28, bw - 20, 26);
+    if (id === "snowy") { ctx.fillStyle = "#fff"; for (let k = 0; k < 6; k++) ctx.fillRect(x + 14 + k * 12, y + 34 + (k % 2) * 8, 2, 2); }
+    if (id === "beach") { ctx.fillStyle = "#fff"; ctx.fillRect(x + 12, y + 27, bw - 24, 2); }
+    if (id === "meadow") { ctx.fillStyle = "#ff8ab8"; ctx.fillRect(x + 18, y + 38, 3, 3); ctx.fillStyle = "#ffe066"; ctx.fillRect(x + bw - 26, y + 44, 3, 3); }
+    ctx.fillStyle = C.text; font(12, true); ctx.fillText((on ? "✓ " : "") + YARD_THEME_INFO[id].name, x + bw / 2, y + 68);
+    ctx.fillStyle = C.textSoft; fitFont(YARD_THEME_INFO[id].note, bw - 8, 9.5, false, 8); ctx.fillText(YARD_THEME_INFO[id].note, x + bw / 2, y + 83);
+    uiButtons.push({ x, y, w: bw, h: 92, id: "v163_theme_" + id });
+  });
+  // cozy bonus tiers
+  const Y = hc163.yard, z = gardenCozy();
+  ctx.fillStyle = C.text; font(14, true); ctx.fillText("Cozy gifts  ·  ✿ " + z, W / 2, top + 176);
+  COZY_TIERS.forEach((T, j) => {
+    const y = top + 196 + j * 26, got = j < Y.tier, next = j === Y.tier;
+    ctx.fillStyle = got ? "rgba(200,240,190,0.7)" : next ? "rgba(255,244,200,0.8)" : "rgba(245,240,245,0.8)";
+    roundRect(34, y, W - 68, 22, 8); ctx.fill();
+    ctx.textAlign = "left"; ctx.fillStyle = got ? "#3f9a48" : C.text; font(11.5, true);
+    ctx.fillText((got ? "✓ " : next ? "▸ " : "· ") + "Reach " + T.at + " cozy", 44, y + 11.5);
+    ctx.textAlign = "right"; drawSeedIcon(W - 70, y + 11, 1.3); ctx.fillStyle = "#3f8a32"; font(11.5, true); ctx.fillText("+" + T.seeds, W - 44, y + 11.5);
+    if (next) { const p = clamp(z / T.at, 0, 1); ctx.fillStyle = "#ffd66b"; ctx.fillRect(150, y + 17, (W - 260) * p, 2); }
+  });
+  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
+  ctx.fillText("Each gift pays once. Tip: ⇅ Layer and rugs let pieces overlap.", W / 2, top + ph - 70);
+  uiButtons.push(btn(W / 2 - 64, top + ph - 58, 128, 46, "Close", { id: "v163_style_close", size: 15 }));
+}
+{ const f = drawGardenHUD; drawGardenHUD = function () { const r = f.apply(this, arguments); if (yardStyleOpen && scene === "garden") drawYardStyle(); return r; }; }
+{ const f = gardenDown; gardenDown = function (p) { if (yardStyleOpen) { yardStyleOpen = false; return; } return f.apply(this, arguments); }; }
+function layerItem() {
+  const it = gSel;
+  if (!it || DECOR_BY_ID[it.id].ground) return false;
+  it.z = it.z === 0 || it.z == null ? 1 : it.z === 1 ? -1 : 0;
+  toast(it.z > 0 ? "Drawn in front" : it.z < 0 ? "Tucked behind" : "Normal layer", C.textSoft);
+  if (typeof sfxPlace === "function") sfxPlace();
+  save();
+  return true;
+}
+
+// ---------- tiny homes: 8 new treasures ----------
+const ROOM163 = [
+  { id: "sunpot", name: "Sunflower Pot", cost: 6000 },
+  { id: "shelllamp2", name: "Shell Lamp", cost: 9000 },
+  { id: "coralshelf", name: "Coral Shelf", cost: 12000 },
+  { id: "bubbletank", name: "Bubble Tank", cost: 18000 },
+  { id: "kelpcurtain", name: "Kelp Curtain", cost: 22000 },
+  { id: "pearlbed", name: "Pearl Bed", cost: 30000 },
+  { id: "snowglobe", name: "Snow Globe", cost: 45000 },
+  { id: "starquilt", name: "Starry Quilt", cost: 60000 },
+];
+for (const it of ROOM163) if (!ROOM_ITEMS.some(r => r.id === it.id)) ROOM_ITEMS.push(Object.assign({}, it));
+{
+  const f = drawRoomItem;
+  drawRoomItem = function (id, x, y) {
+    if (!ROOM163.some(r => r.id === id)) return f.apply(this, arguments);
+    ctx.save(); ctx.translate(x, y);
+    const R = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(a, b, w, h); };
+    const E = (a, b, rx, ry, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(a, b, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); };
+    if (id === "sunpot") {
+      R(-7, 4, 14, 10, "#e07050"); R(-8, 3, 16, 3, "#c85840"); R(-1, -8, 2, 12, "#3e8a40"); E(4, -2, 4, 2, "#6cc050");
+      for (let k = 0; k < 8; k++) E(Math.cos(k * 0.785) * 6, -12 + Math.sin(k * 0.785) * 6, 2.6, 2.6, "#ffd23a");
+      E(0, -12, 3.4, 3.4, "#705030");
+    } else if (id === "shelllamp2") {
+      R(-1, -2, 2, 14, "#9a5f34"); E(0, 13, 7, 2.5, "#9a5f34"); E(0, -6, 11, 8, "#ffd4e0");
+      ctx.strokeStyle = "#ff9ab8"; ctx.lineWidth = 1.2; for (const a of [-0.9, -0.45, 0, 0.45, 0.9]) { ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(Math.sin(a) * 10, -6 - Math.cos(a) * 7); ctx.stroke(); }
+      ctx.fillStyle = "rgba(255,230,160,0.35)"; ctx.beginPath(); ctx.arc(0, -4, 15, 0, Math.PI * 2); ctx.fill();
+    } else if (id === "coralshelf") {
+      R(-20, -6, 40, 3, "#c88a52"); R(-20, 8, 40, 3, "#c88a52"); R(-20, -6, 2, 20, "#9a5f34"); R(18, -6, 2, 20, "#9a5f34");
+      E(-10, -10, 3, 4, "#ff7a9a"); E(2, -11, 4, 5, "#ffa04a"); E(12, -9, 3, 3, "#c9a0ff"); E(-8, 5, 3, 2.5, "#fff0f4"); E(8, 5, 4, 2.5, "#ffd4e0");
+    } else if (id === "bubbletank") {
+      R(-16, -12, 32, 24, "#2c2030"); R(-15, -11, 30, 22, "#8fe6ea"); R(-15, 6, 30, 5, "#f2dca6"); R(-10, -4, 2, 10, "#3f9a58"); R(10, -2, 2, 8, "#6cc070");
+      E(2, -2, 3, 2, "#ffa04a"); ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; for (const [a, b, r] of [[-4, -6, 2], [6, -8, 1.5], [0, -9, 1]]) { ctx.beginPath(); ctx.arc(a, b, r, 0, Math.PI * 2); ctx.stroke(); }
+    } else if (id === "kelpcurtain") {
+      R(-22, -18, 44, 3, "#9a5f34");
+      for (let k = 0; k < 7; k++) for (let j = 0; j < 9; j++) R(-20 + k * 6 + Math.round(Math.sin(j * 0.7 + k + time * 1.5) * 1.5), -15 + j * 3.5, 3, 4, k % 2 ? "#3f9a58" : "#6cc070");
+    } else if (id === "pearlbed") {
+      E(0, 6, 22, 9, "#ffb0c8"); E(0, 4, 19, 6.5, "#fff0f4"); E(-12, 1, 6, 3.5, "#f6f2ff"); E(0, -10, 20, 9, "#ffd4e0");
+      ctx.fillStyle = "#ff9ab8"; for (const a of [-14, -7, 0, 7, 14]) ctx.fillRect(a, -16, 1, 9);
+      E(9, 2, 3, 3, "#f6f2ff"); ctx.fillStyle = "#fff"; ctx.fillRect(8, 0, 1, 1);
+    } else if (id === "snowglobe") {
+      E(0, 12, 12, 4, "#9a5f34"); R(-10, 8, 20, 5, "#c88a52"); E(0, -3, 12, 12, "rgba(200,235,255,0.85)"); E(0, 5, 9, 3, "#ffffff");
+      R(-2, -2, 4, 6, "#fff"); E(0, -4, 2.5, 2.5, "#fff"); R(-1, -4, 1, 1, "#2c2030");
+      ctx.fillStyle = "#fff"; for (let k = 0; k < 6; k++) ctx.fillRect(Math.cos(k * 1.1 + time) * 7, -6 + Math.sin(k * 1.7 + time) * 6, 1.5, 1.5);
+      ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(-7, -11, 2, 4);
+    } else if (id === "starquilt") {
+      R(-22, -8, 44, 22, "#6a6ad0"); R(-22, -8, 44, 3, "#ffd23a"); R(-22, 11, 44, 3, "#ffd23a");
+      ctx.fillStyle = "#fff6b0"; for (const [a, b] of [[-14, 0], [-2, 5], [10, -2], [16, 7], [-8, 8]]) drawStarShape(a, b, 3, 1, 1);
+    }
+    ctx.restore();
+  };
+}
+// tiny homes get a second page of treasures when they don't all fit
+let homePage = 0;
+drawHome = function () {
+  listMax = 0;
+  const animal = ANIMALS.find(a => a.id === homeId);
+  const home = ensureHome(homeId);
+  const n = home.slots.length;
+  panelHeader((animal ? animal.name : "Tiny") + (homeId === "kitsune" ? "'s den" : "'s room"), n + " spots · ♥ " + joy + " · tap a spot to place");
+  drawSprite(animal, 54, 118, 2, false, Math.sin(time * 3) * 2, false, 1, { acc: equippedFor(homeId) });
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.textSoft; font(11, false);
+  ctx.fillText(animal && animal.bio ? animal.bio : "", 96, 108);
+  const cols = n > 4 ? 3 : 2;
+  uiButtons = [];
+  home.slots.forEach((s, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = 28 + col * 108, y = 160 + row * 78;
+    ctx.fillStyle = s ? "rgba(255,236,180,0.8)" : homeArmItem ? "rgba(255,248,220,0.95)" : "rgba(255,255,255,0.8)";
+    roundRect(x, y, 100, 70, 10); ctx.fill();
+    ctx.strokeStyle = homeArmItem && !s ? "#e0b040" : "#e0c8d8"; ctx.lineWidth = 1.5; ctx.stroke();
+    if (s) drawRoomItem(s, x + 50, y + 36);
+    else { ctx.fillStyle = "#c8b0c0"; font(11, false); ctx.textAlign = "center"; ctx.fillText("empty", x + 50, y + 36); }
+    uiButtons.push({ x: x, y: y, w: 100, h: 70, id: "v11_slot_" + i });
+  });
+  const items = roomShopItems();
+  const y0 = n > 4 ? 340 : 330;
+  const rows = Math.max(1, Math.floor((H - 74 - y0) / 48));
+  const per = rows * 3, pages = Math.max(1, Math.ceil(items.length / per));
+  homePage = clamp(homePage, 0, pages - 1);
+  items.slice(homePage * per, homePage * per + per).forEach((it, i) => {
+    const x = 18 + (i % 3) * 114, y = y0 + Math.floor(i / 3) * 48;
+    const placed = home.slots.indexOf(it.id) >= 0, armed = homeArmItem === it.id;
+    uiButtons.push(btn(x, y, 108, 44, placed ? "Placed" : it.name.split(" ")[0] + " " + (it.cost >= 1000 ? Math.round(it.cost / 1000) + "k" : it.cost), {
+      id: placed ? "v11_itemhave_" + it.id : "v11_item_" + it.id, size: 12,
+      bg: placed ? "#e8f8d8" : armed ? "#fff4c8" : "#fff", border: placed ? "#70c080" : armed ? "#e0b040" : "#e0b0c8",
+    }));
+  });
+  panelFooter();
+  if (pages > 1) {
+    const y = H - 64;
+    uiButtons.push(btn(28, y, 60, 46, "◂", { id: "v163_hpg_prev", size: 16, bg: homePage > 0 ? "#f5e6ee" : "#f0eaee", border: "#d0b0c0" }));
+    uiButtons.push(btn(W - 88, y, 60, 46, "▸", { id: "v163_hpg_next", size: 16, bg: homePage < pages - 1 ? "#f5e6ee" : "#f0eaee", border: "#d0b0c0" }));
+    ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false); ctx.fillText((homePage + 1) + " / " + pages, W / 2, y - 8);
+  }
+};
+{ const f = openHome; openHome = function () { homePage = 0; return f.apply(this, arguments); }; }
+
+// ---------- actions ----------
+function v163Action(id) {
+  if (id === "v163_style") { if (scene === "garden") { gSel = null; yardStyleOpen = true; } return true; }
+  if (id === "v163_style_close") { yardStyleOpen = false; return true; }
+  if (id.startsWith("v163_theme_")) { setYardTheme(id.slice(11)); return true; }
+  if (id === "v163_layer") { layerItem(); return true; }
+  if (id === "v163_hpg_prev") { homePage = Math.max(0, homePage - 1); return true; }
+  if (id === "v163_hpg_next") { homePage++; return true; }
+  return false;
+}
+{ const f = v16Action; v16Action = function (id) { if (id && v163Action(id)) return true; return f.apply(this, arguments); }; }
+
+// ---------- test/debug hooks ----------
+const v163Api = {
+  get hc163() { return hc163; },
+  normalizeHc163, ensureHc163,
+  coralOpen, coralStageOpen, coralStartStage, coralFinish, coralTotalStars, coralFriendCount, coralTideLevel, coralInCurrent,
+  CORAL_STAGES, CORAL_FRIENDS, CORAL_IDS, SECRET163, SECRET163_IDS, DECOR163, ROOM163, COZY_TIERS, YARD_THEMES,
+  get coralSel() { return coralSel; }, get yardStyleOpen() { return yardStyleOpen; }, get homePage() { return homePage; },
+  yardTheme, setYardTheme, checkCozyTiers, layerItem, drawCoralBg,
+};
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -20141,7 +21255,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
         adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps,
-        hc15, farm, hc154, hc16, hc162 };
+        hc15, farm, hc154, hc16, hc162, hc163 };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -20184,6 +21298,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     v16: v16Api,
     v161: v161Api,
     v162: v162Api,
+    v163: v163Api,
     drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
