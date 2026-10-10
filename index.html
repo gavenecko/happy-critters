@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.4-harvest">
+<meta name="hc-version" content="16.5-show">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.4 — harvest update
+// Happy Critters v16.5 — show update
 
 const W = 360;
 let H = 540;
@@ -5639,6 +5639,7 @@ function load() {
     if (typeof normalizeHc162 === "function") hc162 = normalizeHc162(d.hc162);
     if (typeof normalizeHc163 === "function") hc163 = normalizeHc163(d.hc163);
     if (typeof normalizeHc164 === "function") hc164 = normalizeHc164(d.hc164);
+    if (typeof normalizeHc165 === "function") hc165 = normalizeHc165(d.hc165);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -5667,6 +5668,7 @@ function save() {
       hc162: (typeof hc162 !== "undefined" ? hc162 : null),
       hc163: (typeof hc163 !== "undefined" ? hc163 : null),
       hc164: (typeof hc164 !== "undefined" ? hc164 : null),
+      hc165: (typeof hc165 !== "undefined" ? hc165 : null),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -6717,6 +6719,7 @@ function drawSprite(animal, x, y, scale, shiny, bounce, sad, phaseSeed, fx) {
   if (fx) {
     const u = s / SPRITE_SIZE;
     if (fx.acc) drawAccessory(fx.acc, animal.id, -s / 2, -s / 2, u);
+    if (fx.acc2) drawAccessory(fx.acc2, animal.id, -s / 2, -s / 2, u);
     if (fx.heartEyes && !sad && !fx.nap) drawHeartEyes(animal.id, -s / 2, -s / 2, u);
     if (fx.nap) drawZzz(animal.id, -s / 2, -s / 2, u);
   }
@@ -9530,8 +9533,8 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 19;
-const APP_LABEL = "v16.4";
+const APP_VERSION = 20;
+const APP_LABEL = "v16.5";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "Coral Cove & Cozy Yards",
@@ -11944,7 +11947,7 @@ function drawArcade() {
       uiButtons.push(btn(W - 158, by, 124, 44, "Play ▸", { id: "arc_" + g, size: 15, bg: "#fff", border: info.border }));
     }
   });
-  if (arcPage) {
+  if (arcPage && V162_GAMES.length < 3) {
     const y = top + 2 * (ch + gap) + 10;
     ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = C.textSoft; font(12, false);
     ctx.fillText("Best scores climb the Goal Ladders in Goals ✦", W / 2, y + 10);
@@ -22505,6 +22508,1198 @@ const v164Api = {
   drawHarvestBg, funRows, funRowState,
 };
 
+// ===================== v16.5 — Friend Dress-Up Show, Fishing on the boat trip, Bubble Pop Bounce =====================
+// New state lives in hc165 (normalized on load), so older saves migrate without loss.
+// Fishing is in g22a-fish.js (+ art in g22c-fishart.js), Bubble Pop Bounce in g22b-bpop.js.
+
+// ---------- state ----------
+const SHOW_THEMES = [
+  { id: "cozy", name: "Cozy", icon: "☕", col: "#ffe2c8", border: "#e0a070", blurb: "Snug, warm and soft" },
+  { id: "sparkly", name: "Sparkly", icon: "✦", col: "#fff4c0", border: "#e0c040", blurb: "Shine and glitter" },
+  { id: "spooky", name: "Spooky", icon: "🦇", col: "#e8dcff", border: "#9a80d0", blurb: "Cute, not scary" },
+  { id: "sporty", name: "Sporty", icon: "⚑", col: "#d8f4ff", border: "#70b0e0", blurb: "Ready, set, play" },
+  { id: "royal", name: "Royal", icon: "♛", col: "#f4dcff", border: "#b070d0", blurb: "Fancy and grand" },
+  { id: "beachy", name: "Beachy", icon: "☀", col: "#fff0c8", border: "#e8b050", blurb: "Sun, sand and sea" },
+  { id: "sky", name: "Sky", icon: "☁", col: "#e0f0ff", border: "#80a8e0", blurb: "Light as a cloud" },
+  { id: "garden", name: "Garden", icon: "✿", col: "#e0f6d4", border: "#70b060", blurb: "Leaves and blooms" },
+];
+const SHOW_IDS = SHOW_THEMES.map(t => t.id);
+function blankShow() { return { day: "", today: 0, total: 0, best: {}, golds: 0, rainbows: 0, theme: 0 }; }
+function blankFish() { return { caught: {}, kept: {}, total: 0, sold: 0, done: false, day: "", sells: 0, casts: 0, misses: 0 }; }
+function blankBpop() { return { best: 0, plays: 0, mile: false, day: "", dayEarned: 0, daily: "", stars: 0 }; }
+function blankHc165() { return { show: blankShow(), fish: blankFish(), bpop: blankBpop(), hints: {}, seen: false }; }
+let hc165 = blankHc165();
+const ID_RE = /^[a-z0-9_]{1,24}$/;
+function normalizeHc165(d) {
+  const o = blankHc165();
+  if (!isObj(d)) return o;
+  if (isObj(d.show)) {
+    const s = d.show, t = o.show;
+    t.day = typeof s.day === "string" && DAY_RE.test(s.day) ? s.day : "";
+    t.today = intIn(s.today, 0, 999); t.total = intIn(s.total, 0, 999999);
+    t.golds = intIn(s.golds, 0, 99); t.rainbows = intIn(s.rainbows, 0, 999999); t.theme = intIn(s.theme, 0, SHOW_THEMES.length - 1);
+    if (isObj(s.best)) for (const k of SHOW_IDS) if (s.best[k] != null) t.best[k] = intIn(s.best[k], 0, 4);
+  }
+  if (isObj(d.fish)) {
+    const s = d.fish, t = o.fish;
+    if (isObj(s.caught)) for (const k in s.caught) {
+      const c = s.caught[k];
+      if (!ID_RE.test(k) || !isObj(c)) continue;
+      t.caught[k] = { n: intIn(c.n, 0, 999999), best: Math.round(Math.max(0, Math.min(999, numOr0(c.best))) * 10) / 10 };
+    }
+    if (isObj(s.kept)) for (const k in s.kept) if (ID_RE.test(k)) { const v = intIn(s.kept[k], 0, 99999); if (v) t.kept[k] = v; }
+    for (const k of ["total", "sold", "sells", "casts", "misses"]) t[k] = intIn(s[k], 0, 9999999);
+    t.day = typeof s.day === "string" && DAY_RE.test(s.day) ? s.day : "";
+    t.done = !!s.done;
+  }
+  if (isObj(d.bpop)) {
+    const s = d.bpop, t = o.bpop;
+    t.best = intIn(s.best, 0, 9999999); t.plays = intIn(s.plays, 0, 9999999); t.mile = !!s.mile;
+    t.day = typeof s.day === "string" && DAY_RE.test(s.day) ? s.day : "";
+    t.dayEarned = intIn(s.dayEarned, 0, 999999); t.daily = typeof s.daily === "string" && DAY_RE.test(s.daily) ? s.daily : "";
+    t.stars = intIn(s.stars, 0, 3);
+  }
+  if (isObj(d.hints)) for (const k in d.hints) if (d.hints[k] === true && ID_RE.test(k)) o.hints[k] = true;
+  o.seen = !!d.seen;
+  return o;
+}
+function ensureHc165() { if (!hc165 || !hc165.show || !hc165.fish || !hc165.bpop || !hc165.hints) hc165 = normalizeHc165(hc165); return hc165; }
+function hint165(k, text, color) {
+  const H5 = ensureHc165();
+  if (H5.hints[k]) return false;
+  H5.hints[k] = true; softHint(text, color); saveSoon();
+  return true;
+}
+
+// ---------- wardrobe tags: every existing hat, clip and dye gets show themes ----------
+const WARD_TAGS = {
+  bow: ["cozy", "royal"], shades: ["beachy", "sporty"], scarf: ["cozy", "sporty"], flowers: ["garden", "royal"], party: ["sparkly", "sporty"],
+  heartclip: ["cozy", "sparkly"], daisy: ["garden", "beachy"], crown: ["royal", "sparkly"], halo: ["sky", "sparkly"], duckhat: ["beachy", "sporty"],
+  clover: ["garden"], blossom: ["garden", "sky"], sunhat: ["beachy", "garden"], acorn: ["garden", "cozy"], earmuffs: ["cozy"],
+  cloudcrown: ["sky", "royal"], bell: ["cozy", "sparkly"], beret: ["cozy", "royal"], ribbon: ["sporty", "garden"], beanie: ["cozy", "sporty"],
+  monocle: ["royal", "spooky"], satchel: ["sporty", "cozy"], mooncap: ["sky", "spooky"], starveil: ["sparkly", "sky"], foxmask: ["spooky", "royal"],
+  sprout: ["garden"], beeband: ["garden", "sporty"], mushcap: ["garden", "spooky"], rainbowbow: ["sparkly", "sky"], kingcrown: ["royal", "sparkly"],
+  cloudhat: ["sky", "cozy"], kiteclip: ["sky", "sporty"], goggles: ["sky", "sporty"], propcap: ["sky", "sporty"], windscarf: ["sky", "cozy"],
+  starclip: ["sparkly", "sky"], featherpin: ["sky", "royal"], boltclip: ["sporty", "sparkly"], cometclip: ["sky", "sparkly"], rainhalo: ["sky", "beachy"],
+  festblossom: ["garden", "royal"], festlantern: ["cozy", "spooky"], festharvest: ["garden", "cozy"], feststar: ["sparkly", "sky"],
+  pumpkincap: ["spooky", "garden"], catears: ["spooky"], candyclip: ["spooky", "sparkly"], batclip: ["spooky"], leafcrown: ["garden", "royal"],
+  ghostclip: ["spooky", "cozy"], wizardhat: ["spooky", "sparkly"], witchhat: ["spooky", "royal"],
+  rosette: ["royal", "sparkly"], showbow: ["sparkly", "cozy"], startiara: ["royal", "sky"], tophat: ["royal", "spooky"],
+  fishhat: ["beachy", "sporty", "cozy"],
+};
+const DYE_TAGS = { blush: ["cozy", "sparkly"], sky: ["sky", "beachy"], butter: ["sporty", "beachy"], sprout: ["garden"], lilac: ["spooky", "royal"], aurora: ["sparkly", "sky"] };
+// kinds for the variety bonus: hats sit on top, clips are small pins, accents are the rest
+const WARD_CLIPS = ["bow", "heartclip", "daisy", "clover", "blossom", "ribbon", "kiteclip", "starclip", "featherpin", "boltclip", "cometclip", "candyclip", "batclip", "ghostclip", "rosette", "showbow", "rainbowbow", "festblossom", "beeband"];
+const WARD_ACCENTS = ["shades", "scarf", "bell", "monocle", "satchel", "goggles", "windscarf", "festlantern"];
+function wardKind(id) { return id.startsWith("dye_") ? "dye" : WARD_CLIPS.includes(id) ? "clip" : WARD_ACCENTS.includes(id) ? "accent" : "hat"; }
+function wardTags(id) { return id.startsWith("dye_") ? (DYE_TAGS[id.slice(4)] || []) : (WARD_TAGS[id] || []); }
+function wardName(id) {
+  if (id.startsWith("dye_")) { const d = DYE_COLS.find(c => c.id === id.slice(4)); return d ? d.name + " dye" : id; }
+  const a = ACCESSORIES.find(x => x.id === id); return a ? a.short || a.name : id;
+}
+// friends who naturally fit a theme get a tiny bonus
+const FRIEND_THEME = {
+  ghostie: "spooky", bat: "spooky", moth: "spooky", lanternmoth: "spooky", scarecrow: "spooky",
+  gloomking: "royal", uni: "royal", kitsune: "royal", phoenix: "sparkly", starkitten: "sparkly", dragonet: "sparkly", cometpup: "sparkly",
+  otter: "beachy", turtle: "beachy", penguin: "beachy", hermit: "beachy", seahorse: "beachy", starpup: "beachy", seaotter: "beachy", octopus: "beachy", jellybun: "beachy", coralpuff: "beachy", tidepup: "beachy",
+  bluebird: "sky", cloudlamb: "sky", kitekitten: "sky", breezebunny: "sky", hotairhamster: "sky", skywhale: "sky", stormsprite: "sky", owl: "sky",
+  frog: "garden", hedgehog: "garden", squirrel: "garden", bunny: "garden", rainbowsnail: "garden", pumpkinmouse: "garden", applehog: "garden", haybunny: "garden", acornkit: "garden", maplefox: "cozy",
+  cat: "cozy", dog: "cozy", lamb: "cozy", panda: "cozy", redpanda: "cozy", teacupmouse: "cozy",
+  fox: "sporty", leopard: "sporty", raccoon: "sporty", chick: "sporty", duckling: "sporty", puddleduck: "sporty", piper: "sporty",
+};
+// what the friend can wear in the show: owned accessories (for that friend) + dye colors you've used on any friend
+function showWardrobe(animalId) {
+  const out = [];
+  for (const a of ACCESSORIES) if (WARD_TAGS[a.id] && accAvailable(a.id, animalId)) out.push(a.id);
+  const used = {};
+  if (typeof v12 !== "undefined" && v12 && v12.dyes) for (const k in v12.dyes) { const s = v12.dyes[k]; if (s && s.acc) used[s.acc] = true; }
+  DYE_COLS.forEach((c, i) => { if (used[i + 1]) out.push("dye_" + c.id); });
+  return out;
+}
+
+// ---------- scoring ----------
+const SHOW_MAX = 12, SHOW_FULL = 3;
+const RIBBONS = [
+  { name: "Bronze", col: "#d08a4a", at: 0 },
+  { name: "Silver", col: "#b8c4d8", at: 4 },
+  { name: "Gold", col: "#ffcc33", at: 8 },
+  { name: "Rainbow", col: "rainbow", at: 11 },
+];
+const SHOW_PAY = [[15, 0], [30, 0], [55, 1], [90, 2]]; // [hearts, seeds] at full pay
+function showScore(themeId, items, friendId) {
+  items = (items || []).slice(0, 3);
+  const match = items.filter(id => wardTags(id).includes(themeId)).length;
+  const kinds = new Set(items.map(wardKind)).size;
+  const variety = Math.max(0, Math.min(2, kinds - 1));
+  const fits = FRIEND_THEME[friendId] === themeId ? 1 : 0;
+  const pts = Math.min(SHOW_MAX, match * 3 + variety + (items.length ? 1 : 0) + fits);
+  let ribbon = 0;
+  for (let i = 0; i < RIBBONS.length; i++) if (pts >= RIBBONS[i].at) ribbon = i;
+  // three judges: a little personality each, always kind (1..10)
+  let h = 0; for (const c of items.join("|") + friendId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const base = Math.round(pts / SHOW_MAX * 10), off = [[-1, 0, 1], [0, 1, -1], [1, -1, 0]][h % 3];
+  const judges = off.map(o => Math.max(1, Math.min(10, base + (base >= 10 ? 0 : o))));
+  return { pts, match, variety, fits, ribbon, judges };
+}
+const SHOW_HATS = [
+  { id: "rosette", name: "Ribbon Rosette", short: "Rosette", golds: 1 },
+  { id: "showbow", name: "Spotlight Bow", short: "Spotlight", golds: 3 },
+  { id: "startiara", name: "Star Tiara", short: "Tiara", golds: 5 },
+  { id: "tophat", name: "Showtime Top Hat", short: "Top Hat", golds: 8 },
+];
+Object.assign(ACC_ART, {
+  rosette: { rows: [".yyy.", "yrrry", "yrwry", "yrrry", ".yyy.", ".r.r.", ".r.r."], cmap: { y: "#ffd23a", r: "#e0405a", w: "#fff8e0" }, at: (hx, top) => [hx + 2.5, top - 3] },
+  showbow: { rows: ["p.....p", "pp.y.pp", "ppyyypp", "pp.y.pp", "p.....p"], cmap: { p: "#ff6fb8", y: "#fff27a" }, at: (hx, top) => [hx - 3.5, top - 3] },
+  startiara: { rows: ["...y...", ".w.y.w.", "wywywyw", "sssssss"], cmap: { y: "#ffe066", w: "#ffffff", s: "#c0c8e8" }, at: (hx, top) => [hx - 3.5, top - 3] },
+  tophat: { rows: [".kkkkk.", ".kkkkk.", ".kkkkk.", ".rrrrr.", "kkkkkkk"], cmap: { k: "#3a3060", r: "#ff5a8a" }, at: (hx, top) => [hx - 3.5, top - 5] },
+});
+for (const h of SHOW_HATS) if (!ACCESSORIES.some(a => a.id === h.id)) ACCESSORIES.push({ id: h.id, name: h.name, short: h.short, show: true });
+{
+  const o = accAvailable;
+  accAvailable = function (id, animalId) {
+    const a = ACCESSORIES.find(x => x.id === id);
+    if (a && (a.show || a.fishing)) return !!ownedAcc[a.id];
+    return o(id, animalId);
+  };
+}
+function showGolds() { const b = ensureHc165().show.best; return SHOW_IDS.filter(k => (b[k] || 0) >= 3).length; } // best stores ribbon+1
+function showDay() {
+  const S = ensureHc165().show, d = todayKey();
+  if (S.day !== d) { S.day = d; S.today = 0; }
+  return S;
+}
+function showFullLeft() { return Math.max(0, SHOW_FULL - showDay().today); }
+// pay one show: full for the first few each day, then a gentle quarter
+function showPay(res, themeId) {
+  const S = showDay();
+  const full = S.today < SHOW_FULL;
+  const p = SHOW_PAY[res.ribbon];
+  const hearts = full ? p[0] : Math.max(2, Math.round(p[0] / 4)), seeds = full ? p[1] : 0;
+  S.today++; S.total++;
+  if (res.ribbon === 3) S.rainbows++;
+  const prev = S.best[themeId] || 0, newBest = res.ribbon + 1 > prev;
+  if (newBest) S.best[themeId] = res.ribbon + 1;
+  joy += hearts;
+  if (seeds) earnSeeds(seeds, "show ribbon");
+  const hats = [];
+  S.golds = showGolds();
+  for (const h of SHOW_HATS) if (S.golds >= h.golds && !ownedAcc[h.id]) { ownedAcc[h.id] = true; hats.push(h); }
+  if (typeof qBump === "function") { qBump("show", themeId); if (res.ribbon >= 2) qBump("showgold"); }
+  saveSoon();
+  return { hearts, seeds, full, newBest, hats };
+}
+
+// ---------- the show scene ----------
+let show = null;
+function openShow(from) {
+  ensureHc165();
+  const pals = foundFriends();
+  if (!pals.length) { toast("Make a friend first", C.textSoft); return false; }
+  const S = showDay();
+  const fi = Math.max(0, pals.findIndex(a => equipped[a.id]));
+  show = { step: "pick", theme: S.theme % SHOW_THEMES.length, fi, items: [], page: 0, t: 0, res: null, pay: null, from: from || scene };
+  const eq = equipped[pals[fi].id];
+  if (eq && WARD_TAGS[eq] && accAvailable(eq, pals[fi].id)) show.items.push(eq);
+  scene = "show";
+  if (typeof qBump === "function") qBump("showopen");
+  hint165("show", "Match the theme ✦ and mix hats, clips & dyes", "#b050a0");
+  return true;
+}
+function showFriend() { const p = foundFriends(); return p[clamp(show.fi, 0, p.length - 1)] || ANIMALS[0]; }
+function showTheme() { return SHOW_THEMES[show.theme]; }
+function showToggle(id) {
+  if (!show || show.step !== "pick") return false;
+  const i = show.items.indexOf(id);
+  if (i < 0 && !showWardrobe(showFriend().id).includes(id)) return false;
+  if (i >= 0) { show.items.splice(i, 1); sfxTick(); return true; }
+  if (show.items.length >= 3) { toast("Up to 3 items", C.textSoft); return false; }
+  if (wardKind(id) === "dye" && show.items.some(x => wardKind(x) === "dye")) { show.items = show.items.filter(x => wardKind(x) !== "dye"); }
+  show.items.push(id); sfxTick();
+  return true;
+}
+function showWalk() {
+  if (!show || show.step !== "pick") return false;
+  const a = showFriend(), T = showTheme();
+  show.res = showScore(T.id, show.items, a.id);
+  show.pay = showPay(show.res, T.id);
+  show.step = "walk"; show.t = 0;
+  ensureHc165().show.theme = show.theme;
+  sfxChime(4);
+  return true;
+}
+function showLeave() {
+  show = null; accCache.clear();
+  scene = "play";
+}
+function showStep(dt) {
+  if (!show) { scene = "play"; return; }
+  show.t += dt;
+  if (show.step === "walk" && show.t > (kind.motion ? 0.3 : 1.3)) { show.step = "judge"; show.t = 0; }
+  if (show.step === "judge" && show.t > (kind.motion ? 0.6 : 1.8)) {
+    show.step = "result"; show.t = 0;
+    sfxUnlock(); spawnConfetti(kind.motion ? 8 : 24);
+    if (show.pay.hats.length) toast("New show prize: " + show.pay.hats.map(h => h.name).join(", ") + "!", "#b050a0");
+  }
+  drawShow();
+  updateParticles(dt); drawParticles();
+}
+// dye preview: the show friend wears the picked dye without changing your saved dyes
+let showDyeFor = null, showDyeHex = "";
+{
+  const o = accDyeHex;
+  accDyeHex = function (animalId) { if (showDyeFor && animalId === showDyeFor) return showDyeHex; return o.apply(this, arguments); };
+}
+function drawCurtains(top, h) {
+  // velvet side drapes + scalloped valance
+  for (const side of [0, 1]) {
+    for (let i = 0; i < 5; i++) {
+      const x = side ? W - 14 - i * 11 : i * 11;
+      ctx.fillStyle = i % 2 ? "#c03a5a" : "#d8506e";
+      ctx.fillRect(x, top, 12, h - i * 14);
+    }
+    ctx.fillStyle = "#ffcc33";
+    ctx.fillRect(side ? W - 60 : 50, top + h * 0.55, 10, 6);
+  }
+  ctx.fillStyle = "#b02e4e"; ctx.fillRect(0, top, W, 22);
+  for (let x = 0; x < W; x += 24) { ctx.fillStyle = "#d8506e"; ctx.beginPath(); ctx.arc(x + 12, top + 22, 12, 0, Math.PI); ctx.fill(); }
+  ctx.fillStyle = "#ffcc33"; for (let x = 6; x < W; x += 24) ctx.fillRect(x + 4, top + 30, 4, 4);
+}
+function drawJudge(a, x, y, score, k) {
+  drawSprite(a, x, y, 1.35, false, 0, false, 21 + x, { heartEyes: score >= 9 && k >= 1 });
+  ctx.fillStyle = "#8a5a3a"; ctx.fillRect(x - 26, y + 14, 52, 8);
+  if (score != null && k > 0) {
+    const cy = y - 40 - (kind.motion ? 0 : (1 - Math.min(1, k)) * 12);
+    ctx.globalAlpha = Math.min(1, k * 2);
+    ctx.fillStyle = "#fffaf0"; roundRect(x - 17, cy - 15, 34, 30, 6); ctx.fill();
+    ctx.strokeStyle = "#e0b060"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#8a5a3a"; ctx.fillRect(x - 1, cy + 15, 3, 10);
+    ctx.fillStyle = score >= 8 ? "#e05a90" : C.text; font(17, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(score), x, cy + 1);
+    ctx.globalAlpha = 1;
+  }
+}
+const JUDGES = ["owl", "bunny", "dog"];
+function drawShowStage(stageH) {
+  const T = showTheme();
+  const g = ctx.createLinearGradient(0, 0, 0, stageH);
+  g.addColorStop(0, "#5a3a6a"); g.addColorStop(0.6, "#8a5a8a"); g.addColorStop(1, "#c08aa8");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, stageH);
+  // twinkly backdrop with the theme color
+  ctx.fillStyle = T.col; ctx.globalAlpha = 0.35; roundRect(60, 46, W - 120, stageH * 0.42, 14); ctx.fill(); ctx.globalAlpha = 1;
+  for (let i = 0; i < 18; i++) {
+    const x = 70 + (i * 61) % (W - 140), y = 56 + (i * 37) % Math.max(20, stageH * 0.38);
+    ctx.fillStyle = "rgba(255,250,220," + (0.4 + 0.3 * Math.sin(i + (kind.motion ? 0 : time * 2))) + ")"; ctx.fillRect(x, y, 2, 2);
+  }
+  // spotlights
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  for (const sx of [W * 0.3, W * 0.7]) {
+    const sw = kind.motion ? 0 : Math.sin(time * 0.8 + sx) * 10;
+    ctx.fillStyle = "rgba(255,240,200,0.10)";
+    ctx.beginPath(); ctx.moveTo(sx - 6, 24); ctx.lineTo(W / 2 - 46 + sw, stageH * 0.7); ctx.lineTo(W / 2 + 46 + sw, stageH * 0.7); ctx.lineTo(sx + 6, 24); ctx.fill();
+  }
+  ctx.restore();
+  // runway in perspective
+  const ry = stageH * 0.55;
+  ctx.fillStyle = "#f6c8da"; ctx.beginPath(); ctx.moveTo(W / 2 - 34, ry); ctx.lineTo(W / 2 + 34, ry); ctx.lineTo(W / 2 + 80, stageH - 50); ctx.lineTo(W / 2 - 80, stageH - 50); ctx.fill();
+  ctx.fillStyle = "#ff9ec8"; ctx.fillRect(W / 2 - 80, stageH - 52, 160, 4);
+  for (let i = 0; i < 6; i++) { const t = i / 6, y = ry + (stageH - 50 - ry) * t; ctx.fillStyle = "#fff4d0"; ctx.fillRect(W / 2 - 36 - 44 * t - 4, y, 3, 3); ctx.fillRect(W / 2 + 36 + 44 * t + 1, y, 3, 3); }
+  // stage floor + judges' table
+  ctx.fillStyle = "#6a4a3a"; ctx.fillRect(0, stageH - 50, W, 50);
+  ctx.fillStyle = "#8a5a3a"; ctx.fillRect(0, stageH - 50, W, 6);
+  drawCurtains(0, stageH - 40);
+}
+function drawShow() {
+  const T = showTheme(), a = showFriend();
+  const stageH = Math.round(Math.min(300, H * 0.4));
+  drawShowStage(stageH);
+  { const g2 = ctx.createLinearGradient(0, stageH, 0, H); g2.addColorStop(0, "#fff0f6"); g2.addColorStop(1, "#fbe6f0"); ctx.fillStyle = g2; ctx.fillRect(0, stageH, W, H - stageH); }
+  // friend on the runway (walks forward during "walk")
+  const walkK = show.step === "pick" ? 1 : show.step === "walk" ? Math.min(1, show.t / (kind.motion ? 0.3 : 1.2)) : 1;
+  const y0 = stageH * 0.5, y1 = stageH - 122;
+  const fy = show.step === "pick" ? y1 : y0 + (y1 - y0) * easeOutCubic(walkK);
+  const hop = kind.motion ? 0 : Math.abs(Math.sin(time * (show.step === "walk" ? 9 : 2.4))) * (show.step === "walk" ? 4 : 2);
+  const acc = show.items.filter(x => wardKind(x) !== "dye"), dye = show.items.find(x => wardKind(x) === "dye");
+  showDyeFor = a.id; showDyeHex = dye ? (DYE_COLS.find(c => "dye_" + c.id === dye) || {}).hex || "" : "";
+  if (!dye) showDyeHex = "";
+  drawSprite(a, W / 2, fy - hop, 2.6 * (0.8 + 0.2 * walkK), false, 0, false, 33, { acc: acc[0] || null, acc2: acc[1] || null, heartEyes: show.step === "result" && show.res.ribbon >= 2 });
+  showDyeFor = null;
+  // judges at the table
+  const jy = stageH - 30;
+  JUDGES.forEach((id, i) => {
+    const J = ANIMALS.find(x => x.id === id) || ANIMALS[i];
+    const k = show.step === "judge" ? (show.t - i * (kind.motion ? 0.1 : 0.45)) / 0.3 : show.step === "result" ? 1 : 0;
+    drawJudge(J, [W / 2 - 108, W / 2, W / 2 + 108][i], jy, show.res ? show.res.judges[i] : null, k);
+  });
+  uiButtons = [];
+  // top banner: theme
+  ctx.fillStyle = "rgba(255,250,245,0.94)"; roundRect(70, 8, W - 140, 30, 12); ctx.fill();
+  ctx.strokeStyle = T.border; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = C.text; font(14, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("Dress-Up Show · " + T.icon + " " + T.name, W / 2, 24);
+  if (show.step === "result") return drawShowResult(stageH);
+  if (show.step !== "pick") return;
+  // theme chooser
+  let y = stageH + 8;
+  ctx.fillStyle = T.col; roundRect(16, y, W - 32, 46, 12); ctx.fill(); ctx.strokeStyle = T.border; ctx.lineWidth = 2; ctx.stroke();
+  uiButtons.push(btn(20, y + 3, 44, 40, "◂", { id: "v165_th_prev", size: 16, bg: "#fff", border: T.border }));
+  uiButtons.push(btn(W - 64, y + 3, 44, 40, "▸", { id: "v165_th_next", size: 16, bg: "#fff", border: T.border }));
+  const S = ensureHc165().show, bestR = S.best[T.id] || 0;
+  ctx.fillStyle = C.text; font(15, true); ctx.textAlign = "center"; ctx.fillText(T.icon + " " + T.name + " theme", W / 2, y + 16);
+  ctx.fillStyle = C.textSoft; font(10.5, false); ctx.fillText(T.blurb + " · best: " + (bestR ? RIBBONS[bestR - 1].name : "none yet"), W / 2, y + 33);
+  // friend chooser
+  y += 52;
+  const pals = foundFriends();
+  uiButtons.push(btn(16, y, 44, 40, "◂", { id: "v165_fr_prev", size: 16, bg: "#f5e6ee", border: "#d0b0c0" }));
+  uiButtons.push(btn(W - 60, y, 44, 40, "▸", { id: "v165_fr_next", size: 16, bg: "#f5e6ee", border: "#d0b0c0" }));
+  ctx.fillStyle = C.text; font(13, true); ctx.textAlign = "center";
+  ctx.fillText(palName(a) + (FRIEND_THEME[a.id] === T.id ? "  ✦ a natural!" : ""), W / 2, y + 13);
+  ctx.fillStyle = C.textSoft; font(10.5, false); ctx.fillText("Pick up to 3: " + show.items.length + "/3 · ✦ = fits the theme", W / 2, y + 30);
+  // wardrobe grid
+  y += 46;
+  const items = showWardrobe(a.id);
+  const cols = 3, gap = 6, bw = (W - 32 - gap * 2) / 3, bh = 46;
+  const rows = Math.max(2, Math.floor((H - 128 - y) / (bh + gap)));
+  const per = cols * rows, pages = Math.max(1, Math.ceil(items.length / per));
+  show.page = clamp(show.page, 0, pages - 1);
+  if (!items.length) { ctx.fillStyle = C.textSoft; font(12, false); ctx.fillText("No wardrobe yet: hats come from the Shop & Album ♥", W / 2, y + 30); }
+  items.slice(show.page * per, show.page * per + per).forEach((id, i) => {
+    const x = 16 + (i % cols) * (bw + gap), yy = y + Math.floor(i / cols) * (bh + gap);
+    const on = show.items.includes(id), fit = wardTags(id).includes(T.id);
+    uiButtons.push(btn(x, yy, bw, bh, "", { id: "v165_it_" + id, size: 1, bg: on ? "#ffd0e4" : "#fffaf5", border: on ? "#ff70a8" : fit ? T.border : "#e0d0d8", r: 10 }));
+    const k = wardKind(id);
+    if (k === "dye") { const c = DYE_COLS.find(d => "dye_" + d.id === id); ctx.fillStyle = c ? c.hex : "#ccc"; roundRect(x + 6, yy + 13, 18, 18, 5); ctx.fill(); }
+    else { ctx.fillStyle = k === "hat" ? "#b090e0" : k === "clip" ? "#ff8ab8" : "#70b0d8"; font(9, true); ctx.textAlign = "left"; ctx.fillText(k, x + 7, yy + 34); }
+    ctx.fillStyle = C.text; fitFont(wardName(id), bw - (k === "dye" ? 34 : 14), 12, true, 8.5); ctx.textAlign = "left";
+    ctx.fillText(wardName(id), x + (k === "dye" ? 28 : 7), yy + (k === "dye" ? 23 : 16));
+    if (fit) { ctx.fillStyle = "#e0a020"; font(12, true); ctx.textAlign = "right"; ctx.fillText("✦", x + bw - 6, yy + 12); }
+    if (on) { ctx.fillStyle = "#e05a90"; font(11, true); ctx.textAlign = "right"; ctx.fillText("✓", x + bw - 6, yy + bh - 10); }
+  });
+  // footer: paging + walk + back
+  const fy2 = H - 116;
+  if (pages > 1) {
+    uiButtons.push(btn(16, fy2, 52, 44, "◂", { id: "v165_pg_prev", size: 15, bg: show.page > 0 ? "#f5e6ee" : "#f0eaee", border: "#d0b0c0" }));
+    uiButtons.push(btn(W - 68, fy2, 52, 44, "▸", { id: "v165_pg_next", size: 15, bg: show.page < pages - 1 ? "#f5e6ee" : "#f0eaee", border: "#d0b0c0" }));
+    ctx.fillStyle = C.textSoft; font(10.5, false); ctx.textAlign = "center"; ctx.fillText("page " + (show.page + 1) + " / " + pages, W / 2, fy2 + 22);
+  }
+  const left = showFullLeft();
+  ctx.fillStyle = left ? "#3f9a48" : C.textSoft; font(10.5, true); ctx.textAlign = "center";
+  ctx.fillText(left ? left + " full-prize show" + (left === 1 ? "" : "s") + " left today" : "Shows today pay a little (full prizes tomorrow)", W / 2, H - 74);
+  uiButtons.push(btn(16, H - 62, 100, 48, "◂ Back", { id: "v165_show_back", size: 14, bg: "#f5e6ee", border: "#d0b0c0" }));
+  uiButtons.push(btn(124, H - 62, W - 140, 48, "Walk the runway ▸", { id: "v165_walk", size: 15, bg: C.btn, border: "#ff80b0" }));
+}
+function drawRibbon(cx, cy, r, k, s) {
+  const R = RIBBONS[r];
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+  const col = R.col === "rainbow" ? null : R.col;
+  const tails = col || "#ff8ab8";
+  ctx.fillStyle = tails; ctx.fillRect(-14, 10, 10, 30); ctx.fillRect(4, 10, 10, 30);
+  ctx.fillStyle = "#fffaf0"; ctx.fillRect(-14, 36, 4, 4); ctx.fillRect(10, 36, 4, 4);
+  if (!col) { const rc = ["#ff6b9d", "#ffd23a", "#7ee070", "#70c0ff", "#c9a0ff"]; for (let i = 0; i < 5; i++) { ctx.fillStyle = rc[i]; ctx.beginPath(); ctx.arc(0, 0, 26 - i * 3.5, 0, Math.PI * 2); ctx.fill(); } }
+  else { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = "#fffaf0"; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = C.text; font(11, true); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("★", 0, 1);
+  ctx.restore();
+}
+function drawShowResult(stageH) {
+  const R = show.res, P = show.pay, t = show.t, rib = RIBBONS[R.ribbon];
+  const top = stageH + 6, ph = Math.min(H - top - 16, 316);
+  ctx.fillStyle = "rgba(255,250,245,0.97)"; roundRect(16, top, W - 32, ph, 16); ctx.fill();
+  ctx.strokeStyle = "#ffb8d0"; ctx.lineWidth = 2; ctx.stroke();
+  const e = kind.motion ? 1 : easeOutBack(Math.min(1, t / 0.45));
+  drawRibbon(W / 2, top + 50, R.ribbon, 1, Math.max(0.05, e));
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(19, true); ctx.fillText(rib.name + " ribbon!", W / 2, top + 106);
+  ctx.fillStyle = C.textSoft; font(11.5, false);
+  const why = [];
+  why.push(R.match + " item" + (R.match === 1 ? "" : "s") + " fit " + showTheme().name);
+  if (R.variety) why.push("+" + R.variety + " variety");
+  if (R.fits) why.push("a natural!");
+  ctx.fillText(why.join(" · ") + " · judges " + R.judges.join(" / "), W / 2, top + 128);
+  ctx.fillStyle = C.heart; font(22, true); ctx.fillText("♥ +" + P.hearts + (P.seeds ? "   🌱 +" + P.seeds : ""), W / 2, top + 160);
+  ctx.fillStyle = C.textSoft; font(11, false);
+  ctx.fillText(P.full ? (P.newBest ? "New best ribbon for this theme!" : "Lovely walk!") : "Extra show today: a smaller prize, just for fun", W / 2, top + 184);
+  if (P.hats.length) { ctx.fillStyle = "#b050a0"; font(12, true); ctx.fillText("Show prize: " + P.hats.map(h => h.name).join(", ") + " (Album)", W / 2, top + 204); }
+  ctx.fillStyle = C.textSoft; font(10.5, false);
+  ctx.fillText("Gold ribbons in " + showGolds() + " / " + SHOW_IDS.length + " themes · prizes at 1, 3, 5, 8", W / 2, top + 224);
+  const by = Math.min(H - 70, top + 250), bw = (W - 32 - 24 - 8) / 2;
+  uiButtons.push(btn(28, by, bw, 48, "Again", { id: "v165_again", size: 15, bg: C.btn, border: "#ff80b0" }));
+  uiButtons.push(btn(36 + bw, by, bw, 48, "Done", { id: "v165_show_back", size: 15, bg: "#e8d0ff", border: "#c090e0" }));
+}
+function showAction(id) {
+  if (id === "v165_show") { if (typeof closeFunMenu === "function") closeFunMenu(); openShow("play"); return true; }
+  if (!show) return false;
+  if (id === "v165_show_back") { showLeave(); return true; }
+  if (id === "v165_walk") { showWalk(); return true; }
+  if (id === "v165_again") { show.step = "pick"; show.res = null; show.pay = null; show.t = 0; return true; }
+  if (id === "v165_th_prev" || id === "v165_th_next") { show.theme = (show.theme + (id.endsWith("next") ? 1 : SHOW_THEMES.length - 1)) % SHOW_THEMES.length; return true; }
+  if (id === "v165_fr_prev" || id === "v165_fr_next") {
+    const n = foundFriends().length; show.fi = (show.fi + (id.endsWith("next") ? 1 : n - 1)) % n; show.page = 0;
+    const a = showFriend(); show.items = show.items.filter(x => showWardrobe(a.id).includes(x));
+    return true;
+  }
+  if (id === "v165_pg_prev") { show.page = Math.max(0, show.page - 1); return true; }
+  if (id === "v165_pg_next") { show.page++; return true; }
+  if (id.startsWith("v165_it_")) { showToggle(id.slice(8)); return true; }
+  return false;
+}
+// Fun sheet row
+{
+  const fr = funRows;
+  funRows = function () { const r = fr.apply(this, arguments); r.push(["Dress-Up Show", "show", "v165_show", "#ffe0f4", "#d070b0"]); return r; };
+  const fs = funRowState;
+  funRowState = function (k) {
+    if (k === "show") {
+      if (!foundFriends().length) return { ok: false, why: "Make a friend first" };
+      const left = showFullLeft();
+      return { ok: true, why: "Themes, ribbons & judges · " + (left ? left + " full prizes today" : "just for fun today") };
+    }
+    return fs.apply(this, arguments);
+  };
+}
+// Show quests (daily pool) + ladder
+[
+  { id: "show_walk", ev: "show", need: () => 2, ok: () => foundFriends().length > 0 && !!(hc165 && hc165.hints.show), text: (q) => "Walk the runway " + q.need + " times", pay: 35 },
+  { id: "show_gold", ev: "showgold", need: () => 1, ok: () => !!(hc165 && hc165.hints.show), text: () => "Win a Gold ribbon in the Dress-Up Show", pay: 50 },
+  { id: "show_open", ev: "showopen", need: () => 1, ok: () => foundFriends().length > 0, text: () => "Visit the Dress-Up Show (Fun menu)", pay: 25 },
+].forEach(q => { if (!V16_QUEST_BY_ID[q.id]) { V16_QUESTS.push(q); V16_QUEST_BY_ID[q.id] = q; } });
+if (typeof LADDERS !== "undefined" && !LADDER_BY_ID.show) {
+  const L = { id: "show", name: "Runway Star", icon: "🎀", unit: "shows walked", val: () => ensureHc165().show.total, t: [3, 10, 30, 80] };
+  LADDERS.push(L); LADDER_BY_ID.show = L;
+}
+
+// ---------- scenes + actions ----------
+{
+  const fs = v16Scene; v16Scene = function (s) { return s === "show" || fs.apply(this, arguments); };
+  const fp = v16Step; v16Step = function (dt) { if (scene === "show") return showStep(dt); return fp.apply(this, arguments); };
+  const fl = v16Leave; v16Leave = function () { if (scene === "show") { if (show && show.step === "result") { show.step = "pick"; show.res = null; } else showLeave(); return true; } return fl.apply(this, arguments); };
+}
+const V165_ACTIONS = [showAction];
+{ const f = v16Action; v16Action = function (id) { if (id) for (const a of V165_ACTIONS) if (a(id)) return true; return f.apply(this, arguments); }; }
+
+// ---------- test/debug hooks (fishing + bubble pop add to this) ----------
+const v165Api = {
+  get hc165() { return hc165; }, normalizeHc165, ensureHc165,
+  SHOW_THEMES, SHOW_IDS, WARD_TAGS, DYE_TAGS, RIBBONS, SHOW_PAY, SHOW_FULL, SHOW_HATS, FRIEND_THEME,
+  showScore, showWardrobe, wardKind, wardTags, showPay, showGolds, showFullLeft, openShow, showToggle, showWalk, showLeave,
+  get show() { return show; },
+};
+
+// v16.5 fish & sea things art (generated by hc-art/genfish.py, do not hand-edit)
+const FISH = [
+  { id: "minnow", name: "Minnow Pip", rar: 0, size: [4, 9], cond: {},
+    rows: ["....................", "....................", "..........kkk.......", "..k......kfffk......", ".kfk....kffffk......", ".kffkk.kbbbbbbk.....", ".kffffkbbbbbbwek....", ".kffffbbbbbbbeebk...", ".kffffbbbbbbbbbbk...", ".kffffkbllllpplek...", ".kffkk.kllfflllk....", ".kfk....kkfkkkk.....", "..k.......k.........", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#a8c8e0", "l": "#e8f4ff", "f": "#88a8c8", "s": "#7090b0"} },
+  { id: "guppy", name: "Bubble Guppy", rar: 0, size: [3, 7], cond: {},
+    rows: ["....................", "............k.......", "...........kfk......", "...kk.....kfffk.....", "..kffk..kkbbbbkk....", "..kfffkkbbbbbbbbk...", "..kffffbbbbbbbwebk..", "..kffffbbbbbbbeebk..", "..kffffbbbbbbbbbbk..", "..kffffbbllllpplek..", "..kfffkkbllfflllk...", "..kffk..kklflllk....", "...kk.....kkkkk.....", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ffb070", "l": "#ffe8c8", "f": "#ff7aa8", "s": "#ff8a50"} },
+  { id: "goby", name: "Pebble Goby", rar: 0, size: [6, 12], cond: {},
+    rows: ["....................", "...........k........", "..........kfk.......", ".........kffk.......", ".kkkk.kkkbbbfkk.....", "kffffkbbbbsbbbbk....", "kffffbbsbbbbbwebk...", "ffffbbbbbbbbbeebbk..", "ffffbbbbbbbbbbbbbk..", "kffffbsllfllpplek...", "kffffkllllffllllk...", ".kkkk.kkklfllkkk....", ".........kkkk.......", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#c8b090", "l": "#f0e4d0", "f": "#a89070", "s": "#8a7058"} },
+  { id: "perch", name: "Sunny Perch", rar: 0, size: [10, 22], cond: {},
+    rows: ["...........k........", "..........kfk.......", ".........kffk.......", "......kkkbbbfkk.....", ".kk..kbbsbbbsbbk....", "kffkkbbbsbbbsbbbk...", "kfffkbbbsbbbswebk...", "kfffbbbbsbbbseebbk..", "kfffbbbbsbbbsbbbbk..", "kfffkbblsfllpplek...", "kffkkbllslffslllk...", ".kk..kblslflsllk....", "......kkkbllkkk.....", ".........kkk........", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#e0d060", "l": "#fff4c0", "f": "#f09040", "s": "#90a040"} },
+  { id: "carp", name: "Lily Carp", rar: 0, size: [18, 40], cond: {},
+    rows: ["..........kk........", ".........kffk.......", "........kfffk.......", "k.....kkbbbbbkk.....", "fk...kbbbbbbbbbk....", "ffk.ksbsbsbsbsbbk...", "fffkbbbbbbbbbwebbk..", "ffffbsbsbsbsbeebbk..", "ffffbbbbbbbbbbbbbk..", "fffkbsbllfllpplebk..", "ffk.kbllllffllllk...", "fk...kllllflllllk...", "k.....kkllllllkk....", "........kkkkkk......", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#c0a070", "l": "#f0e0c0", "f": "#a08050", "s": "#a88858"} },
+  { id: "tadpole", name: "Puddle Tadpole", rar: 0, size: [2, 5], cond: {},
+    rows: ["....................", "....................", "....................", ".........kkkkkk.....", "........kbbbbbbk....", ".......kbbbbbbbbk...", "..k.kkkbbbbbbwebbk..", ".kfkffkfbbbbbeebbk..", ".kffffffbbblllbbbk..", "..kfkkfbblllpplebk..", "...k..kkblllllllk...", "........kbblllbk....", ".........kkkkkk.....", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#6a7a90", "l": "#b0c0d0", "f": "#7a8aa0", "s": "#506078"} },
+  { id: "clown", name: "Clown Cutie", rar: 1, size: [6, 11], cond: {},
+    rows: ["...........k........", "..........kfk.......", ".........kffk.......", ".......kkfffkk......", "..kkk.kbsbbbsbk.....", ".kfffkbbsbbbsbbk....", "kffffbbbsbbbswebk...", "kffffbbbsbbbseebk...", "kffffbbbsbbbsbbbk...", "kffffbblsfllpplek...", ".kfffkblslffsllk....", "..kkk.kbslflslk.....", ".......kkkkkkk......", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ff8a3a", "l": "#ffb070", "f": "#ff8a3a", "s": "#ffffff"} },
+  { id: "puffer", name: "Puffy Blowfish", rar: 1, size: [8, 18], cond: {},
+    rows: ["......k...k...k.....", ".....kskkkskkksk....", "......kbbbbbbbk.....", "....kkbbbbbbbbbk.k..", "..kksbbbbbbbbbbbksk.", ".kfkkbbbbbbbbbbbkk..", ".kffbbbbbbbbwebbbk..", ".kffbbbbbbbbeebbbk..", ".kffbbbbbbbbbbbbbk..", ".kfsbbbbbbbppbebbk..", ".kfkkbllllllllllksk.", "..k.kbllllllllllkk..", ".....kbllllllllk....", "......kbbbllbbk.....", "......kskkkkksk.....", ".......k.....k......"],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#f0d890", "l": "#fff8e0", "f": "#d0b060", "s": "#a08840"} },
+  { id: "crab", name: "Pinchy Crab", rar: 1, size: [5, 14], cond: {},
+    rows: ["....................", "........k...k.......", "...k...kwk.kwk..k...", "..kbk..kek.kek.kbk..", "..kbbk.kfk.kfkkbbk..", ".kbbbkkkfkkkfkkbbbk.", "..kkbkbbbbbbbbkbkk..", "....kbbbbbbbbbbk....", "...kbbbbbbbbbbbbk...", "...kbbbpbelebpbbk...", "...kbbllllelllbbk...", "....kbllllllllbk....", "....kkbbbllbbbk.k...", "...kfkfkkkkkkkfkfk..", "....kfkfk...kfkfk...", ".....k.k.....k.k...."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#f06a5a", "l": "#ffb0a0", "f": "#d04a40", "s": "#ffffff"} },
+  { id: "starfish", name: "Sleepy Starfish", rar: 1, size: [6, 16], cond: {},
+    rows: ["....................", ".........kk.........", "........kbbk........", "........kbsk........", "........kbbk........", "...kkkkkbbbbkkkkk...", "..kbbbbbbbbbbbbbbk..", "...kbbsbwebwebsbk...", "....kkbbeebeebkk....", "......kbbbbbbk......", "......kppbebbk......", ".....kbbbbbbbbk.....", ".....kbbskkbsbk.....", ".....kbkk..kkbk.....", "......k......k......", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ff9a7a", "l": "#ffd0c0", "f": "#e07a5a", "s": "#fff0d0"} },
+  { id: "jelly", name: "Jelly Drop", rar: 1, size: [5, 15], cond: {},
+    rows: ["....................", "......kkkkkkkk......", ".....kbbbbbbbbk.....", "....kbbwwbbbbbbk....", "...kbbbbbbbbbbbbk...", "...kbbbbwebbwebbk...", "..kbbbbbeebbeebbbk..", "...kbbbbbbeebbbbk...", "...kbllpplllllllk...", "....kkkkkkkkkkkk....", "......f..f..f..f....", "......f..f..f..f....", ".....f..f..f..f.....", ".....f..f..f..f.....", ".........f.....f....", ".........f.....f...."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ffb8e0", "l": "#ff8ac8", "f": "#e070b0", "s": "#ffffff"} },
+  { id: "tang", name: "Blue Tang", rar: 1, size: [9, 20], cond: {},
+    rows: ["..........kfk.......", ".........kffk.......", "........kfffk.......", "......kkbssbbkk.....", ".kk..kbbbssbbbbk....", "kffkkbbbbssbbbbbk...", "kfffkbbbbssbbwebk...", "kfffbbbbbssbbeebbk..", "kfffbbbbbssbbbbbbk..", "kfffkbbllfslpplek...", "kffkkblllsffllllk...", ".kk..kbllsfllllk....", "......kklsslllk.....", "........kkkkkk......", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#4a90e8", "l": "#90c8ff", "f": "#ffd23a", "s": "#2a4a90"} },
+  { id: "moonjelly", name: "Moon Jelly", rar: 2, size: [8, 24], cond: {"night": true},
+    rows: ["....................", "......kkkkkkkk......", ".....kbbbbbbbbk.....", "....kbbwwbbbbbbk....", "...kbbbbbbbbbbbbk...", "...kbbbbwebbwebbk...", "..kbbbbbeebbeebbbk..", "...kbbbbbbeebbbbk...", "...kbllpplllllllk...", "....kkkkkkkkkkkk....", "......f..f..f..f....", "......f..f..f..f....", ".....f..f..f..f.....", ".....f..f..f..f.....", ".........f.....f....", ".........f.....f...."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#d8e0ff", "l": "#a8b8f0", "f": "#8090d0", "s": "#ffffff"} },
+  { id: "lantern", name: "Lantern Fish", rar: 2, size: [6, 14], cond: {"night": true},
+    rows: ["...........k.ksk....", "..........kfksssk...", ".........kffkfsk....", ".k......kfffkkk.....", "kfk...kkbbbbbkk.....", "kffk.kbbbbbbbbbk....", "kfffkbbbbbbbbwebk...", "kffffbbbbbbbbeebk...", "kffffbbbbbbbbbbbk...", "kfffkbbllfllpplek...", "kffk.kblllfflllk....", "kfk...kkllflllk.....", ".k......kkkkkk......", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#3a4a80", "l": "#6a7ab0", "f": "#5a6aa0", "s": "#fff27a"} },
+  { id: "raintrout", name: "Rainbow Trout", rar: 2, size: [20, 45], cond: {"rain": true},
+    rows: ["....................", "...........k........", "..........kfk.......", "k.......kkfffk......", "fk...kkkbbssbbkkk...", "ffk.kbbbbbssbbbbbk..", "fffkbbbbbbssbbwebbk.", "ffffbbbbbbssbbeebbk.", "ffffbbbbbbssbbbbbbk.", "fffkbbblllsslpplebk.", "ffk.kbllllfflllllk..", "fk...kkkllfslllkk...", "k.......kkkkkkk.....", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#90c0a0", "l": "#f0f4e0", "f": "#80a890", "s": "#ff8ab8"} },
+  { id: "sakurakoi", name: "Sakura Koi", rar: 2, size: [20, 50], cond: {"season": "spring"},
+    rows: ["...........k........", "..........kfk.......", "k........kffk.......", "fk....kkkbbbfkk.....", "ffk..kbbbbbbbbbk....", "fffkkbbbbbsbbbbbk...", "ffffbbbsbbbbbwebbk..", "ffffbbbbbbbbbeebbk..", "ffffbbbbbbbbbbbbbk..", "ffffbbsllfllpplebk..", "fffkkbllllffllllk...", "ffk..kblllfllllk....", "fk....kkkllllkk.....", "k........kkkk.......", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ffffff", "l": "#fff0f4", "f": "#ffc0d8", "s": "#ff8ab8"} },
+  { id: "sunfish", name: "Sunny Sunfish", rar: 2, size: [15, 35], cond: {"season": "summer"},
+    rows: ["..........kfk.......", ".........kffk.......", ".......kkssbfk......", "......kbbssbbbk.....", "..kkkkbbbssbbbbk....", ".kfffbbbbssbbbbbk...", "kffffbbbbssbbwebk...", "kffffbbbbssbbeebk...", "kffffbbbbssbbbbbk...", "kffffbbllfslpplek...", ".kfffbbllsfflllbk...", "..kkkkbllsfllllk....", "......kllssllllk....", ".......kksslkkk.....", ".........kkk........", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ffd23a", "l": "#fff4b0", "f": "#ff9a3a", "s": "#ffb030"} },
+  { id: "maplekoi", name: "Maple Koi", rar: 2, size: [20, 50], cond: {"season": "autumn"},
+    rows: ["...........k........", "..........kfk.......", "k........kffk.......", "fk....kkkbbbfkk.....", "ffk..kbbbbbbbbbk....", "fffkkbbbbbsbbbbbk...", "ffffbbbsbbbbbwebbk..", "ffffbbbbbbbbbeebbk..", "ffffbbbbbbbbbbbbbk..", "ffffbbsllfllpplebk..", "fffkkbllllffllllk...", "ffk..kblllfllllk....", "fk....kkkllllkk.....", "k........kkkk.......", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ffe0c0", "l": "#fff4e8", "f": "#f08a30", "s": "#e0402a"} },
+  { id: "snowcod", name: "Snowflake Cod", rar: 2, size: [20, 40], cond: {"season": "winter"},
+    rows: ["...........k........", "..........kfk.......", ".........kffk.......", "k.....kkkffffkk.....", "fk...kbbbbbbbbbk....", "ffk.kbbbbbsbbbbbk...", "fffkbbbsbbbbbwebbk..", "ffffbbbbbbbbbeebbk..", "ffffbbbbbbbbbbbbbk..", "fffkbbsllfllpplebk..", "ffk.kbllllffllllk...", "fk...kblllfllllk....", "k.....kkkkkkkkk.....", "....................", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#c8dcf0", "l": "#ffffff", "f": "#a0b8d8", "s": "#ffffff"} },
+  { id: "goldkoi", name: "Golden Koi", rar: 3, size: [40, 80], cond: {},
+    rows: ["..........kk........", ".........kffk.......", "........kfffk.......", "kk....kkbbbbbkk.....", "ffk..kbbbbbbbbbk....", "fffkksbsbsbsbsbbk...", "ffffbbbbbbbbbwebbk..", "ffffbsbsbsbsbeebbk..", "ffffbbbbbbbbbbbbbk..", "ffffbsbllfllpplebk..", "fffkkbllllffllllk...", "ffk..kllllflllllk...", "kk....kkllllllkk....", "........kkkkkk......", "....................", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#ffc830", "l": "#fff0a0", "f": "#ffe070", "s": "#ffe680"} },
+  { id: "pearl", name: "Pearl Oyster", rar: 3, size: [6, 14], cond: {"rain": true},
+    rows: ["....................", "....................", "........kkkk........", ".....kkkffffkkk.....", "...kkffffffffffkk...", "..kffsffsfffsffsfk..", "..kffffffffffffffk..", ".kffffffwwwwffffffk.", "..kkllllwswwlllllk..", "..kbbbbbwwwwbbbbbk..", "..kbbbebbbbbbbebbk..", "..kbbpbbbbbbbbbpbk..", "...kbbbbbbebbbbbk...", "....kkbbbbbbbbkk....", "......kkkkkkkk......", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#b8a8c8", "l": "#ffe0f0", "f": "#d0c0e0", "s": "#9888b0"} },
+  { id: "starwhale", name: "Star Whale Calf", rar: 3, size: [60, 120], cond: {"night": true},
+    rows: ["........k...........", ".......kwk..........", "......kwkwk.........", "......kkwkkk........", "....kkbbbbbbkk.....k", "...kbbbbbbbbbsk...kb", "..kbbbbbbbbbsbbk.kbb", ".kbbbwebbbbbbbbbkbbb", ".kbbbeebbbbbbbbbbbbb", ".kbbbbbbbbbbbbbbkbbb", ".kbbppbebbbbbbbbkkkb", "..kbllslslslsllk...k", "...klllllllllllk....", "....klllllllllk.....", ".....kkkkkkkkk......", "...................."],
+    cmap: {"k": "#3a2a40", "e": "#2a1e30", "w": "#ffffff", "p": "#ff9ab8", "b": "#5a70c0", "l": "#c8d8ff", "f": "#4a60b0", "s": "#fff27a"} },
+];
+const FISH_BY_ID = {}; for (const f of FISH) FISH_BY_ID[f.id] = f;
+
+// ===================== v16.5 — Fishing on the boat trip + Fish Album =====================
+// Inside the boat scene: Fish → cast → wait for a nibble → tap while the ring is in the sweet spot.
+// No penalty for missing: the fish just swims off. Reduced motion: the ring doesn't shrink, it glows.
+const FISH_RAR = [
+  { name: "Common", col: "#8aa08a", w: 60, sell: 4 },
+  { name: "Uncommon", col: "#4a90d0", w: 28, sell: 9 },
+  { name: "Rare", col: "#b060d0", w: 10, sell: 22 },
+  { name: "Legendary", col: "#e0a020", w: 2, sell: 60 },
+];
+const FISH_BITE = 1.5;                 // seconds the nibble lasts
+const FISH_WIN = [0.55, 1.05];         // sweet spot inside the nibble
+const FISH_WIN_SLOW = [0.35, 1.25];    // reduced motion: a wider, glowing window
+const FISH_PERFECT = [0.72, 0.9];
+const FISH_SELL_FULL = 20;             // sells per day at full price, then half
+// ----- conditions: time of day, weather, season -----
+function fishCtx() {
+  return { night: !!(typeof isNightNow === "function" && isNightNow()), rain: !!(typeof v12 !== "undefined" && v12 && v12.wx === "rain"), season: currentSeason() };
+}
+function fishEligible(f, c) {
+  const k = f.cond || {};
+  if (k.night && !c.night) return false;
+  if (k.rain && !c.rain) return false;
+  if (k.season && k.season !== c.season) return false;
+  return true;
+}
+function fishCondText(f) {
+  const k = f.cond || {};
+  if (k.night) return "Night only";
+  if (k.rain) return "Only in the rain";
+  if (k.season) return k.season[0].toUpperCase() + k.season.slice(1) + " only";
+  return "Any time";
+}
+// r1 picks the rarity, r2 the fish within it (falls back to a commoner rarity if nothing fits right now)
+function fishPick(c, r1, r2) {
+  c = c || fishCtx();
+  const tot = FISH_RAR.reduce((s, r) => s + r.w, 0);
+  let x = (r1 == null ? Math.random() : r1) * tot, rar = 0;
+  for (let i = 0; i < FISH_RAR.length; i++) { if (x < FISH_RAR[i].w) { rar = i; break; } x -= FISH_RAR[i].w; rar = i; }
+  for (let r = rar; r >= 0; r--) {
+    const pool = FISH.filter(f => f.rar === r && fishEligible(f, c));
+    if (pool.length) return pool[Math.min(pool.length - 1, Math.floor((r2 == null ? Math.random() : r2) * pool.length))];
+  }
+  return FISH[0];
+}
+function fishSize(f, perfect, r) {
+  const u = Math.pow(r == null ? Math.random() : r, perfect ? 0.6 : 1.25);
+  return Math.round((f.size[0] + (f.size[1] - f.size[0]) * u) * 10) / 10;
+}
+// ----- state helpers -----
+function fishState() {
+  const F = ensureHc165().fish, d = todayKey();
+  if (F.day !== d) { F.day = d; F.sells = 0; }
+  return F;
+}
+function fishCaughtN() { const F = ensureHc165().fish; return FISH.filter(f => F.caught[f.id]).length; }
+function fishRecord(f, size) {
+  const F = fishState();
+  const was = F.caught[f.id];
+  const isNew = !was;
+  const c = was || (F.caught[f.id] = { n: 0, best: 0 });
+  c.n++; F.total++;
+  const best = size > c.best;
+  if (best) c.best = size;
+  if (typeof qBump === "function") { qBump("fish", f.id); if (isNew) qBump("fishnew"); if (f.rar >= 2) qBump("fishrare"); }
+  let reward = null;
+  if (!F.done && fishCaughtN() >= FISH.length) {
+    F.done = true;
+    ownedAcc.fishhat = true;
+    earnSeeds(10, "Fish Album complete");
+    reward = { seeds: 10, hat: "fishhat" };
+    toast("Fish Album complete! Fishing Hat unlocked 🎣", "#3a80c0");
+  }
+  saveSoon();
+  return { isNew, best: best && !isNew, reward };
+}
+function fishSell(id) {
+  const F = fishState(), f = FISH_BY_ID[id];
+  if (!f) return 0;
+  const base = FISH_RAR[f.rar].sell, pay = F.sells < FISH_SELL_FULL ? base : Math.max(1, Math.round(base / 2));
+  F.sells++; F.sold++;
+  joy += pay;
+  if (typeof qBump === "function") qBump("fishsell");
+  saveSoon();
+  return pay;
+}
+function fishKeep(id) { const F = fishState(); F.kept[id] = (F.kept[id] || 0) + 1; saveSoon(); return F.kept[id]; }
+
+// ----- the Fishing Hat (album complete) -----
+Object.assign(ACC_ART, {
+  fishhat: { rows: ["....r....", "...rwr...", "..ggggg..", ".ggggggg.", "gbbbbbbbg", "ggggggggg"], cmap: { g: "#7aa870", b: "#c8a060", r: "#ff5a6a", w: "#ffffff" }, at: (hx, top) => [hx - 4.5, top - 5] },
+});
+if (!ACCESSORIES.some(a => a.id === "fishhat")) ACCESSORIES.push({ id: "fishhat", name: "Fishing Hat", short: "Fishing", fishing: true });
+
+// ----- art -----
+const fishArtCache = new Map();
+function drawFishArt(f, cx, cy, u, sil) {
+  const key = f.id + (sil ? "|s" : "");
+  let off = fishArtCache.get(key);
+  if (off === undefined) {
+    off = null;
+    try {
+      off = document.createElement("canvas"); off.width = 20; off.height = 16;
+      const g = off.getContext("2d");
+      if (!g) off = null; else f.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const ch = row[x]; if (ch === ".") continue; g.fillStyle = sil ? (ch === "k" ? "#4a5a78" : "#7888a8") : f.cmap[ch]; g.fillRect(x, y, 1, 1); } });
+    } catch (e) { off = null; }
+    fishArtCache.set(key, off);
+  }
+  const x0 = Math.round(cx - 10 * u), y0 = Math.round(cy - 8 * u);
+  ctx.imageSmoothingEnabled = false;
+  if (off) { ctx.drawImage(off, x0, y0, 20 * u, 16 * u); return; }
+  f.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const ch = row[x]; if (ch === ".") continue; ctx.fillStyle = sil ? "#7888a8" : f.cmap[ch]; ctx.fillRect(x0 + x * u, y0 + y * u, u, u); } });
+}
+
+// ----- fishing in the boat scene -----
+let fishing = null; // { st: "wait"|"bite"|"catch"|"miss", t, biteAt, f, size, res, msg }
+function fishBobber() { return { x: clamp(boat.x + (boat.face || 1) * 48, 30, W - 30), y: clamp(boat.y + 18, 120, H - 130) }; }
+function fishCast() {
+  if (!boat || fishing) return false;
+  fishState().casts++;
+  ensureHc165().hints.fish = true;
+  fishing = { st: "wait", t: 0, biteAt: 1.2 + Math.random() * 2.3, ...fishBobber() };
+  if (boat) { boat.tx = boat.x; boat.ty = boat.y; boat.drag = false; }
+  sfxDrop();
+  return true;
+}
+function fishWin() { return kind.motion ? FISH_WIN_SLOW : FISH_WIN; }
+function fishTap() {
+  if (!fishing) return false;
+  if (fishing.st === "wait") { fishMiss("Too soon, the fish swam off"); return true; }
+  if (fishing.st !== "bite") return false;
+  const t = fishing.t, w = fishWin();
+  if (t >= w[0] && t <= w[1]) {
+    const perfect = t >= FISH_PERFECT[0] && t <= FISH_PERFECT[1];
+    const f = fishPick(fishCtx());
+    const size = fishSize(f, perfect);
+    const res = fishRecord(f, size);
+    fishing = { st: "catch", t: 0, f, size, res, perfect, x: fishing.x, y: fishing.y };
+    sfxUnlock(); buzz("unlock");
+    spawnSparkles(fishing.x, fishing.y, kind.motion ? 3 : 10);
+    return true;
+  }
+  fishMiss(t < w[0] ? "Too soon, the fish swam off" : "Just missed, it swam away");
+  return true;
+}
+function fishMiss(msg) {
+  fishState().misses++;
+  fishing = { st: "miss", t: 0, msg, x: fishing.x, y: fishing.y };
+  sfxMiss();
+  saveSoon();
+}
+function fishStep(dt) {
+  if (!fishing) return;
+  fishing.t += dt;
+  if (fishing.st === "wait" && fishing.t >= fishing.biteAt) { fishing.st = "bite"; fishing.t = 0; sfxTick(); buzz("pet"); }
+  else if (fishing.st === "bite" && fishing.t > FISH_BITE) fishMiss("It nibbled and swam away");
+  else if (fishing.st === "miss" && fishing.t > 1.4) fishing = null;
+}
+function fishDone(keep) {
+  if (!fishing || fishing.st !== "catch") return false;
+  let pay = 0;
+  if (keep) fishKeep(fishing.f.id); else pay = fishSell(fishing.f.id);
+  toast(keep ? fishing.f.name + " is in your bucket ♥" : "Sold to the dock shop +" + pay + " ♥", keep ? "#3a80c0" : C.heart);
+  fishing = null;
+  return true;
+}
+function drawFishing() {
+  if (!fishing || !boat) return;
+  const F = fishing;
+  // line from the oar side of the boat to the bobber
+  if (F.st === "wait" || F.st === "bite") {
+    const dip = F.st === "bite" ? (kind.motion ? 2 : 2 + Math.sin(F.t * 18) * 3) : (kind.motion ? 0 : Math.sin(F.t * 3) * 1.2);
+    ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(boat.x + (boat.face || 1) * 12, boat.y - 22); ctx.quadraticCurveTo((boat.x + F.x) / 2, boat.y - 36, F.x, F.y - 4 + dip); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.ellipse(F.x, F.y + 3, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ff5a6a"; ctx.beginPath(); ctx.arc(F.x, F.y - 2 + dip, 5, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(F.x, F.y - 2 + dip, 5, 0, Math.PI); ctx.fill();
+    ctx.strokeStyle = "#3a2a40"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(F.x, F.y - 2 + dip, 5, 0, Math.PI * 2); ctx.stroke();
+    if (F.st === "bite") {
+      const w = fishWin(), inWin = F.t >= w[0] && F.t <= w[1];
+      // the target circle + the timing ring
+      ctx.strokeStyle = "rgba(255,240,150,0.9)"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(F.x, F.y, 20, 0, Math.PI * 2); ctx.stroke();
+      if (kind.motion) {
+        ctx.fillStyle = inWin ? "rgba(255,230,90,0.55)" : "rgba(255,255,255,0.12)";
+        ctx.beginPath(); ctx.arc(F.x, F.y, 20, 0, Math.PI * 2); ctx.fill();
+      } else {
+        const r = 20 + 44 * (1 - F.t / ((w[0] + w[1]) / 2)) ;
+        ctx.strokeStyle = inWin ? "#ffe070" : "rgba(255,255,255,0.85)"; ctx.lineWidth = inWin ? 4 : 2.5;
+        ctx.beginPath(); ctx.arc(F.x, F.y, Math.max(4, r), 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.fillStyle = "#fff"; font(13, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(inWin ? "Now!" : "Nibble!", F.x, F.y - 34);
+    }
+  }
+  if (F.st === "miss") {
+    ctx.globalAlpha = clamp(1.4 - F.t, 0, 1);
+    ctx.fillStyle = "rgba(255,250,245,0.92)"; roundRect(W / 2 - 130, H - 178, 260, 34, 14); ctx.fill();
+    ctx.fillStyle = C.textSoft; font(12, true); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(F.msg + " · no worries!", W / 2, H - 161);
+    ctx.globalAlpha = 1;
+  }
+}
+function drawFishCatch() {
+  const F = fishing, f = F.f, R = FISH_RAR[f.rar];
+  ctx.fillStyle = "rgba(20,40,70,0.45)"; ctx.fillRect(0, 0, W, H);
+  const ph = 330, top = Math.round(H / 2 - ph / 2);
+  const e = kind.motion ? 1 : easeOutBack(Math.min(1, F.t / 0.4));
+  ctx.save(); ctx.translate(W / 2, top + ph / 2); ctx.scale(0.85 + 0.15 * e, 0.85 + 0.15 * e); ctx.translate(-W / 2, -(top + ph / 2));
+  solidPanel(28, top, W - 56, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = R.col; font(12, true); ctx.fillText(R.name + (F.res.isNew ? " · New for the album!" : F.res.best ? " · Biggest yet!" : ""), W / 2, top + 26);
+  ctx.fillStyle = "rgba(160,210,255,0.35)"; roundRect(W / 2 - 80, top + 40, 160, 104, 16); ctx.fill();
+  const bob = kind.motion ? 0 : Math.sin(F.t * 3) * 3;
+  drawFishArt(f, W / 2, top + 92 + bob, 6, false);
+  ctx.fillStyle = C.text; font(20, true); ctx.fillText(f.name, W / 2, top + 166);
+  ctx.fillStyle = C.textSoft; font(12, false);
+  ctx.fillText(F.size + " cm" + (F.perfect ? " · perfect timing ✦" : ""), W / 2, top + 188);
+  ctx.fillText("Sell for " + (fishState().sells < FISH_SELL_FULL ? R.sell : Math.max(1, Math.round(R.sell / 2))) + " ♥ or keep it in your bucket", W / 2, top + 208);
+  ctx.restore();
+  uiButtons.length = 0;
+  const bw = (W - 56 - 24 - 10) / 2, by = top + ph - 70;
+  uiButtons.push(btn(40, by, bw, 50, "Keep ♥", { id: "v165_fkeep", size: 15, bg: "#d8f0ff", border: "#70b0e0" }));
+  uiButtons.push(btn(50 + bw, by, bw, 50, "Sell", { id: "v165_fsell", size: 15, bg: C.btn, border: "#ff80b0" }));
+}
+{
+  const o = drawBoatScene;
+  drawBoatScene = function () {
+    fishStep(frameDt);
+    o.apply(this, arguments);
+    drawFishing();
+    if (fishing && fishing.st === "catch") { drawFishCatch(); return; }
+    const by = H - 70;
+    ctx.fillStyle = "rgba(255,250,245,0.9)"; roundRect(14, by - 30, W - 28, 24, 10); ctx.fill();
+    ctx.fillStyle = C.textSoft; font(10.5, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const c = fishCtx();
+    ctx.fillText("Fish Album " + fishCaughtN() + "/" + FISH.length + " · " + (c.night ? "night" : "day") + (c.rain ? " · rain" : "") + " · " + c.season, W / 2, by - 18);
+    if (!fishing) uiButtons.push(btn(W / 2 - 80, by, 160, 52, "🎣 Fish", { id: "v165_fish", size: 17, bg: "#d8f4ff", border: "#3a90d0" }));
+    else if (fishing.st === "wait" || fishing.st === "bite") {
+      ctx.fillStyle = "#fff"; font(12, true); ctx.fillText(fishing.st === "wait" ? "Waiting for a nibble…" : "Tap when the ring meets the circle!", W / 2, by - 46);
+      uiButtons.push(btn(W / 2 - 60, by + 4, 120, 44, "Reel in", { id: "v165_freel", size: 14, bg: "#fff", border: "#80b0e0" }));
+    }
+  };
+}
+{
+  const o = boatTap;
+  boatTap = function (p) {
+    if (fishing) { if (fishing.st === "wait" || fishing.st === "bite") fishTap(); return; }
+    return o.apply(this, arguments);
+  };
+  const ob = openBoat;
+  openBoat = function () { fishing = null; const r = ob.apply(this, arguments); hint165("fishhint", "New: tap 🎣 Fish on the boat!", "#3a80c0"); return r; };
+}
+function fishAction(id) {
+  if (id === "v165_fish") { fishCast(); return true; }
+  if (id === "v165_freel") { if (fishing && fishing.st === "wait") { fishing = null; } else fishTap(); return true; }
+  if (id === "v165_fkeep") { fishDone(true); return true; }
+  if (id === "v165_fsell") { fishDone(false); return true; }
+  if (id === "v12_boat_back") { fishing = null; return false; }
+  if (id === "v16_atab_fish") { albumTab = "fish"; listScroll = 0; listMax = 0; return true; }
+  return false;
+}
+V165_ACTIONS.push(fishAction);
+
+// ----- Fish Album: a third tab inside the Album -----
+{
+  const o = v16AlbumTabs;
+  v16AlbumTabs = function () {
+    v16TabRow([["friends", "Friends", "v16_atab_friends"], ["sets", "Collections", "v16_atab_sets"], ["fish", "Fish " + fishCaughtN() + "/" + FISH.length, "v16_atab_fish"]], albumTab, 70);
+  };
+  const od = drawAlbum;
+  drawAlbum = function () {
+    if (albumTab !== "fish") return od.apply(this, arguments);
+    panelHeader("Critter Album", "Fish caught on the boat trip 🎣");
+    v16AlbumTabs();
+    drawFishAlbum();
+  };
+}
+function drawFishAlbum() {
+  const F = ensureHc165().fish;
+  const top = 122, bottom = H - 74, cols = 3, gap = 6, cw = (W - 44 - gap * 2) / 3, chh = 122;
+  const rowsN = Math.ceil(FISH.length / cols);
+  setListExtent(top, bottom, 56 + rowsN * (chh + gap) + 8);
+  listClip(top, bottom);
+  let y = top + 4 - listScroll;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(12, true);
+  ctx.fillText("Caught " + fishCaughtN() + " / " + FISH.length + " · " + F.total + " fish in all", W / 2, y + 12);
+  ctx.fillStyle = F.done ? "#3f9a48" : C.textSoft; font(10.5, false);
+  ctx.fillText(F.done ? "Album complete! The Fishing Hat is in your wardrobe ✓" : "Complete it for 10 Bloom Seeds + a Fishing Hat", W / 2, y + 32);
+  y += 50;
+  FISH.forEach((f, i) => {
+    const x = 22 + (i % cols) * (cw + gap), yy = y + Math.floor(i / cols) * (chh + gap);
+    if (yy > bottom || yy + chh < top) return;
+    const c = F.caught[f.id], R = FISH_RAR[f.rar];
+    ctx.fillStyle = c ? "#f4faff" : "#eceef4"; roundRect(x, yy, cw, chh, 12); ctx.fill();
+    ctx.strokeStyle = c ? R.col : "#c8ccd8"; ctx.lineWidth = 2; ctx.stroke();
+    drawFishArt(f, x + cw / 2, yy + 34, 3, !c);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = c ? C.text : "#8a90a8"; fitFont(c ? f.name : "???", cw - 10, 11.5, true, 8.5); ctx.fillText(c ? f.name : "???", x + cw / 2, yy + 68);
+    ctx.fillStyle = R.col; font(9.5, true); ctx.fillText(R.name, x + cw / 2, yy + 84);
+    ctx.fillStyle = C.textSoft; font(9.5, false);
+    ctx.fillText(c ? "Best " + c.best + " cm" + (F.kept[f.id] ? " · ×" + F.kept[f.id] : "") : fishCondText(f), x + cw / 2, yy + 100);
+    if (c) { ctx.fillStyle = "#8aa0b8"; font(9, false); ctx.fillText("caught ×" + c.n, x + cw / 2, yy + 113); }
+  });
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+
+// ----- fishing quests + ladder -----
+[
+  { id: "fish_catch", ev: "fish", need: () => 3, ok: () => !!(hc165 && hc165.hints.fish), text: (q) => "Catch " + q.need + " fish on the boat trip", pay: 40 },
+  { id: "fish_new", ev: "fishnew", need: () => 1, ok: () => !!(hc165 && hc165.hints.fish && !hc165.fish.done), text: () => "Find a new fish for the Fish Album", pay: 50 },
+  { id: "fish_sell", ev: "fishsell", need: () => 2, ok: () => !!(hc165 && hc165.hints.fish), text: (q) => "Sell " + q.need + " fish at the dock", pay: 30 },
+  { id: "fish_rare", ev: "fishrare", need: () => 1, ok: () => !!(hc165 && hc165.fish.total >= 10), text: () => "Catch a rare fish (night, rain or season)", pay: 60 },
+].forEach(q => { if (!V16_QUEST_BY_ID[q.id]) { V16_QUESTS.push(q); V16_QUEST_BY_ID[q.id] = q; } });
+if (typeof LADDERS !== "undefined" && !LADDER_BY_ID.fishing) {
+  const L = { id: "fishing", name: "Little Angler", icon: "🎣", unit: "fish caught", val: () => ensureHc165().fish.total, t: [5, 20, 60, 150] };
+  LADDERS.push(L); LADDER_BY_ID.fishing = L;
+}
+Object.assign(v165Api, {
+  FISH, FISH_BY_ID, FISH_RAR, FISH_BITE, FISH_WIN, FISH_WIN_SLOW, FISH_PERFECT, FISH_SELL_FULL,
+  fishCtx, fishEligible, fishPick, fishSize, fishRecord, fishSell, fishKeep, fishCast, fishTap, fishStep, fishDone, fishCaughtN, fishCondText,
+});
+Object.defineProperty(v165Api, "fishing", { get() { return fishing; }, set(v) { fishing = v; }, enumerable: true });
+
+// ===================== v16.5 — Bubble Pop Bounce (arcade, Games page 2) =====================
+// A friend on a cloud paddle bounces a bubble up to pop bubble clusters. Gentle: the bubble floats back
+// when it drops (3 hearts), and running out just ends the round with a happy result card (still pays).
+// Uses the shared mg flow (intro, II pause with Music/Sounds toggles, result, Again / Arcade).
+ARC_INFO.bpop = { name: "Bubble Pop Bounce", blurb: "Bounce the bubble · pop the clusters", col: "#e0f6ff", border: "#70c0e0" };
+V162_GAMES.push("bpop");
+const BP_R = 9, BP_BR = 13, BP_PW = 78, BP_SPEED = 250, BP_WAVES = 5, BP_TIME = 90;
+const BP_STARS = [0, 400, 900];
+const BP_PER_HEART = 25;  // 1 ♥ per 25 points
+const BP_MILE = 600;      // first time past this = +1 Bloom Seed (once ever)
+const BP_COLS = ["#ffb0d0", "#b0e0ff", "#fff0a0", "#c8f0b0", "#e0c8ff"];
+const isBpop = g => g === "bpop";
+function bpPadY() { return H - 112; }
+function bpStars(score) { return score >= BP_STARS[2] ? 3 : score >= BP_STARS[1] ? 2 : 1; }
+function bpBase(score) { return Math.min(ARC_SCORE_CAP, Math.floor(Math.max(0, score) / BP_PER_HEART)); }
+function bpWave(n) {
+  const rows = Math.min(8, 4 + n), cols = 8, out = [];
+  const gx = (W - 40) / cols;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols - (r % 2); c++) {
+    // little gaps make cluster shapes instead of a solid wall
+    if ((r + c * 3 + n) % 7 === 0) continue;
+    out.push({ x: 20 + gx * (c + 0.5 + (r % 2) * 0.5), y: 112 + r * 25, c: (r + Math.floor(c / 2) + n) % BP_COLS.length, star: (r * 5 + c + n * 3) % 17 === 0, pop: 0 });
+  }
+  return out;
+}
+function bpServe() { mg.ball = { x: mg.px, y: bpPadY() - 22, vx: 0, vy: 0, stuck: true, t: 0 }; mg.chain = 0; }
+function bpSpeed() { return BP_SPEED * (kind.motion ? 0.85 : 1) * (1 + Math.min(0.3, mg.wave * 0.06)); }
+function bpLaunch() {
+  const b = mg.ball;
+  if (!b || !b.stuck) return false;
+  const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.6, s = bpSpeed();
+  b.vx = Math.cos(a) * s; b.vy = Math.sin(a) * s; b.stuck = false;
+  sfxTick();
+  return true;
+}
+function bpPop(bb) {
+  bb.pop = 0.0001;
+  mg.chain++;
+  const pts = 10 + Math.min(40, (mg.chain - 1) * 5) + (bb.star ? 40 : 0);
+  mg.score += pts; mg.popped++;
+  addFloat({ x: bb.x, y: bb.y - 8, text: "+" + pts, life: 0.7, vy: -30, color: bb.star ? "#e0a020" : "#5a90c0", size: 11 });
+  particles.push({ kind: "ring", x: bb.x, y: bb.y, life: 0.35, max: 0.35, size: 6, color: BP_COLS[bb.c], t: 0, grow: kind.motion ? 20 : 60, lw: 2 });
+  if (bb.star) spawnSparkles(bb.x, bb.y, kind.motion ? 2 : 6);
+  sfxPop(Math.min(14, mg.chain));
+}
+function bpUpdate(dt) {
+  for (const bb of mg.bubs) if (bb.pop) bb.pop += dt;
+  prune(mg.bubs, bb => !bb.pop || bb.pop < 0.25);
+  if (mg.state !== "play") return;
+  mg.time += dt;
+  if (mg.endT > 0) { mg.endT -= dt; if (mg.endT <= 0) { finishRound(); return; } }
+  mg.px += (mg.tx - mg.px) * Math.min(1, dt * 14);
+  mg.px = clamp(mg.px, BP_PW / 2 + 8, W - BP_PW / 2 - 8);
+  if (!mg.bubs.some(bb => !bb.pop) && mg.endT <= 0) {
+    mg.wave++;
+    mg.score += 100;
+    addFloat({ x: W / 2, y: H / 2, text: "Wave clear! +100", life: 1.2, vy: -20, color: "#e05a90", size: 16 });
+    spawnConfetti(kind.motion ? 6 : 18); sfxChime(6);
+    if (mg.wave >= BP_WAVES) { mg.ball = null; mg.endT = 1.0; }
+    else { mg.bubs = bpWave(mg.wave); bpServe(); }
+  }
+  if (mg.time >= BP_TIME && mg.endT <= 0 && mg.ball) {
+    mg.ball = null; mg.endT = 0.8;
+    addFloat({ x: W / 2, y: H / 2, text: "Time for a bubble bath!", life: 1.2, vy: -20, color: "#5a90c0", size: 15 });
+  }
+  const b = mg.ball;
+  if (!b) return;
+  if (b.stuck) { b.x = mg.px; b.y = bpPadY() - 22; b.t += dt; if (b.t > 1.2) bpLaunch(); return; }
+  // sub-steps keep the bubble from tunnelling
+  const steps = 3;
+  for (let s = 0; s < steps; s++) {
+    const h = dt / steps;
+    b.x += b.vx * h; b.y += b.vy * h;
+    if (b.x < 12 + BP_R) { b.x = 12 + BP_R; b.vx = Math.abs(b.vx); }
+    if (b.x > W - 12 - BP_R) { b.x = W - 12 - BP_R; b.vx = -Math.abs(b.vx); }
+    if (b.y < 76 + BP_R) { b.y = 76 + BP_R; b.vy = Math.abs(b.vy); }
+    for (const bb of mg.bubs) {
+      if (bb.pop) continue;
+      const dx = b.x - bb.x, dy = b.y - bb.y, d = Math.hypot(dx, dy);
+      if (d < BP_R + BP_BR) {
+        const nx = dx / (d || 1), ny = dy / (d || 1), dot = b.vx * nx + b.vy * ny;
+        if (dot < 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; }
+        b.x = bb.x + nx * (BP_R + BP_BR + 0.5); b.y = bb.y + ny * (BP_R + BP_BR + 0.5);
+        bpPop(bb);
+        break;
+      }
+    }
+    const py = bpPadY();
+    if (b.vy > 0 && b.y + BP_R >= py - 6 && b.y < py + 8 && Math.abs(b.x - mg.px) <= BP_PW / 2 + BP_R) {
+      const off = clamp((b.x - mg.px) / (BP_PW / 2), -1, 1), a = -Math.PI / 2 + off * 1.0 + (Math.random() - 0.5) * 0.25, sp = bpSpeed();
+      b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; b.y = py - 6 - BP_R;
+      mg.chain = 0; mg.bounces++; mg.sq = 0.35;
+      sfxCatch(3); buzz("pet");
+    }
+  }
+  mg.sq = Math.max(0, (mg.sq || 0) - dt * 2);
+  if (b.y > H + 20) {
+    mg.lives--;
+    addFloat({ x: clamp(b.x, 50, W - 50), y: bpPadY() - 30, text: mg.lives > 0 ? "It floated back ♥" : "All bubbled out!", life: 1.1, vy: -24, color: "#7a8aa8", size: 13 });
+    sfxOops();
+    if (mg.lives <= 0) { mg.ball = null; mg.endT = 0.9; }
+    else bpServe();
+  }
+}
+function drawBpopGame() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#bfe8ff"); g.addColorStop(1, "#ffe8f4");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  for (let i = 0; i < 5; i++) { const cx = ((i * 83 + (kind.motion ? 0 : time * 5)) % (W + 80)) - 40, cy = 130 + i * 90; ctx.fillRect(Math.round(cx), cy, 40, 8); ctx.fillRect(Math.round(cx) + 8, cy - 6, 22, 7); }
+  // bubbles
+  for (const bb of mg.bubs) {
+    const k = bb.pop ? 1 + bb.pop * 3 : 1, a = bb.pop ? Math.max(0, 1 - bb.pop * 4) : 1;
+    const wob = kind.motion ? 0 : Math.sin(time * 2 + bb.x) * 1.2;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = BP_COLS[bb.c]; ctx.beginPath(); ctx.arc(bb.x, bb.y + wob, BP_BR * k, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(90,110,150,0.55)"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(Math.round(bb.x - 6), Math.round(bb.y + wob - 7), 4, 3);
+    if (bb.star) { ctx.fillStyle = "#e0a020"; font(11, true); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("★", bb.x, bb.y + wob + 1); }
+    ctx.globalAlpha = 1;
+  }
+  // paddle: a friend riding a little cloud
+  const py = bpPadY(), sq = mg.sq || 0;
+  ctx.fillStyle = "#ffffff"; roundRect(mg.px - BP_PW / 2, py - 4 + sq * 3, BP_PW, 14 - sq * 3, 7); ctx.fill();
+  ctx.strokeStyle = "#a8c8e8"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(mg.px - 22, py + 2, 9, 0, Math.PI * 2); ctx.arc(mg.px + 20, py + 3, 8, 0, Math.PI * 2); ctx.fill();
+  drawSprite(mg.critter, mg.px, py + 24, 1.3, false, 0, false, 6, { acc: equippedFor(mg.critter.id), sq: sq * 0.6 });
+  // the bubble ball
+  const b = mg.ball;
+  if (b) {
+    ctx.fillStyle = "rgba(220,240,255,0.75)"; ctx.beginPath(); ctx.arc(b.x, b.y, BP_R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#6aa8e0"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(Math.round(b.x - 4), Math.round(b.y - 5), 3, 3);
+  }
+  drawParticles();
+  drawMgHud("♥ " + mg.score, "Bubble Pop Bounce", "♥".repeat(Math.max(0, mg.lives)) + "♡".repeat(3 - Math.max(0, mg.lives)) + " · " + Math.max(0, Math.ceil(BP_TIME - mg.time)) + "s");
+  if (typeof drawRoundBar === "function") drawRoundBar(Math.min(1, mg.time / BP_TIME));
+  if (mg.state === "play" && b && b.stuck && mg.popped === 0) {
+    ctx.fillStyle = C.textSoft; font(13, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("Slide to move · tap to launch", W / 2, py - 60);
+  }
+}
+function bpopStats() { return ensureHc165().bpop; }
+{ // ---- the shared mg flow ----
+  const os = startMg;
+  startMg = function (game, tier) {
+    if (!isBpop(game)) return os(game, tier);
+    ensureHc165();
+    mg = { game, tier: 0, state: "intro", t: 0, time: 0, paused: false, score: 0, combo: 0, comboT: 0, best: 0,
+      critter: arcCritter(), sadT: 0, happyT: 0, result: null, lives: 3, wave: 0, popped: 0, bounces: 0, chain: 0, endT: 0, px: W / 2, tx: W / 2, sq: 0 };
+    mg.bubs = bpWave(0); bpServe();
+    scene = "mg";
+    particles.length = 0; floatTexts.length = 0;
+    weekBump("arcade");
+    setMusicMode("treats");
+    return true;
+  };
+  const ou = updateMg;
+  updateMg = function (dt) {
+    if (!mg || !isBpop(mg.game)) return ou(dt);
+    if (mg.paused) return;
+    mg.t += dt;
+    if (mg.state === "intro") {
+      if (Math.floor((mg.t - dt) / 0.6) !== Math.floor(mg.t / 0.6) && mg.t < 1.8) sfxTick();
+      if (mg.t >= 1.8) { mg.state = "play"; mg.t = 0; sfxGo(); }
+    }
+    bpUpdate(dt);
+    if (mg.state === "result") mg.rt = (mg.rt || 0) + dt;
+    updateParticles(dt);
+  };
+  const od = drawMg;
+  drawMg = function () {
+    if (!mg || !isBpop(mg.game)) return od();
+    drawBpopGame();
+    if (mg.state === "intro") drawBpIntro();
+    if (mg.state === "result") drawBpResult();
+    else if (mg.paused) drawMgPause();
+  };
+  const odn = mgDown;
+  mgDown = function (p) {
+    if (!mg || !isBpop(mg.game)) return odn(p);
+    if (mg.paused || mg.state !== "play" || p.y < 70) return;
+    mg.tx = p.x;
+    if (mg.ball && mg.ball.stuck) bpLaunch();
+  };
+  const om = mgMove;
+  mgMove = function (p) {
+    if (mg && isBpop(mg.game)) { if (!mg.paused && pointer.down) mg.tx = p.x; return; }
+    return om(p);
+  };
+  const of = finishRound;
+  finishRound = function () {
+    if (mg && isBpop(mg.game) && mg.state !== "result") return bpFinish();
+    return of.apply(this, arguments);
+  };
+  const oa = v162ArcStats;
+  v162ArcStats = function (g) {
+    if (!isBpop(g)) return oa(g);
+    const B = bpopStats();
+    return { best: { bpop: B.best }, stars: { bpop: B.stars }, daily: { bpop: B.daily }, plays: { bpop: B.plays } };
+  };
+  const op = drawArcadePreview;
+  drawArcadePreview = function (game, cx, cy) {
+    if (!isBpop(game)) return op.apply(this, arguments);
+    for (const [dx, dy, c] of [[-16, -16, 0], [0, -20, 1], [16, -16, 2], [-8, -4, 3], [8, -4, 4]]) {
+      ctx.fillStyle = BP_COLS[c]; ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(90,110,150,0.5)"; ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.fillStyle = "#fff"; roundRect(cx - 18, cy + 16, 36, 7, 4); ctx.fill(); ctx.strokeStyle = "#a8c8e8"; ctx.stroke();
+    ctx.fillStyle = "rgba(220,240,255,0.9)"; ctx.beginPath(); ctx.arc(cx + 4, cy + 7, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#6aa8e0"; ctx.stroke();
+  };
+}
+function drawBpIntro() {
+  const k = mg.t, n = 3 - Math.floor(k / 0.6);
+  ctx.fillStyle = "rgba(40,20,50,0.25)"; ctx.fillRect(0, 0, W, H);
+  const top = H / 2 - 90;
+  solidPanel(40, top, W - 80, 150);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText("Bubble Pop Bounce", W / 2, top + 30);
+  ctx.fillStyle = C.textSoft; font(12, false);
+  ctx.fillText("Slide your friend to bounce the bubble", W / 2, top + 58);
+  ctx.fillText("Pop the clusters · 3 hearts · 90 seconds", W / 2, top + 76);
+  const sc = kind.motion ? 1 : 1 + (1 - (k % 0.6) / 0.6) * 0.3;
+  ctx.save(); ctx.translate(W / 2, top + 116); ctx.scale(sc, sc);
+  ctx.fillStyle = C.heart; font(28, true); ctx.fillText(n > 0 ? String(n) : "Go!", 0, 0);
+  ctx.restore();
+}
+function bpReward(base, today) {
+  const B = bpopStats();
+  if (B.day !== today) { B.day = today; B.dayEarned = 0; }
+  const room = Math.max(0, ARC_DAY_CAP - B.dayEarned), hearts = Math.max(0, Math.min(base, room));
+  B.dayEarned += hearts;
+  let daily = 0;
+  if (B.daily !== today) { daily = ARC_DAILY; B.daily = today; }
+  return { hearts, daily, capped: hearts < base };
+}
+function bpFinish() {
+  const B = bpopStats(), today = todayKey();
+  const stars = bpStars(mg.score), newBest = mg.score > B.best && B.best > 0;
+  if (mg.score > B.best) B.best = mg.score;
+  B.stars = Math.max(B.stars, stars); B.plays++;
+  const base = bpBase(mg.score), r = bpReward(base, today);
+  joy += r.hearts + r.daily;
+  let seeds = 0;
+  if (!B.mile && mg.score >= BP_MILE) { B.mile = true; seeds = 1; earnSeeds(1, "Bubble Pop milestone"); }
+  mg.result = { stars, base, hearts: r.hearts, daily: r.daily, capped: r.capped, newBest, seeds };
+  mg.state = "result"; mg.rt = 0;
+  sfxVictory(); buzz("unlock");
+  spawnConfetti(kind.motion ? 12 : 30);
+  if (typeof qBump === "function") { qBump("arcade"); qBump("bpop"); }
+  checkAchievements();
+  save();
+}
+function drawBpResult() {
+  const R = mg.result, t = mg.rt || 0, B = bpopStats();
+  ctx.fillStyle = "rgba(40,20,50," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
+  const ph = 372, top = Math.round(H / 2 - ph / 2);
+  const e = kind.motion ? 1 : easeOutBack(Math.min(1, t / 0.4));
+  ctx.save();
+  ctx.translate(W / 2, top + ph / 2); ctx.scale(0.85 + 0.15 * e, 0.85 + 0.15 * e); ctx.translate(-W / 2, -(top + ph / 2));
+  solidPanel(24, top, W - 48, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(21, true); ctx.fillText("What a bubbly game!", W / 2, top + 32);
+  for (let i = 0; i < 3; i++) {
+    const st = t - 0.35 - i * 0.22, k = st <= 0 ? 0 : easeOutBack(Math.min(1, st / 0.3));
+    if (st > 0 && st - frameDt <= 0 && i < R.stars) sfxStar(i);
+    drawStarShape(W / 2 + (i - 1) * 56, top + 80 - (i === 1 ? 6 : 0), i === 1 ? 24 : 20, i < R.stars, Math.max(0.01, k));
+  }
+  ctx.fillStyle = C.textSoft; font(13, false);
+  let y = top + 128;
+  ctx.fillText("Score " + mg.score + " · " + mg.popped + " bubbles · wave " + Math.min(BP_WAVES, mg.wave + (mg.wave >= BP_WAVES ? 0 : 1)), W / 2, y);
+  ctx.fillText("Best: " + B.best, W / 2, y + 20);
+  if (R.newBest) {
+    ctx.save(); ctx.translate(W - 70, top + 62); ctx.rotate(0.25);
+    ctx.fillStyle = "#ff6b9d"; roundRect(-34, -11, 68, 22, 11); ctx.fill();
+    ctx.fillStyle = "#fff"; font(11, true); ctx.fillText("New best!", 0, 1);
+    ctx.restore();
+  }
+  const hop = kind.motion ? 0 : Math.abs(Math.sin(t * 6)) * 8;
+  drawSprite(mg.critter, W / 2, top + 268 - hop, 2.0, false, 0, false, 11, { acc: equippedFor(mg.critter.id), heartEyes: true });
+  y += 56;
+  ctx.fillStyle = C.heart; font(24, true);
+  ctx.fillText("♥ +" + Math.floor((R.hearts + R.daily) * Math.min(1, t / 0.9)), W / 2, y);
+  font(11, false); ctx.fillStyle = C.textSoft;
+  const parts = [];
+  if (R.hearts) parts.push(R.hearts + " for the round");
+  if (R.daily) parts.push(R.daily + " daily bonus ✦");
+  if (parts.length) ctx.fillText(parts.join(" + "), W / 2, y + 24);
+  if (R.seeds) { ctx.fillStyle = "#3f9a48"; font(12, true); ctx.fillText("🌱 First milestone! +" + R.seeds + " Bloom Seed", W / 2, y + 42); }
+  else if (R.capped) ctx.fillText("Today's round hearts are all collected, play just for fun!", W / 2, y + 42);
+  ctx.restore();
+  uiButtons = [];
+  const by = top + ph - 66, gap = 8, bw = (W - 64 - gap) / 2;
+  if (t > 0.5) [["Again", "mg_again", C.btn, "#ff80b0"], ["Arcade", "mg_arcade", "#e8d0ff", "#c090e0"]]
+    .forEach((it, i) => uiButtons.push(btn(32 + i * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
+}
+V165_ACTIONS.push(id => { if (id === "arc_bpop") { startMg("bpop"); return true; } return false; });
+// quest + ladder
+[
+  { id: "bpop_play", ev: "bpop", need: () => 1, ok: () => true, text: () => "Play a round of Bubble Pop Bounce (Games)", pay: 30 },
+].forEach(q => { if (!V16_QUEST_BY_ID[q.id]) { V16_QUESTS.push(q); V16_QUEST_BY_ID[q.id] = q; } });
+if (typeof LADDERS !== "undefined" && !LADDER_BY_ID.bpop) {
+  const L = { id: "bpop", name: "Bubble Popper", icon: "◯", unit: "Bubble Pop best", val: () => ensureHc165().bpop.best, t: [400, 800, 1300, 2000] };
+  LADDERS.push(L); LADDER_BY_ID.bpop = L;
+}
+
+// ---------- What's New (v16.5) ----------
+Object.assign(WHATS_NEW, {
+  sub: "Dress-Up Show, Fishing & Bubble Pop",
+  pals: ["cat", "bunny", "owl", "dog"],
+  items: [
+    "Dress-Up Show (Fun menu): themes, judges & ribbons",
+    "Fishing on the boat trip: 22 fish & sea friends",
+    "Fish Album tab in the Album, plus a Fishing Hat",
+    "Bubble Pop Bounce: a new game in Games",
+    "Show prizes, fishing quests & new goal ladders",
+  ],
+});
+Object.assign(v165Api, { WHATS_NEW, BP_TIME, BP_STARS, BP_MILE, BP_WAVES, BP_PER_HEART, bpStars, bpBase, bpWave, bpLaunch, bpPop, bpFinish, bpPadY, bpopStats });
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -22532,7 +23727,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
         adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps,
-        hc15, farm, hc154, hc16, hc162, hc163, hc164 };
+        hc15, farm, hc154, hc16, hc162, hc163, hc164, hc165 };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -22577,6 +23772,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     v162: v162Api,
     v163: v163Api,
     v164: v164Api,
+    v165: v165Api,
     drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
