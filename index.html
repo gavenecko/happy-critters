@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.3-tides">
+<meta name="hc-version" content="16.4-harvest">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.3 — tides update
+// Happy Critters v16.4 — harvest update
 
 const W = 360;
 let H = 540;
@@ -142,6 +142,14 @@ const PAL = [
   "#5fd0d4",
   "#1f7f8c",
   "#fff3c4",
+  "#3a3550",
+  "#5a5478",
+  "#e0403a",
+  "#6aa83a",
+  "#d8a850",
+  "#f0d080",
+  "#e0502a",
+  "#dcdcf0",
 ];
 const SPRITE_ALPH = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 function parseGrid(rows) {
@@ -5630,6 +5638,7 @@ function load() {
     if (typeof normalizeHc16 === "function") hc16 = normalizeHc16(d.hc16);
     if (typeof normalizeHc162 === "function") hc162 = normalizeHc162(d.hc162);
     if (typeof normalizeHc163 === "function") hc163 = normalizeHc163(d.hc163);
+    if (typeof normalizeHc164 === "function") hc164 = normalizeHc164(d.hc164);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -5657,6 +5666,7 @@ function save() {
       hc16: (typeof hc16 !== "undefined" ? hc16 : null),
       hc162: (typeof hc162 !== "undefined" ? hc162 : null),
       hc163: (typeof hc163 !== "undefined" ? hc163 : null),
+      hc164: (typeof hc164 !== "undefined" ? hc164 : null),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -9520,8 +9530,8 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 18;
-const APP_LABEL = "v16.3";
+const APP_VERSION = 19;
+const APP_LABEL = "v16.4";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "Coral Cove & Cozy Yards",
@@ -10682,10 +10692,11 @@ function drawGardenHUD() {
     const gap = 5, bw = (W - 16 - gap * (items.length - 1)) / items.length;
     items.forEach((b, i) => uiButtons.push(btn(8 + i * (bw + gap), by, bw, 44, b[0], { id: b[1], size: items.length > 4 ? 12 : 13, bg: b[2], border: b[3] })));
   } else {
-    uiButtons.push(btn(8, by, 72, 44, "◂ Back", { id: "close", size: 13, bg: "#f5e6ee", border: "#d0b0c0" }));
-    uiButtons.push(btn(85, by, 86, 44, "Postcard", { id: "postcard", size: 13, bg: "#fff0f8", border: "#e090b0" }));
-    uiButtons.push(btn(176, by, 76, 44, "Style", { id: "v163_style", size: 13, bg: "#e0f4ff", border: "#80b8e0" }));
-    uiButtons.push(btn(257, by, W - 265, 44, "✿ Decor", { id: "decor", size: 14, bg: "#d0ffd8", border: "#70c080" }));
+    // Back · Postcard · Style · Care · Decor (five even-ish buttons across the bottom bar)
+    const yb = [["◂ Back", "close", "#f5e6ee", "#d0b0c0", 62], ["Postcard", "postcard", "#fff0f8", "#e090b0", 74], ["Style", "v163_style", "#e0f4ff", "#80b8e0", 62],
+      ["♥ Care", "v164_care", "#ffe8d8", "#e0a070", 66], ["✿ Decor", "decor", "#d0ffd8", "#70c080", 0]];
+    let bx = 6;
+    yb.forEach((b, i) => { const w = b[4] || (W - 6 - bx); uiButtons.push(btn(bx, by, w, 44, b[0], { id: b[1], size: i === 4 ? 13 : 12, bg: b[2], border: b[3] })); bx += w + 4; });
   }
 }
 
@@ -13347,7 +13358,7 @@ function drawAdvStage() {
   if (!st) return;
   const R = ADV_REGIONS[st.r];
   if (st.def.finale) { drawAdvFinale(); return; }
-  if (st.ss && st.ss.mode === "sky") drawSkyBg(st.meter / 100); else if (st.ss && st.ss.mode === "coral") drawCoralBg(st.meter / 100); else drawAdvBg(st.r, st.meter / 100);
+  if (st.ss && st.ss.mode === "sky") drawSkyBg(st.meter / 100); else if (st.ss && st.ss.mode === "coral") drawCoralBg(st.meter / 100); else if (st.ss && st.ss.mode === "harvest") drawHarvestBg(st.meter / 100); else drawAdvBg(st.r, st.meter / 100);
   drawAdvPuddles();
   const order = st.pals.slice().sort((a, b) => a.baseY - b.baseY);
   for (const c of order) drawAdvPal(c);
@@ -13368,6 +13379,7 @@ function drawAdvStage() {
   if (st.state === "play" || st.state === "intro") {
     if (st.ss && (st.hint > 0 || st.state === "intro")) { const M = ssModInfo(); advPill(M.hint, 86, M.col, M.bd); }
     else if (st.hint > 0 || st.state === "intro") advPill(R.hint, 86, R.pill, R.accent);
+    else if (st.def.rescue && !st.rescued && st.ss && st.ss.mode === "harvest") advPill("Gently hug the lonely Scarecrow Crow (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#fff0d8", "#e0a050");
     else if (st.def.rescue && !st.rescued && st.ss && st.ss.mode === "coral") advPill("Gently hug the grumpy pufferfish (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#dff8f6", "#5fd0d4");
     else if (st.def.rescue && !st.rescued && st.ss && st.ss.mode === "sky") advPill("Hug the sulky Storm Sprite (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#eef0ff", "#a0a8e0");
     else if (st.def.rescue && !st.rescued) advPill("Find & hug the shy " + ADV_REGIONS[st.r].critter.replace("leopard", "snow leopard") + " (" + (st.rescueC ? st.rescueC.hugs : 0) + "/3)", 86, "#fff6d8", "#e0c060");
@@ -13700,7 +13712,7 @@ function closeAdvMap() {
   else scene = "title";
 }
 function advBand(r) {
-  const top = 78, bot = H - 76, bh = (bot - top) / (typeof CORAL_STAGES !== "undefined" ? 7 : typeof SKY_STAGES !== "undefined" ? 6 : 5); // band 5 = Sky Islands, 6 = Coral Cove
+  const top = 78, bot = H - 76, bh = (bot - top) / (typeof HARVEST_STAGES !== "undefined" ? 8 : typeof CORAL_STAGES !== "undefined" ? 7 : typeof SKY_STAGES !== "undefined" ? 6 : 5); // band 5 = Sky Islands, 6 = Coral Cove
   return { y0: bot - (r + 1) * bh, y1: bot - r * bh, h: bh };
 }
 function advNodePos(i) {
@@ -13928,7 +13940,7 @@ function drawCutArt(art, x, y, w, h, t) {
   const sc = w / W;
   const bgR = kind === "region" ? n : kind === "friend" ? n : kind === "king" || kind === "grouphug" ? 4 : 0;
   const bgK = kind === "graymeadow" || kind === "thieves" ? 0.1 : kind === "region" ? 0.2 : kind === "king" ? 0.15 + n * 0.1 : 1;
-  ctx.save(); ctx.translate(x, y + h - H * sc); ctx.scale(sc, sc); if (kind === "sky") drawSkyBg(1); else if (kind === "coral") drawCoralBg(1); else drawAdvBg(bgR, bgK); ctx.restore();
+  ctx.save(); ctx.translate(x, y + h - H * sc); ctx.scale(sc, sc); if (kind === "sky") drawSkyBg(1); else if (kind === "coral") drawCoralBg(1); else if (kind === "harvest") drawHarvestBg(1); else drawAdvBg(bgR, bgK); ctx.restore();
   const cx = x + w / 2, gy = y + h - 34;
   const hop = k => Math.abs(Math.sin(t * 5 + k)) * 5;
   if (kind === "graymeadow") {
@@ -13980,6 +13992,8 @@ function drawCutArt(art, x, y, w, h, t) {
     drawSkyCutArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "coral") {
     drawCoralCutArt(n, x, y, w, h, t, cx, gy);
+  } else if (kind === "harvest") {
+    drawHarvestCutArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "kingflower" && typeof drawKingFlowerArt === "function") {
     drawKingFlowerArt(n, x, y, w, h, t, cx, gy);
   } else if (kind === "theend") {
@@ -17410,7 +17424,7 @@ function funReadyBits() {
 }
 function funHasDot() {
   const now = funReadyBits();
-  for (let i = 0; i < 4; i++) if (now[i] === "1" && funSeenReady[i] !== "1") return true;
+  for (let i = 0; i < now.length; i++) if (now[i] === "1" && funSeenReady[i] !== "1") return true;
   return false;
 }
 function closeFunMenu() {
@@ -17469,17 +17483,21 @@ function drawFunButton() {
   }
   uiButtons.push(btn(hx, hy, r.hit, r.hit, "", { id: "fun_toggle", size: 1, bg: "rgba(0,0,0,0)", border: "rgba(0,0,0,0)" }));
 }
-function drawFunSheet() {
-  if (!funOpen || scene !== "play") return;
-  // dim backdrop
-  ctx.fillStyle = "rgba(18, 10, 24, 0.42)";
-  ctx.fillRect(0, 0, W, H);
-  const rows = [
+// rows of the Fun sheet: [label, kind, action id, bg, border]; later updates append rows (e.g. holiday fun)
+function funRows() {
+  return [
     ["Seek", "seek", "v154_seek", "#d8f5c8", "#70b070"],
     ["Picnic", "picnic", "v154_picnic", "#ffd0e0", "#e090b0"],
     ["Beach", "beach", "v154_beach", "#c8ecff", "#70b0d8"],
     ["Parade", "parade", "v154_parade", "#efe6ff", "#b090e0"],
   ];
+}
+function drawFunSheet() {
+  if (!funOpen || scene !== "play") return;
+  // dim backdrop
+  ctx.fillStyle = "rgba(18, 10, 24, 0.42)";
+  ctx.fillRect(0, 0, W, H);
+  const rows = funRows();
   const rowH = 52, gap = 6, pad = 14;
   const sheetH = pad + rows.length * (rowH + gap) - gap + 56;
   const sheetY = H - sheetH - 8;
@@ -21228,6 +21246,1265 @@ const v163Api = {
   yardTheme, setYardTheme, checkCozyTiers, layerItem, drawCoralBg,
 };
 
+// v16.4 Harvest Hollow friends + Ghostie Kitten: pixel art (generated by hc-art/gen164.py)
+SPRITE_FRAMES["scarecrow"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000111111000000000", "000000001SSSSSST00000000", "00000001STSSSSSS10000000", "00001111UUUUUUUS11100000", "0001SSSSSSSSSSSSSSS10000", "0001SSSSSSSSSSSSSSS10000", "000T1T11OOOOOOOO1T1T0000", "0000001OOOOOOOOOO1000000", "0000001OhhOOOOhhO1000000", "000011OhihhOOhihhO110000", "0001PP1hiihOOhiih1PP1000", "001PPPPOhhxxxxhhOPPPP100", "001POPggOOxxxxOOggPOP100", "001PPPPOOOOxxOOOOPPPP100", "001PPPPUUUUUUUUUUPPPP100", "001PPPPUUGUUGUUGUPPPP100", "001PPPPOOOOOOOUUOPPPP100", "001PPPPOOOOOOOUUOPPPP100", "0001PPOOOTOOOOTOOOPP1000", "0000111OOOOTOOOOO1110000", "00000001xxOOOxx110000000", "00000001xx111xx100000000", "000000001100011000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000111111000000000", "000000001SSSSSST00000000", "00000001STSSSSSS10000000", "00001111UUUUUUUS11100000", "0001SSSSSSSSSSSSSSS10000", "0001SSSSSSSSSSSSSSS10000", "000T1T11OOOOOOOO1T1T0000", "0000001OOOOOOOOOO1000000", "0000001OhhOOOOhhO1000000", "000011OhhhhOOhhhhO110000", "0001PP1h11hOOh11h1PP1000", "001PPPPOhhxxxxhhOPPPP100", "001POPggOOxxxxOOggPOP100", "001PPPPOOOOxxOOOOPPPP100", "001PPPPUUUUUUUUUUPPPP100", "001PPPPUUGUUGUUGUPPPP100", "001PPPPOOOOOOOUUOPPPP100", "001PPPPOOOOOOOUUOPPPP100", "0001PPOOOTOOOOTOOOPP1000", "0000111OOOOTOOOOO1110000", "00000001xxOOOxx110000000", "00000001xx111xx100000000", "000000001100011000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000111111000000000", "000000001SSSSSST00000000", "00000001STSSSSSS10000000", "00001111UUUUUUUS11100000", "0001SSSSSSSSSSSSSSS10000", "0001SSSSSSSSSSSSSSS10000", "000T1T11OOOOOOOO1T1T0000", "0000001OOOOOOOOOO1000000", "0000001OhhOOOOhhO1000000", "000011OhihhOOhihhO110000", "0001PP1hiihOOhiih1PP1000", "001PPPPOkhxxxxhhOPPPP100", "001POPPOkOxxxxOOOPPOP100", "001PPPPOOOOxxOOOOPPPP100", "001PPPPUUUUUUUUUUPPPP100", "001PPPPUUGUUGUUGUPPPP100", "001PPPPOOOOOOOUUOPPPP100", "001PPPPOOOOOOOUUOPPPP100", "0001PPOOOTOOOOTOOOPP1000", "0000111OOOOTOOOOO1110000", "00000001xxOOOxx110000000", "00000001xx111xx100000000", "000000001100011000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000111111000000000", "000000001SSSSSST00000000", "00000001STSSSSSS10000000", "00001111UUUUUUUS11100000", "0001SSSSSSSSSSSSSSS10000", "0001SSSSSSSSSSSSSSS10000", "000T1T11OOOOOOOO1T1T0000", "0000001OOOOOOOOOO1000000", "0000001OhhOOOOhhO1000000", "000011OhihhOOhihhO110000", "0001PP1hiihOOhiih1PP1000", "001PPPPOkhxxxxhhOPPPP100", "001POPPOkOxxxxOOOPPOP100", "001PPPPOOOOxxOOOOPPPP100", "001PPPPUUUUUUUUUUPPPP100", "001PPPPUUGUUGUUGUPPPP100", "001PPPPOOOOOOOUUOPPPP100", "001PPPPOOOOOOOUUOPPPP100", "0001PPOOOTOOOOTOOOPP1000", "0000111OOOOTOOOOO1110000", "00000001xxOOOxx110000000", "00000001xx111xx100000000", "000000001100011000000000"]),
+};
+ANCHOR["scarecrow"] = [11.5, 5, 10.5, 3, 13];
+SPRITE_FRAMES["pumpkinmouse"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001110000000", "00001111001111RRR1110000", "0001CCCC11sssRRRRRCC1000", "001CCggCC1sss1RRRggCC100", "001CggggC1sss11CggggC100", "001CCggCxxyxxyxxCggCC100", "0001CCxxxyxxxxyxxxCC1000", "00001xxxihxxxxihxxx10000", "0001xxx9iixxxxiixxxx1000", "0001yx9xiix44xiixxxy1010", "001xxxggyxxxxxxyggxxx1C1", "001xyxxxyx1xx1xyxxxyx1C1", "001xxxxxyxx11xxyxxxxx1C1", "0001yxxxyyxxxxyyxxxy1C10", "0001xxxxyyxxxxyyxxxxC100", "00001xxxxyxxxxyxxxx1C100", "000001xxxyxxxxyxxx101000", "00000011xxyxxyxx11000000", "000000001111111100000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001110000000", "00001111001111RRR1110000", "0001CCCC11sssRRRRRCC1000", "001CCggCC1sss1RRRggCC100", "001CggggC1sss11CggggC100", "001CCggCxxyxxyxxCggCC100", "0001CCxxxyxxxxyxxxCC1000", "00001xxxxyxxxxyxxxx10000", "0001xxx9yyxxxxyyxxxx1000", "0001yx9x11x44x11xxxy1010", "001xxxggyxxxxxxyggxxx1C1", "001xyxxxyx1xx1xyxxxyx1C1", "001xxxxxyxx11xxyxxxxx1C1", "0001yxxxyyxxxxyyxxxy1C10", "0001xxxxyyxxxxyyxxxxC100", "00001xxxxyxxxxyxxxx1C100", "000001xxxyxxxxyxxx101000", "00000011xxyxxyxx11000000", "000000001111111100000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001110000000", "00001111001111RRR1110000", "0001CCCC11sssRRRRRCC1000", "001CCggCC1sss1RRRggCC100", "001CggggC1sss11CggggC100", "001CCggCxxyxxyxxCggCC100", "0001CCxxxyxxxxyxxxCC1000", "00001xxxihxxxxihxxx10000", "0001xxx9iixxxxiixxxx1000", "0001yx9xiix44xiixxxy1010", "001xxxxxkxxxxxxyxxxxx1C1", "001xyxxxkxx11xxyxxxyx1C1", "001xxxxxyx1xx1xyxxxxx1C1", "0001yxxxyyxxxxyyxxxy1C10", "0001xxxxyyxxxxyyxxxxC100", "00001xxxxyxxxxyxxxx1C100", "000001xxxyxxxxyxxx101000", "00000011xxyxxyxx11000000", "000000001111111100000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000001110000000", "00001111001111RRR1110000", "0001CCCC11sssRRRRRCC1000", "001CCggCC1sss1RRRggCC100", "001CggggC1sss11CggggC100", "001CCggCxxyxxyxxCggCC100", "0001CCxxxyxxxxyxxxCC1000", "00001xxxihxxxxihxxx10000", "0001xxx9iixxxxiixxxx1000", "0001yx9xiix44xiixxxy1010", "001xxxxxkxxxxxxyxxxxx1C1", "001xyxxxkxx11xxyxxxyx1C1", "001xxxxxyx1xx1xyxxxxx1C1", "0001yxxxyyxxxxyyxxxy1C10", "0001xxxxyyxxxxyyxxxxC100", "00001xxxxyxxxxyxxxx1C100", "000001xxxyxxxxyxxx101000", "00000011xxyxxyxx11000000", "000000001111111100000000", "000000000000000000000000"]),
+};
+ANCHOR["pumpkinmouse"] = [11.5, 7, 11.5, 3, 13];
+SPRITE_FRAMES["acornkit"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000000000ss000000000000", "0000001111s1111000111100", "000001nnnnnnnnn101777710", "00001nsnsnsnsnsn17777571", "00001nnnnnnnnnnn77777771", "000001nnnnnnnnn777777771", "00000166nnnnn66777777771", "0000166ih666ih6677775771", "0000166ii666ii6677777771", "00001gg666866gg677777771", "000001661661666777757771", "000001666116666777777771", "000016666666666677777771", "000016665555566677777771", "000016655nnn556677777710", "000016655rrr556617777100", "000016655rrr556611771000", "000016655555556610110000", "000001665555566100000000", "000001777667771000000000", "000000111111110000000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000000000ss000000000000", "0000001111s1111000111100", "000001nnnnnnnnn101777710", "00001nsnsnsnsnsn17777571", "00001nnnnnnnnnnn77777771", "000001nnnnnnnnn777777771", "00000166nnnnn66777777771", "000016666666666677775771", "000016611666116677777771", "00001gg666866gg677777771", "000001661661666777757771", "000001666116666777777771", "000016666666666677777771", "000016665555566677777771", "000016655nnn556677777710", "000016655rrr556617777100", "000016655rrr556611771000", "000016655555556610110000", "000001665555566100000000", "000001777667771000000000", "000000111111110000000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000000000ss000000000000", "0000001111s1111000111100", "000001nnnnnnnnn101777710", "00001nsnsnsnsnsn17777571", "00001nnnnnnnnnnn77777771", "000001nnnnnnnnn777777771", "00000166nnnnn66777777771", "0000166ih666ih6677775771", "0000166ii666ii6677777771", "0000166k6686666677777771", "0000016k6116666777757771", "000001661661666777777771", "000016666666666677777771", "000016665555566677777771", "000016655nnn556677777710", "000016655rrr556617777100", "000016655rrr556611771000", "000016655555556610110000", "000001665555566100000000", "000001777667771000000000", "000000111111110000000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "0000000000ss000000000000", "0000001111s1111000111100", "000001nnnnnnnnn101777710", "00001nsnsnsnsnsn17777571", "00001nnnnnnnnnnn77777771", "000001nnnnnnnnn777777771", "00000166nnnnn66777777771", "0000166ih666ih6677775771", "0000166ii666ii6677777771", "0000166k6686666677777771", "0000016k6116666777757771", "000001661661666777777771", "000016666666666677777771", "000016665555566677777771", "000016655nnn556677777710", "000016655rrr556617777100", "000016655rrr556611771000", "000016655555556610110000", "000001665555566100000000", "000001777667771000000000", "000000111111110000000000", "000000000000000000000000"]),
+};
+ANCHOR["acornkit"] = [10, 5, 9.5, 2.5, 11];
+SPRITE_FRAMES["applehog"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001000100000000", "000000001018101810100000", "0000000181888sR881810000", "000000188818HQQ818881000", "000001818888QQQ888818100", "000018888888QQQ8888sR810", "000001888887888888HQQ110", "000001555555888888QQQ881", "000015555555588888QQQ881", "00015ih555ih5588sR888881", "00015ii555ii558HQQ887810", "001555555555555QQQ888881", "0015gg55555gg58QQQ888881", "000155155155558888888881", "000015511555588887881110", "000001555555888888110000", "000001777118887771000000", "000000111001111110000000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001000100000000", "000000001018101810100000", "0000000181888sR881810000", "000000188818HQQ818881000", "000001818888QQQ888818100", "000018888888QQQ8888sR810", "000001888887888888HQQ110", "000001555555888888QQQ881", "000015555555588888QQQ881", "0001555555555588sR888881", "000151155511558HQQ887810", "001555555555555QQQ888881", "0015gg55555gg58QQQ888881", "000155155155558888888881", "000015511555588887881110", "000001555555888888110000", "000001777118887771000000", "000000111001111110000000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001000100000000", "000000001018101810100000", "0000000181888sR881810000", "000000188818HQQ818881000", "000001818888QQQ888818100", "000018888888QQQ8888sR810", "000001888887888888HQQ110", "000001555555888888QQQ881", "000015555555588888QQQ881", "00015ih555ih5588sR888881", "00015ii555ii558HQQ887810", "00155k555555555QQQ888881", "00155k555555558QQQ888881", "000155511555558888888881", "000015155155588887881110", "000001555555888888110000", "000001777118887771000000", "000000111001111110000000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000000000000000000", "000000000001000100000000", "000000001018101810100000", "0000000181888sR881810000", "000000188818HQQ818881000", "000001818888QQQ888818100", "000018888888QQQ8888sR810", "000001888887888888HQQ110", "000001555555888888QQQ881", "000015555555588888QQQ881", "00015ih555ih5588sR888881", "00015ii555ii558HQQ887810", "00155k555555555QQQ888881", "00155k555555558QQQ888881", "000155511555558888888881", "000015155155588887881110", "000001555555888888110000", "000001777118887771000000", "000000111001111110000000", "000000000000000000000000"]),
+};
+ANCHOR["applehog"] = [9, 9, 14.5, 2.5, 17];
+SPRITE_FRAMES["maplefox"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001vv100000l1vv100000", "00001vvvv1000lllvvv10000", "00001vgvv111l1lvlvv10000", "00001vgvv1vvvlllgvv10000", "00001vvvvvvvvvsvvvv10000", "00001vvvvvvvvvvvvvv10000", "000001vvihvvvvihvv100000", "000001vviivvvviivv100000", "000001vvvvhhhhvvvv100000", "000001vgghh11hhggv111000", "000001vvhh1hh1hhvvvvv100", "0000001vvhh11hhvvvvvvv10", "00000001vvhhhhvv1vvvvv10", "0000001vvvhhhhvvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvhhh10", "00000001vvhhhhvv1vhhhhh1", "00000001wwvvvww101vhhh10", "00000001ww111ww100111100", "000000001100011000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001vv100000l1vv100000", "00001vvvv1000lllvvv10000", "00001vgvv111l1lvlvv10000", "00001vgvv1vvvlllgvv10000", "00001vvvvvvvvvsvvvv10000", "00001vvvvvvvvvvvvvv10000", "000001vvvvvvvvvvvv100000", "000001vv11vvvv11vv100000", "000001vvvvhhhhvvvv100000", "000001vgghh11hhggv111000", "000001vvhh1hh1hhvvvvv100", "0000001vvhh11hhvvvvvvv10", "00000001vvhhhhvv1vvvvv10", "0000001vvvhhhhvvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvhhh10", "00000001vvhhhhvv1vhhhhh1", "00000001wwvvvww101vhhh10", "00000001ww111ww100111100", "000000001100011000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001vv100000l1vv100000", "00001vvvv1000lllvvv10000", "00001vgvv111l1lvlvv10000", "00001vgvv1vvvlllgvv10000", "00001vvvvvvvvvsvvvv10000", "00001vvvvvvvvvvvvvv10000", "000001vvihvvvvihvv100000", "000001vviivvvviivv100000", "000001vvkvhhhhvvvv100000", "000001vvkhh11hhvvv111000", "000001vvhhh11hhhvvvvv100", "0000001vvh1hh1hvvvvvvv10", "00000001vvhhhhvv1vvvvv10", "0000001vvvhhhhvvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvhhh10", "00000001vvhhhhvv1vhhhhh1", "00000001wwvvvww101vhhh10", "00000001ww111ww100111100", "000000001100011000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001vv100000l1vv100000", "00001vvvv1000lllvvv10000", "00001vgvv111l1lvlvv10000", "00001vgvv1vvvlllgvv10000", "00001vvvvvvvvvsvvvv10000", "00001vvvvvvvvvvvvvv10000", "000001vvihvvvvihvv100000", "000001vviivvvviivv100000", "000001vvkvhhhhvvvv100000", "000001vvkhh11hhvvv111000", "000001vvhhh11hhhvvvvv100", "0000001vvh1hh1hvvvvvvv10", "00000001vvhhhhvv1vvvvv10", "0000001vvvhhhhvvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvvvvv1", "0000001vvhhhhhhvvvvhhh10", "00000001vvhhhhvv1vhhhhh1", "00000001wwvvvww101vhhh10", "00000001ww111ww100111100", "000000001100011000000000"]),
+};
+ANCHOR["maplefox"] = [11.5, 6, 9.5, 3, 12];
+SPRITE_FRAMES["haybunny"] = {
+  idle: parseGrid(["000000001000000100000000", "00000001S100001S10000000", "0000001SSS1001SSS1000000", "0000001SgS1001SgS1000000", "0000001SgS1001SgS1000000", "0000001SSS1001SSS1000000", "0000001SSS1001SSS1000000", "0000001SSS1111SSS1000000", "0000001STTTTTTTTS1000000", "0000001TTTTTTTTTT1000000", "0000001TihTTTTihT1000000", "000001TTiiTTTTiiTT100000", "000001TTTTTTTTTTTT100000", "000001TggTT44TTggT100000", "0000001TTS1SS1STT1000000", "00000T1SGGG11GGGS1T00000", "000001SSSSnGGSSSSS100000", "000001nSSSSSSnSSSS100000", "0000TSSSSSSSSSSSSSS10000", "000001SSSnSSSSSSnS1T0000", "000001SnSSSSSSnSSS100000", "000001SSSSSSSSSSS1000000", "000000111SSSSSS110000000", "000000000111111000000000"]),
+  blink: parseGrid(["000000001000000100000000", "00000001S100001S10000000", "0000001SSS1001SSS1000000", "0000001SgS1001SgS1000000", "0000001SgS1001SgS1000000", "0000001SSS1001SSS1000000", "0000001SSS1001SSS1000000", "0000001SSS1111SSS1000000", "0000001STTTTTTTTS1000000", "0000001TTTTTTTTTT1000000", "0000001TTTTTTTTTT1000000", "000001TT11TTTT11TT100000", "000001TTTTTTTTTTTT100000", "000001TggTT44TTggT100000", "0000001TTS1SS1STT1000000", "00000T1SGGG11GGGS1T00000", "000001SSSSnGGSSSSS100000", "000001nSSSSSSnSSSS100000", "0000TSSSSSSSSSSSSSS10000", "000001SSSnSSSSSSnS1T0000", "000001SnSSSSSSnSSS100000", "000001SSSSSSSSSSS1000000", "000000111SSSSSS110000000", "000000000111111000000000"]),
+  sad: parseGrid(["000000001000000100000000", "00000001S100001S10000000", "0000001SSS1001SSS1000000", "0000001SgS1001SgS1000000", "0000001SgS1001SgS1000000", "0000001SSS1001SSS1000000", "0000001SSS1001SSS1000000", "0000001SSS1111SSS1000000", "0000001STTTTTTTTS1000000", "0000001TTTTTTTTTT1000000", "0000001TihTTTTihT1000000", "000001TTiiTTTTiiTT100000", "000001TTkTTTTTTTTT100000", "000001TTkTT44TTTTT100000", "0000001TTSS11SSTT1000000", "00000T1SGG1GG1GGS1T00000", "000001SSSSnGGSSSSS100000", "000001nSSSSSSnSSSS100000", "0000TSSSSSSSSSSSSSS10000", "000001SSSnSSSSSSnS1T0000", "000001SnSSSSSSnSSS100000", "000001SSSSSSSSSSS1000000", "000000111SSSSSS110000000", "000000000111111000000000"]),
+  sadBlink: parseGrid(["000000001000000100000000", "00000001S100001S10000000", "0000001SSS1001SSS1000000", "0000001SgS1001SgS1000000", "0000001SgS1001SgS1000000", "0000001SSS1001SSS1000000", "0000001SSS1001SSS1000000", "0000001SSS1111SSS1000000", "0000001STTTTTTTTS1000000", "0000001TTTTTTTTTT1000000", "0000001TihTTTTihT1000000", "000001TTiiTTTTiiTT100000", "000001TTkTTTTTTTTT100000", "000001TTkTT44TTTTT100000", "0000001TTSS11SSTT1000000", "00000T1SGG1GG1GGS1T00000", "000001SSSSnGGSSSSS100000", "000001nSSSSSSnSSSS100000", "0000TSSSSSSSSSSSSSS10000", "000001SSSnSSSSSSnS1T0000", "000001SnSSSSSSnSSS100000", "000001SSSSSSSSSSS1000000", "000000111SSSSSS110000000", "000000000111111000000000"]),
+};
+ANCHOR["haybunny"] = [11.5, 7, 10.5, 3, 13];
+SPRITE_FRAMES["ghostie"] = {
+  idle: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001hh10000001hh100000", "00001hhhh111111hhhh10000", "00001hghh1hhhh1hghh10000", "00001hhhhhhhhhhhhhh10000", "000001hhhhhhhhhhhh100000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhVV10000", "00001hhhhhhhhhhhhVV10000", "0001hhhhihhhhhihhVVV1000", "0001hhhhiihhhhiihVVV1000", "0001hhhhiihhhhiihVVV1I00", "00I1hhgghhhhhhhhggVV1000", "0001hhhhhh1hh1hhhVVV1000", "0001hhhhhhh11hhhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001VVVVVVVVVVVVVVVV1000", "0001VVVVVVVVVVVVVVVVV100", "00001VVV1VVV1VVV1VVV1000", "000001110111011101110000", "000000000000000000000000"]),
+  blink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001hh10000001hh100000", "00001hhhh111111hhhh10000", "00001hghh1hhhh1hghh10000", "00001hhhhhhhhhhhhhh10000", "000001hhhhhhhhhhhh100000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhVV10000", "00001hhhhhhhhhhhhVV10000", "0001hhhhhhhhhhhhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001hhhh11hhhh11hVVV1I00", "00I1hhgghhhhhhhhggVV1000", "0001hhhhhh1hh1hhhVVV1000", "0001hhhhhhh11hhhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001VVVVVVVVVVVVVVVV1000", "0001VVVVVVVVVVVVVVVVV100", "00001VVV1VVV1VVV1VVV1000", "000001110111011101110000", "000000000000000000000000"]),
+  sad: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001hh10000001hh100000", "00001hhhh111111hhhh10000", "00001hghh1hhhh1hghh10000", "00001hhhhhhhhhhhhhh10000", "000001hhhhhhhhhhhh100000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhVV10000", "00001hhhhhhhhhhhhVV10000", "0001hhhhihhhhhihhVVV1000", "0001hhhhiihhhhiihVVV1000", "0001hhhhiihhhhiihVVV1I00", "00I1hhhhkhhhhhhhhVVV1000", "0001hhhhkhh11hhhhVVV1000", "0001hhhhhh1hh1hhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001VVVVVVVVVVVVVVVV1000", "0001VVVVVVVVVVVVVVVVV100", "00001VVV1VVV1VVV1VVV1000", "000001110111011101110000", "000000000000000000000000"]),
+  sadBlink: parseGrid(["000000000000000000000000", "000000000000000000000000", "000000110000000011000000", "000001hh10000001hh100000", "00001hhhh111111hhhh10000", "00001hghh1hhhh1hghh10000", "00001hhhhhhhhhhhhhh10000", "000001hhhhhhhhhhhh100000", "000001hhhhhhhhhhhh100000", "00001hhhhhhhhhhhhVV10000", "00001hhhhhhhhhhhhVV10000", "0001hhhhihhhhhihhVVV1000", "0001hhhhiihhhhiihVVV1000", "0001hhhhiihhhhiihVVV1I00", "00I1hhhhkhhhhhhhhVVV1000", "0001hhhhkhh11hhhhVVV1000", "0001hhhhhh1hh1hhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001hhhhhhhhhhhhhVVV1000", "0001VVVVVVVVVVVVVVVV1000", "0001VVVVVVVVVVVVVVVVV100", "00001VVV1VVV1VVV1VVV1000", "000001110111011101110000", "000000000000000000000000"]),
+};
+ANCHOR["ghostie"] = [11.5, 5, 11.5, 3, 14];
+
+// ===================== v16.4 — Harvest Hollow region, six autumn friends =====================
+// New state lives in hc164 (normalized on load), so older saves migrate without loss.
+// Halloween (holiday framework) is in g21b-halloween.js, the Care Corner in g21c-care.js.
+
+// ---------- state ----------
+const HARV_N = 3;
+const HOLIDAY_IDS = ["halloween"];
+function blankHarvest() { return { gm: [0, 0, 0], best: [0, 0, 0], runs: 0, wins: 0, leaves: 0, gusts: 0, scare: 0, done: false }; }
+function blankHol() { return { y: 0, total: 0, day: "", today: 0, step: 0, n: 0, own: {}, done: false }; }
+function blankCare() { return { needs: {}, last: 0, streak: 0, best: 0, sday: "", treats: 3, total: 0, seen: false }; }
+function blankHc164() { const h = {}; for (const id of HOLIDAY_IDS) h[id] = blankHol(); return { harvest: blankHarvest(), hol: h, care: blankCare(), hints: {}, seen: false }; }
+let hc164 = blankHc164();
+const intIn = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.floor(numOr0(v))));
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+function normalizeHc164(d) {
+  const o = blankHc164();
+  if (!isObj(d)) return o;
+  if (isObj(d.harvest)) {
+    const c = d.harvest;
+    if (Array.isArray(c.gm)) for (let i = 0; i < HARV_N; i++) o.harvest.gm[i] = Math.floor(numOr0(c.gm[i])) & 7;
+    if (Array.isArray(c.best)) for (let i = 0; i < HARV_N; i++) o.harvest.best[i] = Math.max(0, numOr0(c.best[i]));
+    for (const k of ["runs", "wins", "leaves", "gusts", "scare"]) o.harvest[k] = Math.max(0, Math.floor(numOr0(c[k])));
+    o.harvest.done = !!c.done;
+  }
+  if (isObj(d.hol)) for (const id of HOLIDAY_IDS) {
+    const s = d.hol[id], t = o.hol[id];
+    if (!isObj(s)) continue;
+    t.y = intIn(s.y, 0, 9999); t.total = intIn(s.total, 0, 9999); t.today = intIn(s.today, 0, 99);
+    t.day = typeof s.day === "string" && DAY_RE.test(s.day) ? s.day : "";
+    t.step = intIn(s.step, 0, 99); t.n = intIn(s.n, 0, 99999); t.done = !!s.done;
+    if (isObj(s.own)) for (const k in s.own) if (s.own[k] === true && /^[a-z0-9_]{1,24}$/.test(k)) t.own[k] = true;
+  }
+  if (isObj(d.care)) {
+    const c = d.care, t = o.care;
+    if (isObj(c.needs)) for (const id in c.needs) {
+      const v = c.needs[id];
+      if (!Array.isArray(v) || !/^[a-z0-9_]{1,24}$/.test(id)) continue;
+      t.needs[id] = [0, 1, 2].map(i => Math.round(Math.min(100, Math.max(0, numOr0(v[i]))) * 10) / 10);
+    }
+    t.last = Math.max(0, numOr0(c.last));
+    t.streak = intIn(c.streak, 0, 9999); t.best = intIn(c.best, 0, 9999); t.total = intIn(c.total, 0, 999999);
+    t.sday = typeof c.sday === "string" && DAY_RE.test(c.sday) ? c.sday : "";
+    t.treats = c.treats == null ? 3 : intIn(c.treats, 0, 999);
+    t.seen = !!c.seen;
+  }
+  if (isObj(d.hints)) for (const k in d.hints) if (d.hints[k] === true && /^[a-z0-9_]{1,24}$/.test(k)) o.hints[k] = true;
+  o.seen = !!d.seen;
+  return o;
+}
+function ensureHc164() { if (!hc164 || !hc164.harvest || !hc164.hol || !hc164.care || !hc164.hints) hc164 = normalizeHc164(hc164); return hc164; }
+function hint164(k, text, color) {
+  const H4 = ensureHc164();
+  if (H4.hints[k]) return false;
+  H4.hints[k] = true;
+  softHint(text, color);
+  saveSoon();
+  return true;
+}
+// ---------- six Harvest Hollow friends ----------
+// harvK = befriended in that Harvest Hollow stage (counts toward "Unlock every friend");
+// the rest sit in the Shop just above the Coral shop friends (max 21000).
+const HARVEST_FRIENDS = [
+  { id: "pumpkinmouse", name: "Pumpkin Mouse", cost: 0, harvK: 0, bio: "Lives in a cozy pumpkin. Smells a little like pie." },
+  { id: "acornkit", name: "Acorn Squirrel Kit", cost: 22500, bio: "Wears its very first acorn cap. Hides snacks for later." },
+  { id: "applehog", name: "Apple Hedgehog", cost: 0, harvK: 1, bio: "Rolls through the orchard and comes out wearing apples." },
+  { id: "maplefox", name: "Maple Fox Kit", cost: 24500, bio: "Tucks a golden maple leaf behind one ear every fall." },
+  { id: "haybunny", name: "Hay Bunny", cost: 27000, bio: "Naps in hay bales. Always has a bit of straw somewhere." },
+  { id: "scarecrow", name: "Scarecrow Crow", cost: 0, harvK: 2, bio: "Used to guard the field all alone. Now it guards its friends." },
+];
+for (const f of HARVEST_FRIENDS) if (!ANIMALS.some(a => a.id === f.id)) {
+  const a = Object.assign({ harvest: true }, f);
+  if (f.harvK != null) a.skyK = f.harvK; // story-only friend: not sold, shows its story hint
+  ANIMALS.push(a);
+}
+const HARVEST_IDS = HARVEST_FRIENDS.map(f => f.id);
+{ const f = skyStoryText; skyStoryText = function (a) { if (a && a.harvest) return "✦ Befriend in Harvest Hollow"; return f.apply(this, arguments); }; }
+function harvestFriendsHave() { return HARVEST_IDS.filter(id => unlocked[id]).length; }
+
+// ---------- collections ----------
+[
+  { id: "harvest", name: "Harvest Friends", ids: HARVEST_IDS.slice(), seeds: 10, col: "#f0a050" },
+  { id: "autumn", name: "Cozy Autumn", ids: ["maplefox", "acornkit", "squirrel", "applehog", "owl"], seeds: 5, col: "#d8783a" },
+].forEach(s => { s.ids = s.ids.filter(id => ANIMALS.some(a => a.id === id)); if (!COLLECTIONS.some(c => c.id === s.id)) COLLECTIONS.push(s); });
+
+// ---------- region gate + helpers ----------
+function harvState() { ensureHc164(); return hc164.harvest; }
+function harvFriendCount() { return ANIMALS.filter(a => unlocked[a.id]).length; }
+// opens after the Coral Cove finale OR once you have 35 friends
+function harvOpen() { return !!((typeof coralState === "function" && coralState().done) || harvFriendCount() >= 35); }
+function harvWon(k) { return !!(harvState().gm[k] & 1); }
+function harvStageOpen(k) { return harvOpen() && k >= 0 && k < HARV_N && (k === 0 || harvWon(k - 1)); }
+function harvStars(k) { return popcnt3(harvState().gm[k] || 0); }
+function harvTotalStars() { let n = 0; for (let k = 0; k < HARV_N; k++) n += harvStars(k); return n; }
+const HARV_LOCK_TEXT = "Opens with 35 friends or after Coral Cove";
+
+// ---------- ten Harvest daily quests ----------
+[
+  { id: "harv_play", ev: "harvplay", need: () => 1, ok: () => harvOpen(), text: () => "Play a Harvest Hollow stage", pay: 45 },
+  { id: "harv_clear", ev: "harvclear", need: () => 1, ok: () => harvOpen(), text: () => "Clear a Harvest Hollow stage", pay: 60 },
+  { id: "harv_leaf", ev: "harvleaf", need: () => 4, ok: () => harvOpen(), text: (q) => "Find " + q.need + " pals in leaf piles", pay: 50 },
+  { id: "harv_gust", ev: "harvgust", need: () => 4, ok: () => harvOpen() && harvWon(0), text: (q) => "Hug " + q.need + " pals in an autumn gust", pay: 50 },
+  { id: "harv_scare", ev: "harvscare", need: () => 3, ok: () => harvOpen() && harvWon(1), text: (q) => "Let the scarecrow cheer " + q.need + " pals", pay: 50 },
+  { id: "harv_star", ev: "harvstar", need: () => 1, ok: () => harvOpen() && harvTotalStars() < HARV_N * 3, text: () => "Earn a new Harvest Hollow star", pay: 60 },
+  { id: "harv_map", ev: "harvmap", need: () => 1, ok: () => harvOpen(), text: () => "Peek at Harvest Hollow on the map", pay: 25 },
+  { id: "harv_hug", ev: "hug", need: () => 6, ok: () => harvestFriendsHave() > 0, text: (q) => "Hug Harvest friends " + q.need + " times", pay: 45, match: (q, arg) => HARVEST_IDS.includes(arg) },
+  { id: "harv_crow", ev: "hug", need: () => 3, ok: () => !!unlocked.scarecrow, text: (q) => "Give Scarecrow Crow " + q.need + " hugs", pay: 45, match: (q, arg) => arg === "scarecrow" },
+  { id: "harv_mouse", ev: "hug", need: () => 4, ok: () => !!unlocked.pumpkinmouse, text: (q) => "Hug Pumpkin Mouse " + q.need + " times", pay: 40, match: (q, arg) => arg === "pumpkinmouse" },
+].forEach(q => { if (!V16_QUEST_BY_ID[q.id]) { V16_QUESTS.push(q); V16_QUEST_BY_ID[q.id] = q; } });
+if (typeof LADDERS !== "undefined" && !LADDER_BY_ID.harvest) {
+  const L = { id: "harvest", name: "Harvest Helper", icon: "❦", unit: "Harvest Hollow stars", val: () => harvTotalStars(), t: [2, 4, 6, 9] };
+  LADDERS.push(L); LADDER_BY_ID.harvest = L;
+}
+
+// ---------- Harvest Hollow: three stages on the storybook map ----------
+// Same stage engine as Coral Cove (st.ss with mode "harvest"). Twists: leaf piles that hide pals until
+// tapped, autumn gusts that blow everyone sideways (gloom blown off the edge is scattered for good),
+// and a friendly scarecrow that cheers up sad pals nearby and keeps gloom away.
+const HARVEST_STAGES = [
+  { name: "Pumpkin Patch", mod: "Leaf Piles", hint: "Pals are hiding in the leaf piles! Tap a pile", dur: 125, par: 62, gEvery: 4.2, gMax: 3, sad: 0.24,
+    tw: "", pat: null, piles: true, x: { k: "leaf", n: 5, text: "Find 5 pals in leaf piles" }, friend: "pumpkinmouse" },
+  { name: "Apple Orchard", mod: "Autumn Gusts", hint: "Whoosh! Gusts blow gloom right off the field", dur: 130, par: 64, gEvery: 3.9, gMax: 4, sad: 0.26,
+    tw: "wind", pat: "wave", x: { k: "gust", n: 6, text: "Hug 6 pals in a gust" }, friend: "applehog" },
+  { name: "Scarecrow Hill", mod: "Friendly Scarecrow", hint: "The scarecrow cheers up sad pals nearby", dur: 140, par: 72, gEvery: 3.8, gMax: 4, sad: 0.3,
+    tw: "", pat: "loop", scare: true, rescue: true, x: { k: "scare", n: 5, text: "Let the scarecrow cheer 5 pals" }, friend: "scarecrow" },
+];
+let harvSel = null;
+const isHarvest = () => !!(st && st.ss && st.ss.mode === "harvest");
+function harvModInfo() { const S = HARVEST_STAGES[st.ss.k]; return { name: S.mod, hint: S.hint, col: "#fff0d8", bd: "#e0a050" }; }
+function harvStartStage(k, skipCut) {
+  if (!harvStageOpen(k)) return false;
+  if (!skipCut && k === 0 && !adv.cuts.harvest_intro) { startCutscene("harvest_intro", () => harvStartStage(k, true)); return true; }
+  if (!skipCut && k === 2 && !adv.cuts.harvest_crow) { startCutscene("harvest_crow", () => harvStartStage(k, true)); return true; }
+  const S = HARVEST_STAGES[k];
+  const def = { name: S.name, dur: S.dur, par: S.par, gEvery: S.gEvery, gMax: S.gMax, sad: S.sad, x: S.x, rescue: !!S.rescue };
+  const [y0, y1] = advYRange();
+  st = {
+    i: 1, r: 0, def, state: "intro", t: 0, time: 0, paused: false, meter: 0, pals: [], lings: [], spawnT: 0.2,
+    gT: 2.2, combo: 0, comboT: 0, bestCombo: 0, shoo: 0, cheer: 0, fog: 0, lily: 0, gust: 0, splits: 0, missed: 0,
+    hugs: 0, result: null, rt: 0, fogs: [], puddles: [], fogT: 0, pudT: 2.5, wind: { cd: S.tw === "wind" ? 3 : 1e9, on: 0, dir: 1 },
+    rescueC: null, rescued: false, hint: 3.2,
+    ss: { mode: "harvest", k, tw: S.tw, pat: S.pat, stars: [], starT: 0, caught: 0, starry: false,
+      piles: [], pT: 0.4, leaf: 0, scatter: 0, scareN: 0, scare: S.scare ? { x: W * 0.5, y: (y0 + y1) / 2 + 24 } : null },
+  };
+  scene = "adv"; advSel = null; harvSel = null; if (typeof coralSel !== "undefined") coralSel = null; if (typeof skySel !== "undefined") skySel = null; advTreasOpen = false;
+  particles.length = 0; floatTexts.length = 0; confetti.length = 0;
+  for (let n = 0; n < 3; n++) advSpawnPal();
+  if (S.piles) for (let n = 0; n < 2; n++) harvAddPile();
+  if (S.rescue) {
+    const a = ANIMALS.find(x => x.id === "scarecrow");
+    const c = { animal: a, x: W * 0.72, y: (y0 + y1) / 2 - 30, baseY: (y0 + y1) / 2 - 30, vx: -12, ph: 0, bob: 3, scale: 2.0, sad: true, state: "float",
+      t: 0, life: 1e9, hugs: 0, heartT: 0, rescue: true };
+    st.rescueC = c; st.pals.push(c);
+  }
+  setMusicMode("adv_r0");
+  harvState().runs++;
+  qBump("harvplay"); qBump("adv");
+  return true;
+}
+function harvAddPile() {
+  const S = st.ss, [y0, y1] = advYRange();
+  for (let k = 0; k < 10; k++) {
+    const x = 50 + Math.random() * (W - 100), y = y0 + 30 + Math.random() * (y1 - y0 - 40);
+    if (S.piles.every(p => Math.hypot(p.x - x, p.y - y) > 80)) { S.piles.push({ x, y, t: 0, wig: 0 }); return true; }
+  }
+  return false;
+}
+// tap a leaf pile: the leaves fly and a pal pops out
+function harvOpenPile(p) {
+  const S = st.ss;
+  p.dead = true; S.leaf++;
+  advGain(1.1);
+  const pool = advPool(0), a = pool[Math.floor(Math.random() * pool.length)];
+  st.pals.push({ animal: a, x: p.x, y: p.y - 6, baseY: p.y - 6, vx: (Math.random() < 0.5 ? -1 : 1) * 22, ph: 0, bob: 4, scale: 1.7, sad: false, state: "float", t: 0, life: 7 + Math.random() * 4, hugs: 0, heartT: 0.8 });
+  for (let k = 0; k < 10; k++) particles.push({ kind: "poof", x: p.x + (Math.random() - 0.5) * 30, y: p.y, vx: (Math.random() - 0.5) * 90, vy: -40 - Math.random() * 60, life: 0.7, max: 0.7, size: 5 + Math.random() * 4, color: ["#e0702a", "#f0a030", "#c8402a", "#e8c040"][k % 4] });
+  addFloat({ x: p.x, y: p.y - 30, text: "Found one! ❦", life: 0.9, vy: -36, color: "#c06020", size: 13 });
+  if (typeof sfxRustle === "function") sfxRustle();
+  if (typeof buzz === "function") buzz("pet");
+  qBump("harvleaf");
+  prune(S.piles, notDead);
+}
+function harvWorld(dt, playing) {
+  const S = st.ss, D = HARVEST_STAGES[S.k];
+  const [y0, y1] = advYRange();
+  for (const g of st.lings) {
+    if (S.pat === "wave") g.y += Math.sin(time * 3 + g.phase) * 20 * dt;
+    else if (S.pat === "loop") { g.x += Math.cos(time * 1.5 + g.phase) * 22 * dt; g.y += Math.sin(time * 1.5 + g.phase) * 22 * dt; }
+    g.y = clamp(g.y, y0 - 40, y1 - 20);
+  }
+  // leaf piles
+  if (D.piles) {
+    for (const p of S.piles) { p.t += dt; p.wig = Math.max(0, p.wig - dt); if (Math.random() < dt * 0.5) p.wig = 0.4; }
+    if (playing) {
+      S.pT -= dt;
+      if (S.pT <= 0) { if (S.piles.length < 3) harvAddPile(); S.pT = 3.2 + Math.random() * 1.5; }
+    }
+  }
+  // autumn gusts: gloom blown past the edge is scattered for good
+  if (D.tw === "wind" && st.wind.on > 0) {
+    for (const g of st.lings) if (!g.dead && (lingCX(g) < -24 || lingCX(g) > W + 24)) {
+      g.dead = true; S.scatter++; advGain(0.5); harvState().gusts++;
+      addFloat({ x: clamp(lingCX(g), 40, W - 40), y: g.y, text: "Scattered! ❦", life: 0.9, vy: -24, color: "#c06020", size: 12 });
+    }
+    prune(st.lings, notDead);
+  }
+  // the friendly scarecrow: cheers up sad pals nearby and keeps gloom at arm's length
+  if (S.scare) {
+    const sc = S.scare;
+    for (const g of st.lings) {
+      const dx = lingCX(g) - sc.x, dy = g.y - (sc.y - 30), d = Math.hypot(dx, dy);
+      if (d < 84) { const k = (84 - d) / 84; g.x += (dx / (d || 1)) * 70 * k * dt; g.y += (dy / (d || 1)) * 50 * k * dt; }
+    }
+    for (const c of st.pals) {
+      if (c.rescue || c.state !== "float") continue;
+      if (c.sad && Math.hypot(c.x - sc.x, c.y - (sc.y - 20)) < 92) {
+        c.scT = (c.scT || 0) + dt;
+        if (c.scT >= 1.1 && playing) {
+          c.sad = false; c.scT = 0; S.scareN++; st.cheer++; advGain(0.9); harvState().scare++;
+          spawnSparkles(c.x, c.y, 8);
+          addFloat({ x: c.x, y: c.y - 30, text: "Cheered! ✿", life: 0.9, vy: -30, color: "#d07020", size: 12 });
+          qBump("harvscare");
+        }
+      } else c.scT = 0;
+    }
+  }
+}
+function harvTap(p) {
+  const S = st.ss;
+  if (!S.piles.length) return false;
+  // pals and gloom win when they're right under the finger
+  for (const c of st.pals) if (c.state === "float" && dist2(p.x, p.y, c.x, c.y) < 22 * 22) return false;
+  for (const g of st.lings) if (dist2(p.x, p.y, lingCX(g), g.y) < 24 * 24) return false;
+  for (const pl of S.piles) if (dist2(p.x, p.y, pl.x, pl.y - 6) < 36 * 36) { harvOpenPile(pl); return true; }
+  return false;
+}
+{
+  const f = advHug;
+  advHug = function (c) {
+    const harv = isHarvest() && !!c && !c.rescue && c.state === "float";
+    const gusty = harv && st.wind.on > 0;
+    f.apply(this, arguments);
+    if (harv && gusty && c.state === "happy") qBump("harvgust");
+  };
+}
+function harvThird(def, res) {
+  if (def.x.k === "leaf") return res.leaf >= def.x.n;
+  if (def.x.k === "gust") return res.gust >= def.x.n;
+  if (def.x.k === "scare") return res.scare >= def.x.n;
+  return advThirdStar(def, res);
+}
+function harvGoalTexts(def) { return [def.rescue ? "Bring back the color & befriend the crow" : "Bring back the color", advSecondText(def), def.x.text]; }
+function harvFinish(win) {
+  if (!st || st.state === "result") return;
+  const S = st.ss, k = S.k, def = st.def, Y = harvState();
+  const res = { win, time: st.time, bestCombo: st.bestCombo, shoo: st.shoo, cheer: st.cheer, fog: st.fog, lily: st.lily, gust: st.gust, splits: st.splits, missed: st.missed, hugs: st.hugs, leaf: S.leaf, scare: S.scareN };
+  let mask = 0;
+  if (win) { mask = 1; if (advSecondStar(def, res)) mask |= 2; if (harvThird(def, res)) mask |= 4; }
+  const prev = Y.gm[k];
+  Y.gm[k] = prev | mask;
+  const newStars = [1, 2, 4].filter(b => (mask & b) && !(prev & b)).length;
+  let hearts = 0, seeds = 0, friend = null, end = false;
+  if (win) {
+    Y.wins++;
+    if (!Y.best[k] || st.time < Y.best[k]) Y.best[k] = Math.round(st.time * 10) / 10;
+    hearts = (!(prev & 1) ? 120 + k * 40 : 20) + newStars * 32;
+    seeds = newStars + (!(prev & 1) ? 3 : 0);
+    const id = HARVEST_STAGES[k].friend;
+    if (id && !unlocked[id]) { unlocked[id] = true; albumNew = true; friend = ANIMALS.find(a => a.id === id); }
+    if (k === HARV_N - 1 && !Y.done) { Y.done = true; seeds += 7; if (!adv.cuts.harvest_end) end = true; }
+    qBump("harvclear");
+    if (newStars) qBump("harvstar", null, newStars);
+    if (typeof sfxVictory === "function") sfxVictory();
+    if (typeof spawnConfetti === "function") spawnConfetti(30);
+  } else {
+    hearts = Math.floor(st.meter / 20);
+    if (typeof sfxMiss === "function") sfxMiss();
+  }
+  Y.leaves += S.leaf;
+  joy += hearts;
+  st.result = { win, mask, prev, stars: popcnt3(mask), hearts, seeds, friend, end, meter: Math.round(st.meter) };
+  st.state = "result"; st.rt = 0;
+  if (seeds) earnSeeds(seeds, "Harvest Hollow");
+  if (friend) toast(friend.name + " is your friend! ♥", C.heart);
+  if (typeof checkAchievements === "function") checkAchievements();
+  if (typeof checkCollections === "function") checkCollections();
+  save();
+}
+function harvLeave(next) {
+  const R = st && st.result;
+  st = null;
+  particles.length = 0; confetti.length = 0;
+  if (R && R.end) { startCutscene("harvest_end", openAdvMap); return; }
+  if (next != null && harvStageOpen(next)) { harvStartStage(next); return; }
+  openAdvMap();
+}
+function harvDrawIntro() {
+  const k = st.t, def = st.def, S = HARVEST_STAGES[st.ss.k];
+  ctx.fillStyle = "rgba(80,40,20,0.2)"; ctx.fillRect(0, 0, W, H);
+  const top = H / 2 - 110, e = easeOutBack(Math.min(1, k / 0.35));
+  ctx.save(); ctx.translate(W / 2, top + 90); ctx.scale(e, e); ctx.translate(-W / 2, -(top + 90));
+  solidPanel(34, top, W - 68, 196);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#b8602a"; font(11, true); ctx.fillText("Harvest Hollow · Stage " + (st.ss.k + 1) + " / " + HARV_N, W / 2, top + 24);
+  ctx.fillStyle = C.text; font(19, true); ctx.fillText(def.name, W / 2, top + 50);
+  ctx.fillStyle = "#fff0d8"; roundRect(W / 2 - 66, top + 66, 132, 22, 11); ctx.fill();
+  ctx.strokeStyle = "#e0a050"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(11, true); ctx.fillText(S.mod, W / 2, top + 77);
+  const have = harvState().gm[st.ss.k] || 0;
+  harvGoalTexts(def).forEach((g, j) => { drawStarShape(64, top + 108 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 140, 11.5, false, 8.5); ctx.fillText(g, 80, top + 109 + j * 24); });
+  ctx.restore();
+}
+function harvDrawResult() {
+  const R = st.result, t = st.rt;
+  ctx.fillStyle = "rgba(80,40,20," + (0.45 * Math.min(1, t / 0.25)) + ")"; ctx.fillRect(0, 0, W, H);
+  const ph = R.win ? 390 : 280, top = Math.round(H / 2 - ph / 2);
+  solidPanel(22, top, W - 44, ph);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (R.win) {
+    ctx.fillStyle = C.text; font(20, true); ctx.fillText("The hollow is glowing!", W / 2, top + 30);
+    for (let i = 0; i < 3; i++) {
+      const s0 = t - 0.35 - i * 0.22, kk = s0 <= 0 ? 0 : easeOutBack(Math.min(1, s0 / 0.3));
+      if (s0 > 0 && s0 - frameDt <= 0 && (R.mask >> i) & 1 && typeof sfxStar === "function") sfxStar(i);
+      drawStarShape(W / 2 + (i - 1) * 54, top + 74 - (i === 1 ? 5 : 0), i === 1 ? 22 : 19, (R.mask >> i) & 1, Math.max(0.01, kk));
+    }
+    harvGoalTexts(st.def).forEach((txt, j) => {
+      const got = (R.mask >> j) & 1, before = (R.prev >> j) & 1, s = (got ? "✓ " : "· ") + txt + (got && !before ? "  NEW" : "");
+      ctx.textAlign = "left"; ctx.fillStyle = got ? "#3f9a48" : "#a898a8";
+      fitFont(s, W - 100, 11.5, false, 8.5); ctx.fillText(s, 46, top + 116 + j * 20);
+    });
+    ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(11, false);
+    ctx.fillText("Best ★ " + harvStars(st.ss.k) + " / 3  ·  Time " + fmtClock(st.time), W / 2, top + 184);
+    ctx.fillStyle = C.heart; font(20, true);
+    ctx.fillText("♥ +" + R.hearts, W / 2 - (R.seeds ? 40 : 0), top + 212);
+    if (R.seeds) { drawSeedIcon(W / 2 + 34, top + 212, 2); ctx.fillStyle = "#3f8a32"; font(18, true); ctx.textAlign = "left"; ctx.fillText("+" + R.seeds, W / 2 + 44, top + 212); ctx.textAlign = "center"; }
+    if (R.friend) { ctx.fillStyle = "#e0508a"; font(12, true); ctx.fillText("✦ " + R.friend.name + " is your friend!", W / 2, top + 240); }
+    const who = R.friend || ANIMALS.find(a => a.id === HARVEST_STAGES[st.ss.k].friend) || ANIMALS[0];
+    const hop = (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 5)) * 6;
+    drawSprite(who, W / 2, top + ph - 104 - hop, 1.7, false, 0, false, 5, { acc: equippedFor(who.id), heartEyes: true });
+  } else {
+    ctx.fillStyle = C.text; font(19, true); ctx.fillText("Almost glowing!", W / 2, top + 34);
+    ctx.fillStyle = C.textSoft; font(12, false);
+    ctx.fillText("You brought back " + R.meter + "% of the color!", W / 2, top + 64);
+    ctx.fillText("Try again whenever you like ♥", W / 2, top + 84);
+    if (R.hearts) { ctx.fillStyle = C.heart; font(16, true); ctx.fillText("♥ +" + R.hearts + " for trying", W / 2, top + 114); }
+    drawSprite(ANIMALS[0], W / 2, top + 170, 1.7, false, 0, false, 5, { acc: equippedFor("cat") });
+  }
+  uiButtons = [];
+  if (t > 0.5) {
+    const by = top + ph - 62;
+    const items = [["Retry", "adv_retry", "#d0ffd8", "#70c080"], ["Map", "adv_map", "#e8d0ff", "#c090e0"]];
+    if (R.win && st.ss.k < HARV_N - 1 && !R.end) items.push(["Next ▸", "adv_next", C.btn, "#ff80b0"]);
+    if (R.win && R.end) items.push(["Story ▸", "adv_map", C.btn, "#ff80b0"]);
+    const n = items.length, gap = 8, bw = (W - 60 - gap * (n - 1)) / n;
+    items.forEach((it, j) => uiButtons.push(btn(30 + j * (bw + gap), by, bw, 48, it[0], { id: it[1], size: 14, bg: it[2], border: it[3] })));
+  }
+}
+function harvHudLabel() {
+  const S = st.ss, D = HARVEST_STAGES[S.k];
+  return "Harvest Hollow · " + (S.k + 1) + "/" + HARV_N + (D.piles ? "  ❦" + S.leaf : "") + (D.tw === "wind" ? "  ≋" + st.gust : "") + (D.scare ? "  ✿" + S.scareN : "");
+}
+{
+  const fW = ssWorld; ssWorld = function (dt, playing) { if (isHarvest()) return harvWorld(dt, playing); return fW.apply(this, arguments); };
+  const fT = ssTap; ssTap = function (p) { if (isHarvest()) return harvTap(p); return fT.apply(this, arguments); };
+  const fD = ssDrawExtras; ssDrawExtras = function () { if (isHarvest()) return harvDrawExtras(); return fD.apply(this, arguments); };
+  const fF = ssFinish; ssFinish = function (win) { if (isHarvest()) return harvFinish(win); return fF.apply(this, arguments); };
+  const fL = ssLeave; ssLeave = function (next) { if (isHarvest()) return harvLeave(next); return fL.apply(this, arguments); };
+  const fI = ssDrawIntro; ssDrawIntro = function () { if (isHarvest()) return harvDrawIntro(); return fI.apply(this, arguments); };
+  const fR = ssDrawResult; ssDrawResult = function () { if (isHarvest()) return harvDrawResult(); return fR.apply(this, arguments); };
+  const fM = ssModInfo; ssModInfo = function () { if (isHarvest()) return harvModInfo(); return fM.apply(this, arguments); };
+  const fH = ssHudLabel; ssHudLabel = function () { if (isHarvest()) return harvHudLabel(); return fH.apply(this, arguments); };
+}
+
+// ---------- art: the hollow backdrop (stages, map band, story pages) ----------
+function drawPumpkin(x, y, s, lit) {
+  ctx.fillStyle = "#e0782a"; ctx.beginPath(); ctx.ellipse(x, y, 9 * s, 6.5 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f0943a"; ctx.beginPath(); ctx.ellipse(x, y, 4.5 * s, 6.5 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#c86020"; ctx.fillRect(x - 0.5 * s, y - 6 * s, 1 * s, 12 * s);
+  ctx.fillStyle = "#6a8a2a"; ctx.fillRect(x - 1 * s, y - 9 * s, 2 * s, 3.5 * s);
+  ctx.fillStyle = "#ffd88a"; ctx.fillRect(x - 6 * s, y - 3 * s, 1.5 * s, 1.5 * s);
+  if (lit) {
+    ctx.fillStyle = "#fff0a0"; ctx.fillRect(x - 5 * s, y - 2 * s, 2.5 * s, 2 * s); ctx.fillRect(x + 2.5 * s, y - 2 * s, 2.5 * s, 2 * s);
+    ctx.fillRect(x - 4 * s, y + 2 * s, 8 * s, 1.5 * s);
+  }
+}
+function drawHayBale(x, y, s) {
+  ctx.fillStyle = "#d8a850"; ctx.fillRect(x - 14 * s, y - 9 * s, 28 * s, 16 * s);
+  ctx.fillStyle = "#f0d080"; ctx.fillRect(x - 14 * s, y - 9 * s, 28 * s, 3 * s);
+  ctx.fillStyle = "#b88838"; for (let k = -10; k <= 10; k += 5) ctx.fillRect(x + k * s, y - 6 * s, 1 * s, 12 * s);
+  ctx.fillStyle = "#a07030"; ctx.fillRect(x - 14 * s, y - 2 * s, 28 * s, 1.5 * s);
+}
+function drawAppleTree(x, y, s, k) {
+  ctx.fillStyle = "#8a5a30"; ctx.fillRect(x - 4 * s, y - 34 * s, 8 * s, 34 * s);
+  ctx.fillStyle = k > 0.4 ? "#6aa83a" : "#9aa890"; ctx.beginPath(); ctx.arc(x, y - 44 * s, 22 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = k > 0.4 ? "#e0a030" : "#b8b0a0"; ctx.beginPath(); ctx.arc(x + 9 * s, y - 50 * s, 12 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = k > 0.4 ? "#88c048" : "#b0b8a8"; ctx.beginPath(); ctx.arc(x - 8 * s, y - 52 * s, 9 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = k > 0.3 ? "#e0403a" : "#b8a0a0";
+  for (const [dx, dy] of [[-12, -40], [6, -36], [14, -48], [-4, -58], [-16, -52]]) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, 2.6 * s, 0, Math.PI * 2); ctx.fill(); }
+}
+function drawFallingLeaves(n, y0, h, calm) {
+  const cols = ["#e0702a", "#f0a030", "#c8402a", "#e8c040"];
+  for (let i = 0; i < n; i++) {
+    const sp = 16 + (i % 4) * 7, tt = calm ? time * 0.25 : time;
+    const x = ((i * 71 + tt * sp * 0.6) % (W + 30)) - 15 + Math.sin(tt * 1.6 + i) * 10;
+    const y = y0 + ((i * 53 + tt * sp) % Math.max(60, h));
+    ctx.fillStyle = cols[i % 4];
+    ctx.fillRect(Math.round(x), Math.round(y), 4, 3); ctx.fillRect(Math.round(x) + 1, Math.round(y) + 3, 2, 1);
+  }
+}
+function drawHarvestBg(k) {
+  k = clamp(k == null ? 1 : k, 0, 1);
+  const calm = kind && kind.motion;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#ffd0a0"); g.addColorStop(0.4, "#ffe6c0"); g.addColorStop(1, "#f6d8a0");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // warm low sun
+  ctx.fillStyle = "rgba(255,236,170,0.55)"; ctx.beginPath(); ctx.arc(70, 92, 46, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff0b8"; ctx.beginPath(); ctx.arc(70, 92, 24, 0, Math.PI * 2); ctx.fill();
+  // far hills
+  ctx.fillStyle = "#e8a868"; ctx.beginPath(); ctx.moveTo(0, 170); ctx.quadraticCurveTo(W * 0.3, 120, W * 0.6, 160); ctx.quadraticCurveTo(W * 0.85, 185, W, 140); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#c8b060"; ctx.beginPath(); ctx.moveTo(0, 210); ctx.quadraticCurveTo(W * 0.4, 176, W * 0.7, 206); ctx.quadraticCurveTo(W * 0.9, 220, W, 196); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+  // field
+  ctx.fillStyle = "#b8b850"; ctx.fillRect(0, 230, W, H - 230);
+  ctx.fillStyle = "#a8a848"; for (let y = 250; y < H; y += 26) ctx.fillRect(0, y, W, 2);
+  // apple trees on the sides
+  drawAppleTree(26, 252, 1.05, k); drawAppleTree(W - 28, 246, 1.15, k);
+  // hay bales + pumpkins along the bottom
+  const fy = H - 92;
+  drawHayBale(W * 0.18, fy + 26, 1.2); drawHayBale(W * 0.82, fy + 34, 1.0); drawHayBale(W * 0.88, fy + 14, 0.8);
+  drawPumpkin(W * 0.36, fy + 42, 1.3, false); drawPumpkin(W * 0.52, fy + 50, 1.0, false); drawPumpkin(W * 0.66, fy + 40, 1.5, false);
+  // warm light wash + falling leaves
+  ctx.fillStyle = "rgba(255,190,110,0.10)"; ctx.fillRect(0, 0, W, H);
+  drawFallingLeaves(calm ? 6 : 14, 60, H - 120, calm);
+  if (k < 1) { ctx.fillStyle = "rgba(150,145,150," + (0.45 * (1 - k)) + ")"; ctx.fillRect(0, 0, W, H); }
+}
+function drawScarecrowPost(x, y, s, cheer) {
+  ctx.fillStyle = "#8a5a30"; ctx.fillRect(x - 2 * s, y - 50 * s, 4 * s, 52 * s); ctx.fillRect(x - 22 * s, y - 38 * s, 44 * s, 4 * s);
+  ctx.fillStyle = "#6a9ad0"; ctx.fillRect(x - 10 * s, y - 40 * s, 20 * s, 18 * s);   // shirt
+  ctx.fillStyle = "#e0502a"; ctx.fillRect(x - 3 * s, y - 34 * s, 6 * s, 6 * s);    // patch
+  ctx.fillStyle = "#f0d080"; ctx.beginPath(); ctx.arc(x, y - 50 * s, 8 * s, 0, Math.PI * 2); ctx.fill(); // sack head
+  ctx.fillStyle = "#2c2030"; ctx.fillRect(x - 4 * s, y - 52 * s, 2 * s, 2 * s); ctx.fillRect(x + 2 * s, y - 52 * s, 2 * s, 2 * s);
+  ctx.fillRect(x - 3 * s, y - 47 * s, 6 * s, 1 * s); ctx.fillRect(x - 4 * s, y - 48 * s, 1 * s, 1 * s); ctx.fillRect(x + 3 * s, y - 48 * s, 1 * s, 1 * s);
+  ctx.fillStyle = "#d8a850"; ctx.fillRect(x - 12 * s, y - 59 * s, 24 * s, 3 * s); ctx.fillRect(x - 6 * s, y - 66 * s, 12 * s, 7 * s);   // hat
+  ctx.fillStyle = "#f0d080"; for (const dx of [-22, -19, 19, 22]) ctx.fillRect(x + dx * s, y - 36 * s, 2 * s, 4 * s);              // straw hands
+  if (cheer) {
+    ctx.strokeStyle = "rgba(255,210,120,0.45)"; ctx.lineWidth = 2; ctx.setLineDash([4, 5]);
+    ctx.beginPath(); ctx.arc(x, y - 20, 92, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+function drawLeafPile(p, calm) {
+  const w = p.wig > 0 && !calm ? Math.sin(p.wig * 40) * 2 : 0;
+  const cols = ["#e0702a", "#f0a030", "#c8402a", "#e8c040", "#d0582c"];
+  ctx.fillStyle = "rgba(90,60,30,0.18)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 6, 26, 6, 0, 0, Math.PI * 2); ctx.fill();
+  for (let k = 0; k < 16; k++) {
+    const a = k * 2.4, r = 6 + (k % 5) * 3.6;
+    ctx.fillStyle = cols[k % 5];
+    ctx.fillRect(Math.round(p.x + Math.cos(a) * r * 1.2 + w), Math.round(p.y - 4 - Math.abs(Math.sin(a)) * r * 0.7), 6, 4);
+  }
+  // little ears peeking out
+  ctx.fillStyle = "#fff0e0"; ctx.fillRect(Math.round(p.x - 5 + w), Math.round(p.y - 17), 3, 4); ctx.fillRect(Math.round(p.x + 3 + w), Math.round(p.y - 17), 3, 4);
+}
+function harvDrawExtras() {
+  const S = st.ss, calm = kind && kind.motion;
+  if (S.scare) drawScarecrowPost(S.scare.x, S.scare.y, 1.1, true);
+  for (const p of S.piles) drawLeafPile(p, calm);
+}
+
+// ---------- the map band (above Coral Cove) ----------
+function harvBand() { return advBand(7); }
+function harvNodePos(k) {
+  const B = harvBand(), xs = [W - 76, W / 2, 76];
+  return { x: xs[k], y: B.y0 + B.h * (k === 1 ? 0.45 : 0.62) };
+}
+function drawHarvestBand() {
+  const B = harvBand(), open = harvOpen(), done = harvState().done, calm = kind && kind.motion;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, B.y0, W, B.h + 1); ctx.clip();
+  const g = ctx.createLinearGradient(0, B.y0, 0, B.y1);
+  g.addColorStop(0, "#ffd8a8"); g.addColorStop(1, "#e8b868");
+  ctx.fillStyle = g; ctx.fillRect(0, B.y0, W, B.h + 1);
+  ctx.fillStyle = "#c8b060"; ctx.fillRect(0, B.y1 - 12, W, 12);
+  const s = Math.min(0.55, B.h / 150);
+  drawAppleTree(W * 0.08, B.y1 - 4, s, 1); drawAppleTree(W * 0.93, B.y1 - 4, s * 0.9, 1);
+  drawHayBale(W * 0.3, B.y1 - 10, s); drawPumpkin(W * 0.7, B.y1 - 8, s * 1.4, false); drawPumpkin(W * 0.62, B.y1 - 6, s, false);
+  for (let i = 0; i < 6; i++) { const x = (i * 61 + (calm ? 0 : time * 12)) % W, y = B.y0 + ((i * 29 + (calm ? 0 : time * 16)) % B.h); ctx.fillStyle = ["#e0702a", "#f0a030", "#c8402a"][i % 3]; ctx.fillRect(x, y, 4, 3); }
+  advGrayVeil(done ? 1 : open ? 0.45 : 0);
+  ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(0, B.y1, W, 1.5);
+  font(10, true);
+  const label = (done ? "✿ " : open ? "❦ " : "🔒 ") + "Harvest Hollow";
+  const w = ctx.measureText(label).width + 16, px = W / 2 - w / 2, py = B.y1 - 21;
+  ctx.fillStyle = done ? "#fff0d8" : "rgba(245,242,248,0.92)"; roundRect(px, py, w, 18, 9); ctx.fill();
+  ctx.strokeStyle = done ? "#e0a050" : "#c8c0d0"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = done ? C.text : "#8a8098"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, px + 8, py + 9.5);
+  if (!open) {
+    font(9.5, true); const t = HARV_LOCK_TEXT, tw = ctx.measureText(t).width + 14;
+    ctx.fillStyle = "rgba(255,255,255,0.85)"; roundRect(W / 2 - tw / 2, B.y0 + 6, tw, 16, 8); ctx.fill();
+    ctx.fillStyle = "#7a6a90"; ctx.textAlign = "center"; ctx.fillText(t, W / 2, B.y0 + 14.5);
+  }
+}
+function drawHarvestNodes() {
+  const open = harvOpen(), Y = harvState();
+  if (open && typeof coralNodePos === "function") { // a leafy path climbs from the coral castle to the hollow
+    const a = coralNodePos(CORAL_N - 1), b = harvNodePos(0);
+    for (let j = 1; j < 6; j++) { const t = j / 6; ctx.fillStyle = ["#e0702a", "#f0a030", "#c8402a"][j % 3]; ctx.fillRect(a.x + (b.x - a.x) * t - 2, a.y + (b.y - a.y) * t - 2, 5, 4); }
+  }
+  for (let k = 0; k < HARV_N - 1; k++) {
+    const a = harvNodePos(k), b = harvNodePos(k + 1);
+    const n = Math.max(3, Math.floor(Math.hypot(b.x - a.x, b.y - a.y) / 12));
+    for (let j = 1; j < n; j++) { const t = j / n; ctx.fillStyle = harvWon(k) ? "rgba(255,250,240,0.95)" : "rgba(210,205,220,0.8)"; ctx.fillRect(a.x + (b.x - a.x) * t - 2, a.y + (b.y - a.y) * t - 2, 4, 4); }
+  }
+  for (let k = 0; k < HARV_N; k++) {
+    const p = harvNodePos(k), won = harvWon(k), op = harvStageOpen(k), rad = k === HARV_N - 1 ? 19 : 16;
+    const next = op && !won && (k === 0 || harvWon(k - 1)), bounce = next && !(kind && kind.motion) ? Math.abs(Math.sin(time * 3)) * 3 : 0;
+    ctx.fillStyle = "rgba(80,40,20,0.18)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + rad - 1, rad * 0.9, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = won ? "#f0a050" : op ? "#fff" : "#d8d2de";
+    ctx.beginPath(); ctx.arc(p.x, p.y - bounce, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = won ? "#fff" : op ? "#d07a30" : "#b8b0c0"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    if (!op) { ctx.fillStyle = "#9a90a8"; font(12, true); ctx.fillText("🔒", p.x, p.y + 1); }
+    else if (k === HARV_N - 1) drawSprite(ANIMALS.find(a => a.id === "scarecrow"), p.x, p.y - bounce, 0.95, false, 0, !won, 7, null);
+    else { ctx.fillStyle = won ? "#fff" : C.text; font(14, true); ctx.fillText("❦" + (k + 1), p.x, p.y + 1 - bounce); }
+    if (op || won) for (let s = 0; s < 3; s++) drawStarShape(p.x + (s - 1) * 11, p.y + rad + 7, 5, (Y.gm[k] >> s) & 1, 1);
+    uiButtons.push({ x: p.x - 26, y: p.y - 26, w: 52, h: 60, id: "harv_node_" + k });
+  }
+}
+{ // draw the band + nodes right after the Coral Cove ones
+  const fb = drawCoralBand; drawCoralBand = function () { const r = fb.apply(this, arguments); drawHarvestBand(); return r; };
+  const fn = drawCoralNodes; drawCoralNodes = function () { const r = fn.apply(this, arguments); drawHarvestNodes(); return r; };
+}
+function drawHarvestCard(k) {
+  const S = HARVEST_STAGES[k], who = ANIMALS.find(a => a.id === S.friend);
+  ctx.fillStyle = "rgba(80,40,20,0.4)"; ctx.fillRect(0, 0, W, H);
+  const ph = 318, top = Math.round(H / 2 - ph / 2);
+  solidPanel(28, top, W - 56, ph);
+  uiButtons = [];
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#b8602a"; font(11, true); ctx.fillText("Harvest Hollow · Stage " + (k + 1) + " / " + HARV_N, W / 2, top + 26);
+  ctx.fillStyle = C.text; font(18, true); ctx.fillText(S.name, W / 2, top + 52);
+  ctx.fillStyle = "#fff0d8"; roundRect(W / 2 - 70, top + 68, 140, 24, 12); ctx.fill();
+  ctx.strokeStyle = "#e0a050"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.text; font(12, true); ctx.fillText(S.mod, W / 2, top + 80);
+  ctx.fillStyle = C.textSoft; fitFont(S.hint, W - 90, 11, false, 8.5); ctx.fillText(S.hint, W / 2, top + 106);
+  const have = harvState().gm[k] || 0;
+  harvGoalTexts(S).forEach((g, j) => { drawStarShape(58, top + 134 + j * 24, 7, (have >> j) & 1, 1); ctx.textAlign = "left"; ctx.fillStyle = C.text; fitFont(g, W - 130, 11.5, false, 8.5); ctx.fillText(g, 74, top + 135 + j * 24); });
+  ctx.textAlign = "center"; ctx.fillStyle = "#3f8a32"; font(11, true);
+  const rw = "Rewards: Bloom Seeds" + (who && !unlocked[who.id] ? " + a new friend!" : " · " + (who ? who.name + " ♥" : ""));
+  fitFont(rw, W - 90, 11, true, 8.5); ctx.fillText(rw, W / 2, top + 214);
+  if (who) drawSprite(who, W / 2, top + 246, 1.1, false, 0, !unlocked[who.id], 3, null);
+  uiButtons.push(btn(44, top + ph - 64, (W - 100) / 2, 48, "Close", { id: "harv_close", size: 14, bg: "#fff", border: "#d0b0c0" }));
+  uiButtons.push(btn(56 + (W - 100) / 2, top + ph - 64, (W - 100) / 2, 48, "Play ▸", { id: "harv_play", size: 15 }));
+}
+function harvAction(id) {
+  if (id.startsWith("harv_node_")) {
+    const k = +id.slice(10);
+    if (!harvOpen()) { toast(HARV_LOCK_TEXT, C.textSoft); if (typeof sfxNope === "function") sfxNope(); return true; }
+    if (!harvStageOpen(k)) { toast("Finish " + HARVEST_STAGES[k - 1].name + " first", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return true; }
+    harvSel = k; advSel = null; advTreasOpen = false; coralSel = null; if (typeof skySel !== "undefined") skySel = null; return true;
+  }
+  if (id === "harv_close") { harvSel = null; return true; }
+  if (id === "harv_play") { const k = harvSel; harvSel = null; if (k != null) harvStartStage(k); return true; }
+  if (id === "adv_retry" && isHarvest() && scene === "adv") { const k = st.ss.k; st = null; harvStartStage(k); return true; }
+  return false;
+}
+{ const f = v16Action; v16Action = function (id) { if (id && harvAction(id)) return true; return f.apply(this, arguments); }; }
+{ const f = advAction; advAction = function (id) { if (id === "adv_back" && harvSel != null) { harvSel = null; return true; } return f.apply(this, arguments); }; }
+{ const f = openAdvMap; openAdvMap = function () { harvSel = null; const r = f.apply(this, arguments); if (scene === "advmap" && harvOpen()) qBump("harvmap"); return r; }; }
+{ const f = closeAdvMap; closeAdvMap = function () { harvSel = null; return f.apply(this, arguments); }; }
+{ const f = drawAdvMap; drawAdvMap = function () { const r = f.apply(this, arguments); if (harvSel != null && advSel == null && !advTreasOpen && coralSel == null) drawHarvestCard(harvSel); return r; }; }
+{
+  const f = advPointer;
+  advPointer = function (p) { if (scene === "advmap" && harvSel != null) { harvSel = null; return; } return f.apply(this, arguments); };
+  const e = advEscape;
+  advEscape = function () { if (scene === "advmap" && harvSel != null) { harvSel = null; return true; } return e.apply(this, arguments); };
+}
+
+// ---------- story pages ----------
+ADV_CUTS.harvest_intro = [
+  { art: "harvest:0", text: "Past Coral Cove, a warm wind carried golden leaves up a winding hill." },
+  { art: "harvest:1", text: "At the top was Harvest Hollow: pumpkins, hay bales, and apple trees in soft autumn light." },
+  { art: "harvest:2", text: "But gray gloom had drifted over the orchard. Little pals were hiding in the leaf piles!" },
+];
+ADV_CUTS.harvest_crow = [
+  { art: "harvest:3", text: "On Scarecrow Hill, a little crow in a straw hat sat all alone." },
+  { art: "harvest:3", text: "“Everyone flies away when they see me,” it sniffled. Maybe a few gentle hugs would help?" },
+];
+ADV_CUTS.harvest_end = [
+  { art: "harvest:4", text: "After three gentle hugs, the crow fluffed up its feathers… and smiled." },
+  { art: "harvest:5", text: "“I was only guarding the field so nobody would be lonely,” it said. “Can I guard your meadow?” Of course! ♥" },
+];
+function drawHarvestCutArt(n, x, y, w, h, t, cx, gy) {
+  const hop = k => (kind && kind.motion) ? 0 : Math.abs(Math.sin(t * 4 + k)) * 4;
+  const A = id => ANIMALS.find(a => a.id === id);
+  const crow = A("scarecrow");
+  if (n === 0) {
+    drawSprite(ANIMALS[0], cx - 60, gy - hop(0), 2, false, 0, false, 1, { acc: equippedFor("cat") });
+    drawSprite(A("coralpuff") || ANIMALS[1], cx + 50, gy - 10 - hop(1), 1.6, false, 0, false, 2, null);
+  } else if (n === 1) {
+    drawSprite(ANIMALS[0], cx - 70, gy - hop(0), 1.8, false, 0, false, 1, { acc: equippedFor("cat"), heartEyes: true });
+    drawSprite(A("pumpkinmouse"), cx + 10, gy - hop(1), 1.7, false, 0, false, 2, null);
+    drawSprite(A("applehog"), cx + 80, gy - hop(2), 1.6, false, 0, false, 3, null);
+  } else if (n === 2) {
+    drawGloomCloud({ x: cx - 80 + Math.sin(t) * 8, y: y + 26, s: 1.3, phase: 0 });
+    drawGloomCloud({ x: cx + 30 + Math.sin(t + 2) * 8, y: y + 38, s: 1.0, phase: 1 });
+    drawLeafPile({ x: cx + 60, y: gy + 10, wig: (t % 1.2) < 0.4 ? 0.3 : 0 }, kind && kind.motion);
+    drawSprite(ANIMALS[0], cx - 40, gy - hop(0), 1.8, false, 0, false, 1, { acc: equippedFor("cat") });
+  } else if (n === 3) {
+    drawScarecrowPost(cx + 50, gy + 20, 1.3, false);
+    drawSprite(crow, cx - 40, gy - 10, 2.4, false, 0, true, 1, null);
+  } else if (n === 4) {
+    drawScarecrowPost(cx + 70, gy + 20, 1.2, false);
+    drawSprite(crow, cx - 10, gy - 16 - hop(0), 2.4, false, 0, false, 1, { heartEyes: true });
+    drawSprite(ANIMALS[0], cx - 90, gy - hop(1), 1.6, false, 0, false, 2, { acc: equippedFor("cat"), heartEyes: true });
+    for (let k = 0; k < 4; k++) drawHeart(cx + Math.cos(t * 1.4 + k * 1.6) * 60, gy - 50 + Math.sin(t * 1.4 + k * 1.6) * 20, 5, C.heart);
+  } else {
+    ["cat", "pumpkinmouse", "scarecrow", "applehog"].forEach((id, k) => { const a = A(id); if (a) drawSprite(a, x + 46 + k * ((w - 92) / 3), gy - hop(k), 1.5, false, 0, false, k, { heartEyes: true, acc: equippedFor(id) }); });
+  }
+}
+
+// ===================== v16.4 — holiday framework + Halloween =====================
+// Holidays are tied to the real local calendar. Each holiday keeps its own progress in hc164.hol[id]
+// (reset each year it comes back); anything earned (costumes, decor, friends) stays forever.
+// Debug: ?hcDate=2026-10-20 in the URL, or v164Api.setHolidayDate() in tests.
+const HOLIDAYS = [
+  { id: "halloween", name: "Halloween", icon: "🎃", start: [9, 15], end: [10, 1], col: "#ffe2c4", border: "#e0803a", dates: "Oct 15 – Nov 1" },
+];
+const HOL_BY_ID = {}; for (const h of HOLIDAYS) HOL_BY_ID[h.id] = h;
+let holDateOverride = null;
+const holUrlDate = (() => { try { const q = new URLSearchParams(location.search).get("hcDate"); return q && DAY_RE.test(q) ? q : null; } catch (e) { return null; } })();
+function parseDay(k) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(k || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3], 12) : null; }
+function holDate() {
+  if (holDateOverride) return new Date(holDateOverride.getTime());
+  const c = (typeof window !== "undefined" && window.__HC_CLOCK) || {};
+  if (c.date) { const d = c.date instanceof Date ? c.date : parseDay(c.date); if (d) return new Date(d.getTime()); }
+  if (holUrlDate) return parseDay(holUrlDate);
+  return new Date();
+}
+function holToday() { return todayKey(holDate()); }
+function holidayActiveOn(H, d) {
+  const y = d.getFullYear();
+  const s = new Date(y, H.start[0], H.start[1], 0, 0, 0, 0), e = new Date(y, H.end[0], H.end[1], 23, 59, 59, 999);
+  return d >= s && d <= e;
+}
+function holidayActive(id) {
+  const H = HOL_BY_ID[id];
+  if (!H) return false;
+  // test runs stay identical every real day unless a test sets a date (or asks for a holiday)
+  if (typeof window !== "undefined" && window.__HC_TEST && !holDateOverride) {
+    const c = window.__HC_CLOCK || {};
+    if (!c.date) return c.holiday === id || (c.holiday === "auto" && holidayActiveOn(H, new Date()));
+  }
+  return holidayActiveOn(H, holDate());
+}
+function activeHolidays() { return HOLIDAYS.filter(h => holidayActive(h.id)); }
+function holState(id) {
+  ensureHc164();
+  const s = hc164.hol[id];
+  if (!s) return null;
+  if (holidayActive(id)) {
+    const y = holDate().getFullYear();
+    if (s.y !== y) { s.y = y; s.total = 0; s.day = ""; s.today = 0; s.step = 0; s.n = 0; s.done = false; saveSoon(); } // a new year's event (owned things stay)
+    const d = holToday();
+    if (s.day !== d) { s.day = d; s.today = 0; }
+  }
+  return s;
+}
+
+// ---------- 8 Halloween costumes (cozy, not scary) ----------
+Object.assign(ACC_ART, {
+  witchhat: { rows: ["....kk...", "...kkk...", "..kkkk...", "..kyyk...", ".kkkkkk..", "kkkkkkkkk"], cmap: { k: "#6a4aa0", y: "#ffd23a" }, at: (hx, top) => [hx - 4.5, top - 6] },
+  pumpkincap: { rows: ["...gs...", ".oooooo.", "oyoooyoo", ".oooooo."], cmap: { o: "#f08a30", y: "#ffc060", g: "#5ab850", s: "#7a5a30" }, at: (hx, top) => [hx - 4, top - 3] },
+  batclip: { rows: ["k.....k", "kk.p.kk", "kkkkkkk", ".k...k."], cmap: { k: "#5a4a78", p: "#ff9ec8" }, at: (hx, top) => [hx - 3.5, top - 3] },
+  candyclip: { rows: ["..w..", ".www.", ".yyy.", "yyyyy", "ooooo"], cmap: { w: "#ffffff", y: "#ffd23a", o: "#f08a30" }, at: (hx, top) => [hx + 2.5, top - 4] },
+  wizardhat: { rows: ["....b....", "...bbb...", "...byb...", "..bbbbb..", "..bbbyb..", "bbbbbbbbb"], cmap: { b: "#4a6ad0", y: "#ffe066" }, at: (hx, top) => [hx - 4.5, top - 6] },
+  ghostclip: { rows: [".www.", "wkwkw", "wwwww", "w.w.w"], cmap: { w: "#ffffff", k: "#2c2030" }, at: (hx, top) => [hx + 2.5, top - 4] },
+  catears: { rows: ["k.....k", "kp...pk", "kkkkkkk"], cmap: { k: "#3a3550", p: "#ff9ec8" }, at: (hx, top) => [hx - 3.5, top - 3] },
+  leafcrown: { rows: ["o.r.y.o", "oryryro", "ggggggg"], cmap: { o: "#f08a30", r: "#e0403a", y: "#ffd23a", g: "#8a5a30" }, at: (hx, top) => [hx - 3.5, top - 3] },
+});
+const HALLOWEEN_HATS = [
+  { id: "pumpkincap", name: "Pumpkin Cap", short: "Pumpkin" },
+  { id: "catears", name: "Black Cat Ears", short: "Cat Ears" },
+  { id: "candyclip", name: "Candy Corn Clip", short: "Candy" },
+  { id: "batclip", name: "Little Bat Bow", short: "Bat Bow" },
+  { id: "leafcrown", name: "Autumn Leaf Crown", short: "Leaves" },
+  { id: "ghostclip", name: "Ghostie Clip", short: "Ghostie" },
+  { id: "wizardhat", name: "Starry Wizard Hat", short: "Wizard" },
+  { id: "witchhat", name: "Friendly Witch Hat", short: "Witch" },
+];
+for (const h of HALLOWEEN_HATS) if (!ACCESSORIES.some(a => a.id === h.id)) ACCESSORIES.push({ id: h.id, name: h.name, short: h.short, halloween: true });
+{ // Halloween costumes are wearable once earned (forever)
+  const o = accAvailable;
+  accAvailable = function (id, animalId) {
+    const a = ACCESSORIES.find(x => x.id === id);
+    if (a && a.halloween) return !!ownedAcc[a.id];
+    return o(id, animalId);
+  };
+}
+
+// ---------- jack-o'-lantern yard decor ----------
+const DECOR164H = [
+  { id: "jacklantern", name: "Jack-o'-Lantern", cat: "season", cost: 1500, cozy: 8, fw: 1, fh: 1, aw: 12, ah: 14, act: "watch", spots: [[6, 16]], hol: "halloween",
+    paint(P) {
+      P.e(6, 9, 6, 4.8, "#e0782a"); P.e(6, 9, 3, 4.8, "#f0943a"); P.r(5, 2, 2, 3, "#6a8a2a"); P.r(7, 2, 2, 1, "#5ab850");
+      P.r(3, 7, 2, 2, "#fff0a0"); P.r(7, 7, 2, 2, "#fff0a0"); P.r(4, 11, 4, 1, "#fff0a0"); P.p(5, 12, "#fff0a0"); P.p(2, 9, "#ffd88a");
+    } },
+  { id: "pumpkintrio", name: "Lantern Pumpkin Trio", cat: "season", cost: 2600, cozy: 12, fw: 2, fh: 1, aw: 24, ah: 16, act: "watch", spots: [[12, 18]], hol: "halloween",
+    paint(P) {
+      for (const [x, y, s] of [[5, 11, 1], [18, 11, 1], [12, 9, 1.3]]) {
+        P.e(x, y, 5 * s, 4 * s, "#e0782a"); P.e(x, y, 2.4 * s, 4 * s, "#f0943a"); P.r(x - 1, Math.round(y - 4 * s - 2), 2, 2, "#6a8a2a");
+        P.r(x - 3, y - 1, 2, 1, "#fff0a0"); P.r(x + 1, y - 1, 2, 1, "#fff0a0"); P.r(x - 2, y + 2, 4, 1, "#fff0a0");
+      }
+      P.e(12, 15, 11, 1.2, "rgba(255,220,120,0.5)");
+    } },
+];
+for (const d of DECOR164H) if (!DECOR_BY_ID[d.id]) {
+  const item = Object.assign({ unlock: { hol: d.hol, text: "Halloween · " + HOL_BY_ID[d.hol].dates } }, d);
+  DECOR.push(item); DECOR_BY_ID[item.id] = item;
+}
+{
+  const f = decorUnlocked;
+  decorUnlocked = function (d) {
+    if (d && d.unlock && d.unlock.hol) { const s = hc164 && hc164.hol && hc164.hol[d.unlock.hol]; return holidayActive(d.unlock.hol) || !!(s && s.own[d.id]); }
+    return f.apply(this, arguments);
+  };
+}
+{ // anything bought during the event stays buyable/placeable afterwards
+  const f = buyDecor;
+  buyDecor = function (id) {
+    const r = f.apply(this, arguments), d = DECOR_BY_ID[id];
+    if (r && d && d.hol) { ensureHc164(); hc164.hol[d.hol].own[id] = true; save(); }
+    return r;
+  };
+}
+
+// ---------- Ghostie Kitten (seasonal secret friend) ----------
+if (!ANIMALS.some(a => a.id === "ghostie"))
+  ANIMALS.push({ id: "ghostie", name: "Ghostie Kitten", cost: 0, secret: true, holiday: "halloween", lock: "A seasonal secret friend · Halloween", bio: "A tiny kitty in a bedsheet. Says “boo” very, very softly." });
+SECRET_HELLO.ghostie = "Ghostie Kitten floated in! Boo ♥";
+const GHOSTIE_NEED = 5;
+function maybeGhostie() {
+  const s = holState("halloween");
+  if (!unlocked.ghostie && s && holidayActive("halloween") && s.total >= GHOSTIE_NEED) { unlockSecretFriend("ghostie"); return true; }
+  return false;
+}
+[
+  { id: "spooky", name: "Spooky Cute", ids: ["ghostie", "pumpkinmouse", "scarecrow", "bat", "lanternmoth"], seeds: 6, col: "#e0803a" },
+].forEach(s => { s.ids = s.ids.filter(id => ANIMALS.some(a => a.id === id)); if (!COLLECTIONS.some(c => c.id === s.id)) COLLECTIONS.push(s); });
+
+// ---------- Trick-or-Treat (from the Fun sheet; 3 knocks a day) ----------
+const TRICK_DAY_CAP = 3, TRICK_VISITORS = 3, TRICK_PAY = 18;
+let trick = null;
+function trickLeft() { const s = holState("halloween"); return s ? Math.max(0, TRICK_DAY_CAP - s.today) : 0; }
+function startTrick() {
+  if (!holidayActive("halloween")) { toast("Trick-or-treat is a Halloween treat (" + HOL_BY_ID.halloween.dates + ")", C.textSoft); return false; }
+  const s = holState("halloween");
+  if (s.today >= TRICK_DAY_CAP) { toast("Everyone's tucked in. More knocks tomorrow!", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return false; }
+  const pool = unlockedList().filter(a => a.id !== "gloomking" && a.id !== "ghostie");
+  if (!pool.length) return false;
+  s.today++; s.total++;
+  const ghost = !unlocked.ghostie && s.total >= GHOSTIE_NEED;
+  const who = [];
+  for (let i = 0; i < TRICK_VISITORS; i++) who.push(pool[(Math.floor(Math.random() * pool.length) + i) % pool.length]);
+  if (ghost) who[TRICK_VISITORS - 1] = ANIMALS.find(a => a.id === "ghostie");
+  trick = { who, i: 0, ph: "walk", t: 0, x: -30, hearts: 0, from: scene === "play" ? "play" : "title", done: false };
+  if (scene === "play") prevScene = "pause";
+  scene = "trick";
+  if (!hc164.hints.trick) hint164("trick", "Keep opening the door. Little ghosts love it!", "#a050c0");
+  qBump("trick"); qBump("fun");
+  save();
+  return true;
+}
+function trickDoor() {
+  if (!trick || trick.done) return false;
+  if (trick.ph !== "knock") return false;
+  const a = trick.who[trick.i];
+  trick.ph = "treat"; trick.t = 0;
+  const pay = TRICK_PAY + trick.i * 4;
+  trick.hearts += pay; joy += pay;
+  spawnHearts(W * 0.6, H * 0.5, 8, true);
+  for (let k = 0; k < 8; k++) particles.push({ kind: "poof", x: W * 0.55 + (Math.random() - 0.5) * 30, y: H * 0.56, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 60, life: 0.8, max: 0.8, size: 5, color: ["#ff8ab8", "#ffd23a", "#f08a30", "#90e070", "#c9a0ff"][k % 5] });
+  addFloat({ x: W * 0.5, y: H * 0.42, text: (a && a.id === "ghostie" ? "Boo… ♥ " : "Trick or treat! ") + "+" + pay + " ♥", life: 1.2, vy: -24, color: "#c05a20", size: 14 });
+  if (typeof sfxChime === "function") sfxChime(3 + trick.i); if (typeof buzz === "function") buzz("pet");
+  if (a && unlocked[a.id] && a.id !== "ghostie") { critterHugs[a.id] = (critterHugs[a.id] || 0) + 1; checkFriendship(a); }
+  return true;
+}
+function trickStep(dt) {
+  const T = trick;
+  if (!T) { scene = "play"; return; }
+  T.t += dt;
+  const doorX = W * 0.6;
+  if (!T.done) {
+    if (T.ph === "walk") { T.x = Math.min(doorX - 56, T.x + 110 * dt); if (T.x >= doorX - 56) { T.ph = "knock"; T.t = 0; if (typeof sfxPet === "function") sfxPet(); } }
+    else if (T.ph === "treat" && T.t > 1.1) { T.ph = "leave"; T.t = 0; }
+    else if (T.ph === "leave") { T.x -= 140 * dt; if (T.x < -40) { T.i++; if (T.i >= T.who.length) finishTrick(); else { T.ph = "walk"; T.x = -30; T.t = 0; } } }
+  }
+  updateParticles(dt);
+  drawTrick();
+}
+function finishTrick() {
+  const T = trick;
+  T.done = true; T.t = 0;
+  maybeGhostie();
+  if (typeof sfxVictory === "function") sfxVictory();
+  checkCollections && checkCollections();
+  save();
+}
+function leaveTrick() {
+  maybeGhostie();
+  const from = trick ? trick.from : "play";
+  trick = null; particles.length = 0;
+  scene = from === "title" ? "title" : "play";
+}
+function drawTrick() {
+  const T = trick, calm = kind && kind.motion;
+  // dusk sky
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#5a4a90"); g.addColorStop(0.45, "#c07a9a"); g.addColorStop(0.75, "#f0a870"); g.addColorStop(1, "#8a6a50");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#fff6d0"; ctx.beginPath(); ctx.arc(70, 110, 26, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,246,208,0.25)"; ctx.beginPath(); ctx.arc(70, 110, 40, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff"; for (let i = 0; i < 14; i++) ctx.fillRect((i * 67 + 13) % W, 40 + (i * 31) % 150, 2, 2);
+  // the house + door
+  const gy = Math.round(H * 0.68), doorX = W * 0.6;
+  ctx.fillStyle = "#c88a5a"; ctx.fillRect(W * 0.46, gy - 210, W * 0.54, 210);
+  ctx.fillStyle = "#9a5f34"; ctx.beginPath(); ctx.moveTo(W * 0.42, gy - 206); ctx.lineTo(W * 0.73, gy - 290); ctx.lineTo(W + 10, gy - 206); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#ffe6a0"; ctx.fillRect(W * 0.82, gy - 170, 40, 36); ctx.fillStyle = "#9a5f34"; ctx.fillRect(W * 0.82 + 19, gy - 170, 2, 36); ctx.fillRect(W * 0.82, gy - 153, 40, 2);
+  const open = T && (T.ph === "treat");
+  ctx.fillStyle = open ? "#ffe6a0" : "#7a4a2a"; ctx.fillRect(doorX - 22, gy - 110, 44, 110);
+  if (!open) { ctx.fillStyle = "#5a3420"; ctx.fillRect(doorX - 18, gy - 104, 36, 46); ctx.fillRect(doorX - 18, gy - 52, 36, 46); ctx.fillStyle = "#ffd23a"; ctx.fillRect(doorX + 12, gy - 58, 4, 4); }
+  else { ctx.fillStyle = "#7a4a2a"; ctx.fillRect(doorX + 18, gy - 110, 8, 110); ctx.fillStyle = "rgba(255,220,140,0.35)"; ctx.beginPath(); ctx.moveTo(doorX - 22, gy); ctx.lineTo(doorX + 22, gy); ctx.lineTo(doorX + 60, gy + 60); ctx.lineTo(doorX - 70, gy + 60); ctx.closePath(); ctx.fill(); }
+  // porch, path, pumpkins, leaves
+  ctx.fillStyle = "#6a8a3a"; ctx.fillRect(0, gy, W, H - gy);
+  ctx.fillStyle = "#b8905a"; ctx.fillRect(W * 0.44, gy, W * 0.56, 12); ctx.fillStyle = "#a07848"; ctx.fillRect(W * 0.44, gy + 12, W * 0.56, 4);
+  ctx.fillStyle = "#c8b080"; for (let x = 0; x < W * 0.44; x += 26) ctx.fillRect(x, gy + 18, 20, 8);
+  drawPumpkin(doorX - 46, gy - 6, 1.3, true); drawPumpkin(doorX + 44, gy - 6, 1.1, true); drawPumpkin(W - 22, gy - 8, 1.6, true);
+  drawHayBale(W * 0.88, gy + 22, 1.0);
+  drawFallingLeaves(calm ? 5 : 12, 40, H - 160, calm);
+  uiButtons = [];
+  panelHeaderLite("Trick-or-Treat", T ? (T.done ? "All done for now ♥" : "Visitor " + Math.min(T.i + 1, T.who.length) + " / " + T.who.length) : "");
+  if (!T) return;
+  // the visitor, in a costume
+  if (!T.done && T.i < T.who.length) {
+    const a = T.who[T.i], hop = calm ? 0 : Math.abs(Math.sin(T.t * 7)) * (T.ph === "walk" || T.ph === "leave" ? 5 : 2);
+    const hat = a.id === "ghostie" ? null : HALLOWEEN_HATS[(T.i + (a.id.length)) % HALLOWEEN_HATS.length].id;
+    drawSprite(a, T.x, gy - 26 - hop, 2.2, T.ph === "leave", 0, false, T.i, { acc: hat, heartEyes: T.ph === "treat" });
+    // candy bucket
+    drawPumpkin(T.x + 26, gy - 12 - hop * 0.5, 0.8, false);
+    if (T.ph === "knock") {
+      const b = calm ? 0 : Math.sin(T.t * 10) * 2;
+      ctx.fillStyle = "rgba(255,250,245,0.95)"; roundRect(T.x - 54, gy - 112 + b, 108, 26, 12); ctx.fill();
+      ctx.strokeStyle = "#e0803a"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = C.text; font(12, true); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(a.id === "ghostie" && !unlocked.ghostie ? "knock… knock…" : "Knock knock! ♥", T.x, gy - 99 + b);
+      uiButtons.push({ x: T.x - 34, y: gy - 80, w: 68, h: 70, id: "v164_door" });
+      uiButtons.push(btn(W / 2 - 100, H - 128, 200, 52, "Open the door", { id: "v164_door", size: 16, bg: "#ffd8a0", border: "#e0803a" }));
+    }
+  } else if (T.done) {
+    const ph = 196, top = Math.round(H / 2 - ph / 2 - 30);
+    solidPanel(40, top, W - 80, ph);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text; font(17, true); ctx.fillText("What a sweet night!", W / 2, top + 30);
+    ctx.fillStyle = C.heart; font(22, true); ctx.fillText("♥ +" + T.hearts, W / 2, top + 66);
+    ctx.fillStyle = C.textSoft; font(11, false);
+    const left = trickLeft();
+    ctx.fillText(left ? left + " more trick-or-treat" + (left > 1 ? "s" : "") + " today" : "More knocks tomorrow", W / 2, top + 96);
+    if (unlocked.ghostie) { drawSprite(ANIMALS.find(a => a.id === "ghostie"), W / 2, top + 140, 1.6, false, 0, false, 2, { heartEyes: true }); }
+    else { ctx.fillText("Trick-or-treats this Halloween: " + Math.min(GHOSTIE_NEED, holState("halloween").total) + " ✦", W / 2, top + 120); }
+  }
+  uiButtons.push(btn(20, H - 64, T.done ? W - 40 : 110, 48, T.done ? "Back to the meadow" : "◂ Leave", { id: "v164_trick_back", size: 14, bg: T.done ? C.btn : "#f5e6ee", border: T.done ? "#ff80b0" : "#d0b0c0" }));
+}
+function panelHeaderLite(title, sub) {
+  ctx.fillStyle = "rgba(255,250,245,0.92)"; roundRect(16, 14, W - 32, 50, 14); ctx.fill();
+  ctx.strokeStyle = "#e0b0c8"; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(16, true); ctx.fillText(title, W / 2, 32);
+  ctx.fillStyle = C.textSoft; font(10.5, false); ctx.fillText(sub, W / 2, 51);
+}
+// the Fun sheet gains a Trick-or-Treat row while Halloween is on
+{
+  const fr = funRows;
+  funRows = function () { const r = fr.apply(this, arguments); if (holidayActive("halloween")) r.push(["Trick-or-Treat", "trick", "v164_trick", "#ffe0bc", "#e0803a"]); return r; };
+  const fs = funRowState;
+  funRowState = function (k) {
+    if (k === "trick") {
+      if (!holidayActive("halloween")) return { ok: false, why: "Halloween only" };
+      if (!foundFriends().length) return { ok: false, why: "Make a friend first" };
+      const left = trickLeft();
+      if (!left) return { ok: false, why: "More knocks tomorrow (" + TRICK_DAY_CAP + "/" + TRICK_DAY_CAP + " today)" };
+      return { ok: true, why: "Friends knock with candy · " + left + " left today" };
+    }
+    return fs.apply(this, arguments);
+  };
+  const fb = funReadyBits;
+  funReadyBits = function () { const r = fb.apply(this, arguments); return holidayActive("halloween") ? r + (trickLeft() > 0 && foundFriends().length ? "1" : "0") : r; };
+}
+
+// ---------- the Halloween track (Goals > Quests, event only): 8 steps, each pays a costume ----------
+const HOL_TRACK = {
+  halloween: [
+    { ev: "hug", need: 30, text: "Hug 30 friends" },
+    { ev: "trick", need: 1, text: "Go trick-or-treating" },
+    { ev: "yard", need: 1, text: "Visit the Yard" },
+    { ev: "care", need: 2, text: "Care for friends 2 times" },
+    { ev: "adv", need: 1, text: "Play a Storybook stage" },
+    { ev: "trick", need: 2, text: "Trick-or-treat 2 more times" },
+    { ev: "cheer", need: 5, text: "Cheer up 5 sad friends" },
+    { ev: "quest", need: 2, text: "Claim 2 daily quests" },
+  ],
+};
+const HOL_TRACK_PAY = { hearts: 60, finish: { hearts: 150, seeds: 3, decor: "pumpkintrio" } };
+function holBump(ev, amt) {
+  for (const H of HOLIDAYS) {
+    const steps = HOL_TRACK[H.id];
+    if (!steps || !holidayActive(H.id)) continue;
+    const s = holState(H.id);
+    if (s.step >= steps.length) continue;
+    const S = steps[s.step];
+    if (S.ev !== ev) continue;
+    s.n += amt == null ? 1 : Math.max(0, amt);
+    if (s.n >= S.need) holStepDone(H, s, steps);
+    saveSoon();
+  }
+}
+function holStepDone(H, s, steps) {
+  const hat = H.id === "halloween" ? HALLOWEEN_HATS[s.step] : null;
+  s.step++; s.n = 0;
+  joy += HOL_TRACK_PAY.hearts;
+  if (hat) {
+    if (!ownedAcc[hat.id]) { ownedAcc[hat.id] = true; s.own[hat.id] = true; softHintSafe("New costume: " + hat.name + "! 🎃", "#c05a20"); }
+    else joy += 40;
+  }
+  if (s.step >= steps.length && !s.done) {
+    s.done = true;
+    const F = HOL_TRACK_PAY.finish;
+    joy += F.hearts; earnSeeds(F.seeds, H.name);
+    if (F.decor) { garden.inv[F.decor] = (garden.inv[F.decor] || 0) + 1; s.own[F.decor] = true; }
+    toast(H.name + " track complete! A gift is in your Yard ✿", "#c05a20");
+    if (!kind.motion && typeof spawnConfetti === "function") spawnConfetti(30);
+  }
+  if (typeof sfxChime === "function") sfxChime(5);
+  save();
+}
+{
+  const o = qBump;
+  qBump = function (ev, arg, amt) { const r = o.apply(this, arguments); try { holBump(ev, ev === "combo" ? amt : undefined); } catch (e) {} return r; };
+  if (typeof v16Api !== "undefined") v16Api.qBump = qBump;
+}
+const HOL_CARD_H = 206;
+{
+  const fh = festCardH;
+  festCardH = function () { return fh.apply(this, arguments) + (activeHolidays().length ? HOL_CARD_H + 12 : 0); };
+  const fd = drawFestCard;
+  drawFestCard = function (y, top, bottom) { const r = fd.apply(this, arguments); if (holidayActive("halloween")) drawHolCard("halloween", y + FEST_CARD_H + 12); return r; };
+}
+function drawHolCard(id, y) {
+  const H = HOL_BY_ID[id], s = holState(id), steps = HOL_TRACK[id], x = 24, w = W - 48, h = HOL_CARD_H;
+  ctx.fillStyle = H.col; roundRect(x, y, w, h, 14); ctx.fill();
+  ctx.strokeStyle = H.border; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.text; font(15, true); ctx.fillText(H.icon + " " + H.name + " Track", x + 12, y + 20);
+  ctx.fillStyle = C.textSoft; font(10, false); ctx.fillText(H.dates + " · every step gives a costume", x + 12, y + 38);
+  const tx0 = x + 22, tx1 = x + w - 22, ty = y + 62;
+  for (let i = 0; i < steps.length; i++) {
+    const cx = tx0 + (tx1 - tx0) * i / (steps.length - 1), done = i < s.step, cur = i === s.step;
+    ctx.fillStyle = done ? H.border : cur ? "#fff" : "#f4ece6";
+    ctx.beginPath(); ctx.arc(cx, ty, cur ? 11 : 9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = done || cur ? H.border : "#d8c8c0"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.textAlign = "center"; ctx.fillStyle = done ? "#fff" : C.text; font(10, true); ctx.fillText(done ? "✓" : String(i + 1), cx, ty + 1);
+  }
+  ctx.textAlign = "left";
+  if (s.step < steps.length) {
+    const S = steps[s.step];
+    ctx.fillStyle = C.text; fitFont("Step " + (s.step + 1) + ": " + S.text, w - 24, 13, true, 9); ctx.fillText("Step " + (s.step + 1) + ": " + S.text, x + 12, y + 92);
+    const bx = x + 12, bw = w - 90, by = y + 106;
+    ctx.fillStyle = "rgba(60,50,70,0.14)"; roundRect(bx, by, bw, 10, 5); ctx.fill();
+    ctx.fillStyle = H.border; roundRect(bx, by, Math.max(10, bw * Math.min(1, s.n / S.need)), 10, 5); ctx.fill();
+    ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText(Math.min(s.n, S.need) + " / " + S.need, bx + bw + 8, by + 5);
+  } else { ctx.fillStyle = "#3f9a48"; font(13, true); ctx.fillText("Track complete ✓ Happy Halloween!", x + 12, y + 96); }
+  // costume shelf: all 8, earned ones in full color
+  const n = HALLOWEEN_HATS.length, cw = (w - 24) / n, pal = ANIMALS.find(a => a.id === "cat") || ANIMALS[0];
+  HALLOWEEN_HATS.forEach((hat, i) => {
+    const cx = x + 12 + cw * i + cw / 2, got = !!ownedAcc[hat.id];
+    ctx.fillStyle = got ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.35)"; roundRect(cx - cw / 2 + 2, y + 128, cw - 4, 64, 8); ctx.fill();
+    if (!got) ctx.globalAlpha = 0.35;
+    drawSprite(pal, cx, y + 162, 1.15, false, 0, false, i, { acc: hat.id });
+    ctx.globalAlpha = 1;
+    if (got) { ctx.fillStyle = "#3f9a48"; font(9, true); ctx.textAlign = "center"; ctx.fillText("✓", cx + cw / 2 - 8, y + 136); }
+  });
+}
+// a soft one-time hint when Halloween first starts
+{
+  const f = v16Tick;
+  v16Tick = function (dt) {
+    const r = f.apply(this, arguments);
+    if (scene === "play" && holidayActive("halloween")) hint164("halloween", "Happy Halloween! Trick-or-treat in Fun 🎃", "#c05a20");
+    return r;
+  };
+}
+
+// ===================== v16.4 — Care Corner (inside the Yard) + v16.4 wiring =====================
+// Every friend has three gentle needs (hungry, sleepy, playful) that rise slowly in real time.
+// Nothing bad ever happens: needs just wait, friendship never goes down, and if you're away for
+// more than a day the needs pause (no guilt). Caring for a friend who wants it pays a few hearts,
+// a friendship hug, and counts toward a daily Care streak.
+const CARE_KINDS = ["feed", "nap", "play"];
+const CARE_INFO = {
+  feed: { need: "Hungry", btn: "Snack", col: "#f0a050", done: "Yum! ♥" },
+  nap: { need: "Sleepy", btn: "Tuck in", col: "#8a90e0", done: "Zzz… ♥" },
+  play: { need: "Playful", btn: "Play", col: "#60c080", done: "Wheee! ♥" },
+};
+const CARE_RATE = [12, 8, 15];        // need points per hour (0..100)
+const CARE_WANT = 30;                 // below this a friend is content (no bonus, no quest)
+const CARE_PAUSE_MS = 24 * 3600 * 1000;
+const TREAT_PACK = { n: 5, cost: 100 };
+let careNowOverride = null;
+function careNow() { return careNowOverride != null ? careNowOverride : Date.now(); }
+function careHash(id, k) { let h = 7 + k * 31; for (let i = 0; i < id.length; i++) h = (h * 33 + id.charCodeAt(i)) >>> 0; return h; }
+function careFriends() { return ANIMALS.filter(a => unlocked[a.id] && a.id !== "gloomking"); }
+function careNeeds(id) {
+  const C4 = ensureHc164().care;
+  if (!C4.needs[id]) C4.needs[id] = [0, 1, 2].map(k => 20 + careHash(id, k) % 45); // a gentle head start, different per friend
+  return C4.needs[id];
+}
+// needs rise with real time; a gap of more than a day pauses them instead
+function careTick() {
+  const C4 = ensureHc164().care, now = careNow();
+  if (!C4.last) { C4.last = now; return 0; }
+  const dt = now - C4.last;
+  if (dt <= 0) { C4.last = Math.min(C4.last, now); return 0; }
+  C4.last = now;
+  if (dt > CARE_PAUSE_MS) return 0; // away a while: everyone just waited patiently
+  const hrs = dt / 3600000;
+  for (const a of careFriends()) {
+    const n = careNeeds(a.id);
+    for (let k = 0; k < 3; k++) n[k] = Math.round(Math.min(100, n[k] + CARE_RATE[k] * hrs) * 10) / 10;
+  }
+  return hrs;
+}
+let careOrder = [], carePage = 0;
+function openCare() {
+  const C4 = ensureHc164().care;
+  careTick();
+  for (const a of careFriends()) careNeeds(a.id);
+  careOrder = careFriends().map(a => a.id).sort((x, y) => Math.max(...careNeeds(y)) - Math.max(...careNeeds(x)));
+  carePage = 0;
+  if (!C4.seen) { C4.seen = true; hint164("care", "Friends get hungry, sleepy or playful ♥", "#c07040"); }
+  scene = "care";
+  save();
+  return true;
+}
+function careStreakBump() {
+  const C4 = hc164.care, d = todayKey();
+  if (C4.sday === d) return 0;
+  const y = dayNum(d) - 1;
+  C4.streak = C4.sday && dayNum(C4.sday) === y ? C4.streak + 1 : 1;
+  C4.best = Math.max(C4.best, C4.streak);
+  C4.sday = d;
+  const bonus = 5 + 5 * Math.min(C4.streak, 7);
+  joy += bonus;
+  toast((C4.streak > 1 ? "Care streak: " + C4.streak + " days!" : "First care today!") + " +" + bonus + " ♥", "#c07040");
+  return bonus;
+}
+function careAct(id, kindId) {
+  const C4 = ensureHc164().care, k = CARE_KINDS.indexOf(kindId), a = ANIMALS.find(x => x.id === id);
+  if (k < 0 || !a || !unlocked[id]) return false;
+  careTick();
+  const n = careNeeds(id), v = n[k];
+  if (v < CARE_WANT) {
+    toast(a.name + (k === 0 ? " isn't hungry right now ♥" : k === 1 ? " isn't sleepy yet ♥" : " is happy just resting ♥"), C.textSoft);
+    return false;
+  }
+  if (k === 0) {
+    if (C4.treats <= 0) { toast("Out of treats. Grab a pack below ♥", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return false; }
+    C4.treats--;
+  }
+  n[k] = 0;
+  const pay = 8 + Math.round(v / 10);
+  joy += pay;
+  C4.total++;
+  critterHugs[id] = (critterHugs[id] || 0) + 1; // a friendship hug (friendship only ever goes up)
+  checkFriendship(a);
+  careStreakBump();
+  careFx = { id, k, t: 0, pay };
+  if (typeof sfxPet === "function") sfxPet();
+  if (typeof buzz === "function") buzz("pet");
+  qBump("care", kindId);
+  if (typeof checkAchievements === "function") checkAchievements();
+  save();
+  return true;
+}
+let careFx = null;
+function buyTreats() {
+  const C4 = ensureHc164().care;
+  if (joy < TREAT_PACK.cost) { toast("Needs " + TREAT_PACK.cost + " ♥", C.textSoft); if (typeof sfxNope === "function") sfxNope(); return false; }
+  joy -= TREAT_PACK.cost; C4.treats += TREAT_PACK.n;
+  toast("+" + TREAT_PACK.n + " treats ♥", "#c07040");
+  if (typeof sfxUnlock === "function") sfxUnlock();
+  save();
+  return true;
+}
+function careRowH() { return 128; }
+function carePerPage() { return Math.max(1, Math.floor((H - 150 - 84) / careRowH())); }
+let careTickT = 0;
+function careStep(dt) {
+  careTickT -= dt;
+  if (careTickT <= 0) { careTickT = 5; careTick(); }
+  if (careFx) { careFx.t += dt; if (careFx.t > 1.2) careFx = null; }
+  drawCare();
+  updateParticles(dt); drawParticles();
+}
+function drawCare() {
+  const C4 = ensureHc164().care;
+  panelHeader("Care Corner", "Treats " + C4.treats + "  ·  Care streak " + C4.streak + (C4.streak === 1 ? " day" : " days"));
+  const per = carePerPage(), pages = Math.max(1, Math.ceil(careOrder.length / per));
+  carePage = clamp(carePage, 0, pages - 1);
+  const ids = careOrder.slice(carePage * per, carePage * per + per), rh = careRowH();
+  if (!ids.length) { ctx.fillStyle = C.textSoft; font(12, false); ctx.textAlign = "center"; ctx.fillText("Make a friend first ♥", W / 2, H / 2); }
+  ids.forEach((id, i) => {
+    const a = ANIMALS.find(x => x.id === id), n = careNeeds(id), y = 80 + i * rh;
+    const wants = n.some(v => v >= 50);
+    ctx.fillStyle = wants ? "rgba(255,240,226,0.95)" : "rgba(255,250,245,0.9)"; roundRect(20, y, W - 40, rh - 8, 12); ctx.fill();
+    ctx.strokeStyle = wants ? "#e0a070" : "#e8d0dc"; ctx.lineWidth = 1.5; ctx.stroke();
+    const fx = careFx && careFx.id === id ? careFx : null;
+    const hop = fx && !(kind && kind.motion) ? Math.abs(Math.sin(fx.t * 9)) * 6 * (1 - fx.t / 1.2) : 0;
+    drawSprite(a, 54, y + 40 - hop, 1.45, false, 0, false, i, { acc: equippedFor(id), heartEyes: !!fx });
+    if (fx) { ctx.fillStyle = "#c07040"; font(11, true); ctx.textAlign = "center"; ctx.fillText(CARE_INFO[CARE_KINDS[fx.k]].done + " +" + fx.pay, 54, y + 12 - fx.t * 6); }
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillStyle = C.text; fitFont(a.name, W - 140, 13, true, 9); ctx.fillText(a.name, 92, y + 14);
+    CARE_KINDS.forEach((kk, j) => {
+      const I = CARE_INFO[kk], v = n[j], by = y + 30 + j * 13, bx = 152, bw = W - 40 - bx + 6;
+      ctx.fillStyle = C.textSoft; font(9.5, true); ctx.fillText(I.need, 92, by);
+      ctx.fillStyle = "rgba(60,50,70,0.12)"; roundRect(bx, by - 4, bw, 8, 4); ctx.fill();
+      ctx.fillStyle = v >= 50 ? I.col : "rgba(160,150,170,0.6)"; roundRect(bx, by - 4, Math.max(6, bw * v / 100), 8, 4); ctx.fill();
+    });
+    const bw = (W - 40 - 16 - 12) / 3;
+    CARE_KINDS.forEach((kk, j) => {
+      const I = CARE_INFO[kk], v = n[j], on = v >= CARE_WANT && (j > 0 || C4.treats > 0);
+      uiButtons.push(btn(28 + j * (bw + 6), y + rh - 8 - 48, bw, 44, I.btn, { id: "v164_c" + kk + "_" + id, size: 13, r: 10,
+        bg: on ? (v >= 50 ? "#ffe4c8" : "#fff4ea") : "#f0eaee", border: on ? I.col : "#d8c8d0", color: on ? C.btnText : "#a898a8" }));
+    });
+  });
+  // treats + paging + back
+  const ty = H - 128;
+  ctx.textAlign = "left"; ctx.fillStyle = C.text; font(12, true); ctx.fillText("Treats ×" + C4.treats, 30, ty + 22);
+  ctx.fillStyle = C.textSoft; font(9.5, false); ctx.fillText("Snacks use a treat · naps & play are free", 30, ty + 40);
+  uiButtons.push(btn(W - 150, ty, 122, 44, "+" + TREAT_PACK.n + " · " + TREAT_PACK.cost + " ♥", { id: "v164_cbuy", size: 12, r: 10, bg: joy >= TREAT_PACK.cost ? "#ffe8d8" : "#f0eaee", border: "#e0a070" }));
+  const by = H - 64;
+  uiButtons.push(btn(W / 2 - 64, by, 128, 46, "◂ Yard", { id: "v164_care_back", size: 15 }));
+  if (pages > 1) {
+    uiButtons.push(btn(28, by, 60, 46, "◂", { id: "v164_cpg_prev", size: 16, bg: carePage > 0 ? "#f5e6ee" : "#f0eaee", border: "#d0b0c0" }));
+    uiButtons.push(btn(W - 88, by, 60, 46, "▸", { id: "v164_cpg_next", size: 16, bg: carePage < pages - 1 ? "#f5e6ee" : "#f0eaee", border: "#d0b0c0" }));
+    ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false); ctx.fillText((carePage + 1) + " / " + pages, W / 2, by - 8);
+  }
+}
+// Care quests join the daily pool once you've opened the Care Corner
+[
+  { id: "care_feed", ev: "care", need: () => 2, ok: () => !!(hc164 && hc164.care.seen), text: (q) => "Give " + q.need + " friends a snack", pay: 35, match: (q, arg) => arg === "feed" },
+  { id: "care_nap", ev: "care", need: () => 2, ok: () => !!(hc164 && hc164.care.seen), text: (q) => "Tuck in " + q.need + " sleepy friends", pay: 35, match: (q, arg) => arg === "nap" },
+  { id: "care_play", ev: "care", need: () => 2, ok: () => !!(hc164 && hc164.care.seen), text: (q) => "Play with " + q.need + " friends in the Care Corner", pay: 35, match: (q, arg) => arg === "play" },
+  { id: "care_any", ev: "care", need: () => 4, ok: () => !!(hc164 && hc164.care.seen), text: (q) => "Care for friends " + q.need + " times", pay: 45 },
+].forEach(q => { if (!V16_QUEST_BY_ID[q.id]) { V16_QUESTS.push(q); V16_QUEST_BY_ID[q.id] = q; } });
+
+// ---------- scenes + actions ----------
+{
+  const fs = v16Scene; v16Scene = function (s) { return s === "care" || s === "trick" || fs.apply(this, arguments); };
+  const fp = v16Step; v16Step = function (dt) { if (scene === "care") return careStep(dt); if (scene === "trick") return trickStep(dt); return fp.apply(this, arguments); };
+  const fl = v16Leave; v16Leave = function () { if (scene === "care") { scene = "garden"; return true; } if (scene === "trick") { leaveTrick(); return true; } return fl.apply(this, arguments); };
+}
+function v164Action(id) {
+  if (id === "v164_care") { if (scene === "garden") { gSel = null; openCare(); } return true; }
+  if (id === "v164_care_back") { scene = "garden"; return true; }
+  if (id === "v164_cbuy") { buyTreats(); return true; }
+  if (id === "v164_cpg_prev") { carePage = Math.max(0, carePage - 1); return true; }
+  if (id === "v164_cpg_next") { carePage++; return true; }
+  const m = /^v164_c(feed|nap|play)_(.+)$/.exec(id);
+  if (m) { careAct(m[2], m[1]); return true; }
+  if (id === "v164_trick") { if (typeof closeFunMenu === "function") closeFunMenu(); startTrick(); return true; }
+  if (id === "v164_door") { trickDoor(); return true; }
+  if (id === "v164_trick_back") { leaveTrick(); return true; }
+  return false;
+}
+{ const f = v16Action; v16Action = function (id) { if (id && v164Action(id)) return true; return f.apply(this, arguments); }; }
+
+// ---------- What's New (v16.4) ----------
+Object.assign(WHATS_NEW, {
+  sub: "Harvest Hollow & Halloween",
+  pals: ["scarecrow", "pumpkinmouse", "maplefox", "haybunny"],
+  items: [
+    "Harvest Hollow: leaf piles, gusts & a lonely crow",
+    "Six autumn friends in the Hollow and the Shop",
+    "Halloween (Oct 15–Nov 1): trick-or-treat & costumes",
+    "Care Corner in the Yard: snacks, naps & play",
+    "10 Harvest quests, new sets & a goal ladder",
+  ],
+});
+
+// ---------- test/debug hooks ----------
+const v164Api = {
+  get hc164() { return hc164; },
+  normalizeHc164, ensureHc164,
+  harvOpen, harvStageOpen, harvStartStage, harvFinish, harvTotalStars, harvFriendCount, harvOpenPile, harvAddPile,
+  HARVEST_STAGES, HARVEST_FRIENDS, HARVEST_IDS, HALLOWEEN_HATS, DECOR164H, HOLIDAYS, HOL_TRACK, GHOSTIE_NEED, TRICK_DAY_CAP,
+  get harvSel() { return harvSel; }, get trick() { return trick; }, get careOrder() { return careOrder; }, get carePage() { return carePage; },
+  holidayActive, holidayActiveOn, holState, holDate, activeHolidays, startTrick, trickDoor, leaveTrick, trickLeft, maybeGhostie, holBump,
+  setHolidayDate(d) { holDateOverride = d ? new Date(d.getTime()) : null; },
+  setCareNow(ms) { careNowOverride = ms; },
+  careTick, careNeeds, careAct, openCare, buyTreats, careFriends, CARE_RATE, CARE_WANT, CARE_PAUSE_MS,
+  drawHarvestBg, funRows, funRowState,
+};
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -21255,7 +22532,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
         garden, visitors, gBubbles, gSel, gDrag, cozy: gardenCozy(), decorTab, awayReturn, prevScene,
         arcade, mg, ownedAcc, musicMode: music.modeKey, seasons, flies, season: currentSeason(), light: dayLight(),
         adv, st, cut, credits, advSel, advTreasOpen, musicFlavor: music.flavor, bgId, kind, kindTalk, party, band, booth, v12, skyTaps,
-        hc15, farm, hc154, hc16, hc162, hc163 };
+        hc15, farm, hc154, hc16, hc162, hc163, hc164 };
     },
     set: (k, v) => {
       if (k === "mood") mood = v; else if (k === "joy") joy = v; else if (k === "scene") scene = v;
@@ -21299,6 +22576,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     v161: v161Api,
     v162: v162Api,
     v163: v163Api,
+    v164: v164Api,
     drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
