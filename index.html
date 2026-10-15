@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.7-holidays">
+<meta name="hc-version" content="16.8-release">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.7 — holidays part 2
+// Happy Critters v16.8 — release polish
 
 const W = 360;
 let H = 540;
@@ -5640,6 +5640,7 @@ function load() {
     if (typeof normalizeHc163 === "function") hc163 = normalizeHc163(d.hc163);
     if (typeof normalizeHc164 === "function") hc164 = normalizeHc164(d.hc164);
     if (typeof normalizeHc165 === "function") hc165 = normalizeHc165(d.hc165);
+    if (typeof normalizeHc168 === "function") hc168 = normalizeHc168(d.hc168);
     if (typeof v12Boot === "function") v12Boot();
     prepMorning();
     if (!isFinite(joy)) joy = 0;
@@ -5669,6 +5670,7 @@ function save() {
       hc163: (typeof hc163 !== "undefined" ? hc163 : null),
       hc164: (typeof hc164 !== "undefined" ? hc164 : null),
       hc165: (typeof hc165 !== "undefined" ? hc165 : null),
+      hc168: (typeof hc168 !== "undefined" ? hc168 : null),
     }));
     saveDirty = false;
   } catch (e) {}
@@ -9239,7 +9241,7 @@ function canvasPos(e) {
   const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
   return { x: ((clientX - r.left) / r.width) * W, y: ((clientY - r.top) / r.height) * H };
 }
-const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true, settings: true, wishes: true, market: true, dye: true };
+const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true, settings: true, wishes: true, market: true, dye: true, about: true };
 const dist2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
 
 function tapGloom(p) {
@@ -9539,8 +9541,8 @@ function frame(ts) {
 // ===================== COZY LAYER (v4, updated v5) =====================
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
-const APP_VERSION = 22;
-const APP_LABEL = "v16.7";
+const APP_VERSION = 23;
+const APP_LABEL = "v16.8";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "Coral Cove & Cozy Yards",
@@ -14656,7 +14658,9 @@ function copyNote() {
 function drawKindSettings() {
   panelHeader("Settings", "Happy Critters " + APP_LABEL);
   const top = 78, bottom = H - 74, rowH = 52;
+  const tipsOn = !(typeof hc168 !== "undefined" && hc168 && hc168.off);
   const rows = [
+    ["kind_backup", "Save backup code  ♥", "#e8d0ff", "#c090e0"],
     ["tog_music", "♪  Music: " + (musicOn ? "On" : "Off"), musicOn ? "#d0ffd8" : "#eee4ea", musicOn ? "#70c080" : "#c8b8c8"],
     ["tog_sfx", "✦  Sounds: " + (sfxOn ? "On" : "Off"), sfxOn ? "#d0e8ff" : "#eee4ea", sfxOn ? "#80b0e0" : "#c8b8c8"],
     ["tog_haptics", "♡  Haptics: " + (hapticsOn ? "On" : "Off"), hapticsOn ? "#ffe0ee" : "#eee4ea", hapticsOn ? "#ff90b8" : "#c8b8c8"],
@@ -14664,8 +14668,8 @@ function drawKindSettings() {
     ["tog_motion", "✿  Gentler motion: " + (kind.motion ? "On" : "Off"), kind.motion ? "#e6f0ff" : "#f5e6ee", kind.motion ? "#80b0e0" : "#d0b0c0"],
     ["tog_big", "Aa  Bigger text: " + (kind.big ? "On" : "Off"), kind.big ? "#fff0d8" : "#f5e6ee", kind.big ? "#e0b060" : "#d0b0c0"],
     ["tog_meter", "◕  Joy shapes: " + (kind.meter ? "On" : "Off"), kind.meter ? "#ffe6f2" : "#f5e6ee", kind.meter ? "#ff90b8" : "#d0b0c0"],
+    ["v168_tips", "?  Tips: " + (tipsOn ? "On" : "Off"), tipsOn ? "#fff4d0" : "#f5e6ee", tipsOn ? "#e0b040" : "#d0b0c0"],
     ["kind_jar", "Dream Jar" + (kind.dream ? "  ♥" : ""), "#fff4c8", "#e0b040"],
-    ["kind_backup", "Save backup code", "#e8d0ff", "#c090e0"],
     ["v11_visit", "Friend visit code", "#efe6ff", "#b090e0"],
     ["seasons", (SEASON_INFO[currentSeason()] || SEASON_INFO.spring).icon + "  Time & Seasons", "#f8e4f2", "#e0a0c0"],
     ["v12_wx", "☂  Weather: " + (typeof wxLabel === "function" ? wxLabel() : "Auto"), "#e7f4ff", "#80b0e0"],
@@ -14673,12 +14677,17 @@ function drawKindSettings() {
     ["v162_twists", "☀  Daily Twists: " + (typeof hc162 !== "undefined" && hc162 && hc162.twOff ? "Off" : "On"), (typeof hc162 !== "undefined" && hc162 && hc162.twOff) ? "#f5e6ee" : "#fff4d0", (typeof hc162 !== "undefined" && hc162 && hc162.twOff) ? "#d0b0c0" : "#e0b040"],
     ["tut_replay", "Replay the tutorial", "#f5e6ee", "#d0b0c0"],
     ["whatsnew", "What's new", "#fff0b0", "#e0c060"],
+    ["v168_about", "About & credits", "#ffe0ee", "#ff90b8"],
   ];
   if (updateReady) rows.push(["sw_refresh", "Update ready ✨", "#d0ffd8", "#70c080"]);
-  setListExtent(top, bottom, rows.length * rowH + 8);
+  const noteH = Math.round(38 * textScale());
+  setListExtent(top, bottom, noteH + rows.length * rowH + 8);
   listClip(top, bottom);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = C.textSoft; font(11, false);
+  wrapText("Your meadow is saved in this browser only. Copy a backup code now and then ♥", W - 64).slice(0, 3).forEach((l, i) =>
+    ctx.fillText(l, W / 2, top + 14 + i * Math.round(14 * textScale()) - listScroll));
   rows.forEach((r, i) => {
-    const y = top + 4 + i * rowH - listScroll;
+    const y = top + 4 + noteH + i * rowH - listScroll;
     if (y > bottom || y + rowH < top) return;
     listBtn(28, y, W - 56, 44, r[1], { id: r[0], size: 14, bg: r[2], border: r[3] }, top, bottom);
   });
@@ -14761,10 +14770,11 @@ function drawRename() {
 }
 function drawKindScene() {
   if (scene === "backup") drawBackup();
+  else if (scene === "about" && typeof drawAbout === "function") drawAbout();
   else if (scene === "jar") drawDreamScreen();
   else if (scene === "rename") drawRename();
 }
-const isKindScene = s => s === "backup" || s === "jar" || s === "rename";
+const isKindScene = s => s === "backup" || s === "jar" || s === "rename" || s === "about";
 
 function openBackup() {
   kind.pending = null; kind.backupMode = "export";
@@ -14798,6 +14808,7 @@ function kindAction(id) {
   }
   if (id === "kind_no") { kind.pending = null; return true; }
   if (id === "kind_yes") { applyImportedSave(); return true; }
+  if (id === "close" && scene === "about") { scene = aboutBack || "settings"; hideNote(); return true; }
   if (id === "close" && (scene === "jar" || scene === "backup")) { scene = kind.back || prevScene || "title"; hideNote(); return true; }
   if (id === "kind_dream_save") { setDream(noteValue()); if (scene === "jar") scene = kind.back || prevScene || "play"; hideNote(); return true; }
   if (id === "kind_dream_clear") { kind.dream = ""; kind.dreamDay = ""; noteSet(""); save(); toast("The jar is empty again", C.textSoft); return true; }
@@ -19992,8 +20003,8 @@ function drawLadders() {
     else if (got < 4) { ctx.textAlign = "right"; ctx.fillStyle = C.textSoft; font(10, true); ctx.fillText("+" + TIER_PAY[got][0] + " ♥ · +" + TIER_PAY[got][1] + " 🌱", W - 34, y + 48); }
     y += rowH;
   }
-  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
-  ctx.fillText("Bronze +50 ♥ · Silver +120 · Gold +300 · Rainbow +600, plus seeds", W / 2, y + 10);
+  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; const lt = "Bronze +50 ♥ · Silver +120 · Gold +300 · Rainbow +600, plus seeds"; fitFont(lt, W - 44, 10, false, 7);
+  ctx.fillText(lt, W / 2, y + 10);
   ctx.restore();
   drawScrollbar(top, bottom);
   panelFooter();
@@ -20396,7 +20407,7 @@ function coralWon(k) { return !!(coralState().gm[k] & 1); }
 function coralStageOpen(k) { return coralOpen() && k >= 0 && k < CORAL_N && (k === 0 || coralWon(k - 1)); }
 function coralStars(k) { return popcnt3(coralState().gm[k] || 0); }
 function coralTotalStars() { let n = 0; for (let k = 0; k < CORAL_N; k++) n += coralStars(k); return n; }
-const CORAL_LOCK_TEXT = "Opens with 25 friends or after the Sky Islands";
+const CORAL_LOCK_TEXT = "Opens at 25 friends or after Sky Islands";
 
 // ---------- ten Coral daily quests ----------
 [
@@ -21118,8 +21129,8 @@ function drawYardStyle() {
     ctx.textAlign = "right"; drawSeedIcon(W - 70, y + 11, 1.3); ctx.fillStyle = "#3f8a32"; font(11.5, true); ctx.fillText("+" + T.seeds, W - 44, y + 11.5);
     if (next) { const p = clamp(z / T.at, 0, 1); ctx.fillStyle = "#ffd66b"; ctx.fillRect(150, y + 17, (W - 260) * p, 2); }
   });
-  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; font(10, false);
-  ctx.fillText("Each gift pays once. Tip: ⇅ Layer and rugs let pieces overlap.", W / 2, top + ph - 70);
+  ctx.textAlign = "center"; ctx.fillStyle = C.textSoft; const yt = "Each gift pays once. Tip: ⇅ Layer and rugs let pieces overlap."; fitFont(yt, W - 56, 10, false, 7);
+  ctx.fillText(yt, W / 2, top + ph - 70);
   uiButtons.push(btn(W / 2 - 64, top + ph - 58, 128, 46, "Close", { id: "v163_style_close", size: 15 }));
 }
 { const f = drawGardenHUD; drawGardenHUD = function () { const r = f.apply(this, arguments); if (yardStyleOpen && scene === "garden") drawYardStyle(); return r; }; }
@@ -22708,7 +22719,7 @@ function openShow(from) {
   if (eq && WARD_TAGS[eq] && accAvailable(eq, pals[fi].id)) show.items.push(eq);
   scene = "show";
   if (typeof qBump === "function") qBump("showopen");
-  hint165("show", "Match the theme ✦ and mix hats, clips & dyes", "#b050a0");
+  hint165("show", "Match the theme ✦, mix hats & dyes", "#b050a0");
   return true;
 }
 function showFriend() { const p = foundFriends(); return p[clamp(show.fi, 0, p.length - 1)] || ANIMALS[0]; }
@@ -24117,6 +24128,8 @@ function holShopRows() {
   const pri = id => holidayActive(id) ? ["newyear", "christmas", "thanksgiving"].indexOf(id) : 9;
   const ids = holShopIds().sort((a, b) => pri(a) - pri(b));
   const rows = [];
+  // Halloween prizes come from its Trick-or-Treat track, not this shop: say so while it is on, so the tab never feels empty
+  if (holidayActive("halloween")) rows.push({ head: "halloween" }, { note: "Halloween outfits & friends are prizes in Trick-or-Treat (Fun menu)." });
   for (const hid of ids) {
     rows.push({ head: hid });
     for (const it of HOL_ITEMS[hid]) rows.push({ item: it });
@@ -24148,15 +24161,21 @@ function buyHolDecor(id) {
   return buyDecor(id);
 }
 function drawHolidayShop(top, bottom) {
-  const rows = holShopRows(), headH = 34, rowH = 70;
-  let total = 8; for (const r of rows) total += r.head ? headH : rowH;
+  const rows = holShopRows(), headH = 34, rowH = 70, noteH = Math.round(36 * (typeof textScale === "function" ? textScale() : 1));
+  const hOf = r => r.head ? headH : r.note ? noteH : rowH;
+  let total = 8; for (const r of rows) total += hOf(r);
   setListExtent(top, bottom, total);
   const model = holModel();
   let y = top + 4 - listScroll;
   rows.forEach((r, i) => {
-    const h = r.head ? headH : rowH;
+    const h = hOf(r);
     if (y > bottom || y + h < top) { y += h; return; }
     ctx.textBaseline = "middle";
+    if (r.note) {
+      ctx.fillStyle = C.textSoft; font(11, false); ctx.textAlign = "left";
+      wrapText(r.note, W - 64).slice(0, 2).forEach((ln, k) => ctx.fillText(ln, 28, y + 12 + k * Math.round(14 * (typeof textScale === "function" ? textScale() : 1))));
+      y += h; return;
+    }
     if (r.head) {
       const H = HOL_BY_ID[r.head], on = holidayActive(r.head);
       ctx.fillStyle = C.text; font(14, true); ctx.textAlign = "left";
@@ -25643,6 +25662,187 @@ const v167Api = {
   get card() { return card; }, get clover() { return clover; }, get egg() { return egg; }, get spark() { return spark; },
 };
 
+// ===================== v16.8 — Release polish: first-10-minutes tips, About & credits, save reminders =====================
+// New state lives in hc168 (normalized on load): which tips were shown, which menus were visited, tip on/off, session count.
+// Tips never block play: one small card at a time (like the Morning note), dismissible, off in Settings.
+const TIP_URL = ""; // optional tip-jar link, e.g. "https://ko-fi.com/yourname". Leave "" for a placeholder. It never gates content.
+const CREATOR = "gavenecko";
+const TIP_MAX_TOTAL = 8, TIP_MAX_SESSION = 3, TIP_FIRST_AT = 30, TIP_GAP = 80, TIP_LIFE = 10;
+const TIP_KEYS = ["shop", "yard", "games", "goals", "album", "fun"];
+function blankHc168() { return { tips: {}, visits: {}, off: false, sess: 0, shown: 0, backup: false, seen: false }; }
+let hc168 = blankHc168();
+function normalizeHc168(d) {
+  const o = blankHc168();
+  if (!isObj(d)) return o;
+  if (isObj(d.tips)) for (const k in d.tips) if (d.tips[k] === true && ID_RE.test(k)) o.tips[k] = true;
+  if (isObj(d.visits)) for (const k of TIP_KEYS) if (d.visits[k]) o.visits[k] = intIn(d.visits[k], 0, 99999) || 1;
+  o.off = !!d.off; o.sess = intIn(d.sess, 0, 99999); o.shown = intIn(d.shown, 0, 99999); o.backup = !!d.backup; o.seen = !!d.seen;
+  return o;
+}
+function ensureHc168() { if (!hc168 || !hc168.tips || !hc168.visits) hc168 = normalizeHc168(hc168); return hc168; }
+
+// ---------- tips (in order of priority; each shows once, and only if it is still useful) ----------
+const friendsCount = () => { let n = 0; for (const k in unlocked) if (unlocked[k]) n++; return n; };
+const TIPS = [
+  { id: "hug", text: "Tap a floating critter to hug it. Hugs fill the Joy bar!", ok: () => totalHugs < 12 },
+  { id: "shop", text: "Shop: spend your hearts on new friends, scenes and outfits.", ok: () => !hc168.visits.shop && joy >= 60 },
+  { id: "goals", text: "Goals: small wishes that pay hearts. Check back each day.", ok: () => !hc168.visits.goals && totalHugs >= 25 },
+  { id: "yard", text: "Yard: a cozy garden to decorate. Friends drop by to visit.", ok: () => !hc168.visits.yard && (totalHugs >= 45 || joy >= 220) },
+  { id: "games", text: "Games: the story Adventure and mini-games that earn hearts.", ok: () => !hc168.visits.games && totalHugs >= 70 },
+  { id: "fun", text: "Fun (above the toolbar): daily extras and little events.", ok: () => !hc168.visits.fun && totalHugs >= 100 },
+  { id: "album", text: "Album: see your friends, their hearts, and give them names.", ok: () => !hc168.visits.album && friendsCount() >= 3 },
+  { id: "backup", text: "Your meadow is saved in this browser. Settings has a backup code.", ok: () => !hc168.backup && (totalHugs >= 150 || hc168.sess >= 3) },
+];
+const TIP_BY_ID = {}; for (const t of TIPS) TIP_BY_ID[t.id] = t;
+let tipCard = null, tipClock = 0, tipSince = 0, tipSessCounted = false, tipSessShown = 0;
+const tipsAllowed = () => ensureHc168() && !hc168.off && tutorialDone && !tut && hc168.shown < TIP_MAX_TOTAL;
+function tipBusy() {
+  return scene !== "play" || (typeof funOpen !== "undefined" && funOpen) || !!storyBanner || !!activeEvent
+    || (typeof party !== "undefined" && party && party.noteShow) || toastQueue.length > 0;
+}
+function pickTip() { for (const t of TIPS) if (!hc168.tips[t.id] && t.ok()) return t; return null; }
+function showTip(t) {
+  hc168.tips[t.id] = true; hc168.shown++; tipSessShown++; tipSince = 0;
+  if (t.id === "backup") hc168.backup = true;
+  tipCard = { id: t.id, text: t.text, t: 0, life: TIP_LIFE * (kind && kind.big ? 1.4 : 1) };
+  saveSoon();
+}
+function tipDismiss() { tipCard = null; tipSince = 0; }
+function tipTick(dt) {
+  if (!tipSessCounted) { tipSessCounted = true; ensureHc168(); hc168.sess = Math.min(99999, hc168.sess + 1); saveSoon(); }
+  if (tipCard) {
+    if (scene !== "play" || !tipsAllowed()) { tipCard = null; return; }
+    tipCard.t += dt;
+    if (tipCard.t >= tipCard.life) tipDismiss();
+    return;
+  }
+  if (scene !== "play") return;
+  tipClock += dt; tipSince += dt;
+  if (!tipsAllowed() || tipSessShown >= TIP_MAX_SESSION || tipBusy()) return;
+  if (tipClock < TIP_FIRST_AT || tipSince < (tipSessShown ? TIP_GAP : 0)) return;
+  const t = pickTip();
+  if (t) showTip(t);
+}
+function drawTipCard() {
+  if (!tipCard || scene !== "play") return;
+  if (typeof party !== "undefined" && party && party.noteShow) return;
+  const c = tipCard, y = 86, h = Math.round(64 * Math.max(1, textScale() * 0.95));
+  if (y + h > H - 90) return;
+  const a = Math.min(1, c.t / 0.5, Math.max(0, (c.life - c.t) / 0.6)); // soft fade only (no slide), fine for reduced motion
+  ctx.save(); ctx.globalAlpha = Math.max(0, a);
+  ctx.fillStyle = "rgba(255,250,245,0.96)"; roundRect(16, y, W - 32, h, 12); ctx.fill();
+  ctx.strokeStyle = "#ffd890"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#c08a20"; font(11, true); ctx.fillText("Tip", 28, y + 16);
+  ctx.fillStyle = C.text; font(11, false);
+  const lh = Math.round(13 * textScale());
+  wrapText(c.text, W - 150).slice(0, 3).forEach((ln, i) => ctx.fillText(ln, 28, y + 34 + i * lh));
+  ctx.restore();
+  if (a > 0.4) uiButtons.push(btn(W - 96, y + Math.round((h - 44) / 2), 70, 44, "Got it", { id: "v168_tip_ok", size: 12, bg: "#fff0c8", border: "#e0b040" }));
+}
+{ const f = drawMorningNote; drawMorningNote = function () { const r = f.apply(this, arguments); drawTipCard(); return r; }; }
+{ const f = v16Tick; v16Tick = function (dt) { const r = f.apply(this, arguments); tipTick(dt); return r; }; }
+
+// ---------- first visit to a menu: one gentle line, once ----------
+const VISIT_LINE = { // short on purpose: they must fit one line even with Bigger text
+  shop: "Hearts buy friends & outfits ♥",
+  yard: "Decorate! Friends will visit.",
+  games: "Story Adventure + mini-games",
+  goals: "Little wishes that pay hearts",
+  album: "Hug friends to grow their hearts",
+  fun: "Daily extras live here ♥",
+};
+function visitMenu(key) {
+  ensureHc168();
+  const first = !hc168.visits[key];
+  hc168.visits[key] = Math.min(99999, (hc168.visits[key] || 0) + 1);
+  if (tipCard && tipCard.id === key) tipDismiss();
+  if (first) {
+    hc168.tips[key] = true; // its meadow tip is no longer needed
+    if (tipsAllowed() && VISIT_LINE[key]) toast(VISIT_LINE[key], "#a0701c");
+    saveSoon();
+  }
+}
+{
+  const PANEL_KEY = { shop: "shop", garden: "yard", arcade: "games", achievements: "goals", album: "album" };
+  const f = openPanel;
+  openPanel = function (name) { const r = f.apply(this, arguments); if (PANEL_KEY[name]) visitMenu(PANEL_KEY[name]); return r; };
+  const g = openFunMenu;
+  openFunMenu = function () { const r = g.apply(this, arguments); visitMenu("fun"); return r; };
+}
+
+// ---------- About & credits (Settings) ----------
+let aboutBack = "settings";
+function openAbout() { aboutBack = scene === "settings" ? "settings" : (scene === "about" ? aboutBack : scene); if (scene !== "about" && scene !== "settings") prevScene = scene; scene = "about"; listScroll = 0; listMax = 0; }
+function drawAbout() {
+  panelHeader("About", "Happy Critters " + APP_LABEL);
+  const top = 78, bottom = H - 74, ts = textScale(), lh = Math.round(16 * ts), x0 = 30, bw = W - 60;
+  const blocks = [
+    ["Free & friendly", "Happy Critters is free to play. No ads, no paywall, and nothing locked behind a purchase."],
+    ["Your save", "Your meadow is saved in this browser, on this device. Clearing site data, a private window or a different browser starts a fresh meadow. Copy a backup code now and then ♥", "v168_backup", "Save backup code"],
+    ["Privacy", "No accounts, no tracking, no data collected. Nothing leaves your device unless you copy a code or postcard yourself."],
+    ["Made with AI help", "The art, music, sounds, writing and code were made with AI tools, then shaped and finished by hand."],
+    ["Tip jar (optional)", TIP_URL ? "Enjoying it? A tip is a kind thank-you. It never unlocks anything." : "A tip jar may live here one day. It would only ever be a thank-you and never unlock or gate anything.", TIP_URL ? "v168_tip_url" : null, "Open tip jar"],
+    ["Say hello", "Found a bug or have an idea? Leave a note on the game's itch.io page."],
+  ];
+  font(12, false);
+  const layout = []; let y = 4;
+  for (const b of blocks) {
+    const lines = wrapText(b[1], bw);
+    layout.push({ b, lines, y }); y += Math.round(22 * ts) + lines.length * lh + (b[2] ? 52 : 6) + 10;
+  }
+  y += 14 * ts + 30;
+  setListExtent(top, bottom, y + 8);
+  listClip(top, bottom);
+  ctx.textBaseline = "middle";
+  for (const L of layout) {
+    const yy = top + L.y - listScroll;
+    if (yy > bottom || yy + 300 < top) continue;
+    ctx.textAlign = "left"; ctx.fillStyle = C.text; font(13, true); ctx.fillText(L.b[0], x0, yy + 10);
+    ctx.fillStyle = C.textSoft; font(12, false);
+    L.lines.forEach((ln, i) => ctx.fillText(ln, x0, yy + Math.round(22 * ts) + 6 + i * lh));
+    if (L.b[2]) listBtn(x0, yy + Math.round(22 * ts) + L.lines.length * lh + 8, bw, 40, L.b[3], { id: L.b[2], size: 13, bg: "#e8d0ff", border: "#c090e0" }, top, bottom);
+  }
+  const fy = top + y - 40 - listScroll;
+  ctx.textAlign = "center"; ctx.fillStyle = C.heart; font(12, true);
+  ctx.fillText("Made with love by " + CREATOR + " ♥", W / 2, fy);
+  ctx.fillStyle = C.textSoft; font(11, false);
+  ctx.fillText(APP_LABEL + "  ·  thank you for playing!", W / 2, fy + Math.round(18 * ts));
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
+function v168Action(id) {
+  if (id === "v168_tip_ok") { tipDismiss(); return true; }
+  if (id === "v168_tips") {
+    ensureHc168(); hc168.off = !hc168.off; if (hc168.off) tipCard = null; save();
+    toast(hc168.off ? "Tips off" : "Tips on", C.textSoft); return true;
+  }
+  if (id === "v168_about") { openAbout(); return true; }
+  if (id === "v168_backup") { const keep = prevScene; ensureHc168().backup = true; openBackup(); prevScene = keep; kind.back = "about"; return true; }
+  if (id === "v168_tip_url") { try { if (TIP_URL) window.open(TIP_URL, "_blank", "noopener"); } catch (e) {} return true; }
+  return false;
+}
+V165_ACTIONS.push(v168Action);
+
+// ---------- What's New (v16.8) ----------
+Object.assign(WHATS_NEW, {
+  sub: "Ready for itch.io",
+  pals: ["cat", "bunny", "fox", "otter"],
+  items: [
+    "Gentle tips for your first few days (Settings → Tips)",
+    "About & credits, with the backup-code reminder",
+    "Settings now starts with Save backup code",
+    "A bug sweep across every region and holiday",
+  ],
+});
+
+const v168Api = {
+  TIPS, TIP_BY_ID, TIP_MAX_TOTAL, TIP_MAX_SESSION, TIP_FIRST_AT, TIP_GAP, normalizeHc168, ensureHc168, tipTick, pickTip, tipDismiss, openAbout, v168Action,
+  get hc168() { return hc168; }, get tipCard() { return tipCard; }, get tipClock() { return tipClock; }, TIP_URL,
+  resetSession() { tipCard = null; tipClock = 0; tipSince = 0; tipSessShown = 0; tipSessCounted = false; },
+};
+
 // ===================== BOOT =====================
 load();
 if (freshSave) {
@@ -25717,7 +25917,7 @@ if (window.__HC_TEST || window.__HC_DEBUG) {
     v164: v164Api,
     v165: v165Api,
     v166: v166Api,
-    v167: v167Api,
+    v167: v167Api, v168: v168Api,
     drawSprite, tapMoon, maybeMoonHint, openFarm, beachOpen, normalizeHc154,
     get audioState() { return audioCtx ? audioCtx.state : "none"; },
   };
