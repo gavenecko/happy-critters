@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.8.1-release">
+<meta name="hc-version" content="16.8.2-release">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.8.1 — release polish + Ko-fi link
+// Happy Critters v16.8.2 — Fun sheet pink-flash fix
 
 const W = 360;
 let H = 540;
@@ -8120,6 +8120,8 @@ function panelBox(x, y, w, h) {
 }
 function btn(x, y, w, h, label, opts) {
   opts = opts || {};
+  // invisible hit areas (full-screen backdrops, the Fun/mail/market tap zones) must never paint, not even the pressed/hover tint
+  if (opts.ghost || opts.bg === "rgba(0,0,0,0)") return { x, y, w, h, id: opts.id };
   const hot = hitUI && pointIn(hitUI.x, hitUI.y, x, y, w, h);
   ctx.fillStyle = hot ? (opts.hi || C.btnHi) : (opts.bg || C.btn);
   roundRect(x, y, w, h, opts.r || 12);
@@ -9542,7 +9544,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 23;
-const APP_LABEL = "v16.8.1";
+const APP_LABEL = "v16.8.2";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "Coral Cove & Cozy Yards",
@@ -17512,44 +17514,51 @@ function funRows() {
     ["Parade", "parade", "v154_parade", "#efe6ff", "#b090e0"],
   ];
 }
+let funSheetErrs = 0;
+function funSafe(label, fn) {
+  try { fn(); } catch (e) { if (funSheetErrs++ < 5) { try { console.error("Fun sheet: " + label + " failed", e); } catch (e2) {} }}
+}
 function drawFunSheet() {
   if (!funOpen || scene !== "play") return;
-  // dim backdrop
-  ctx.fillStyle = "rgba(18, 10, 24, 0.42)";
-  ctx.fillRect(0, 0, W, H);
-  const rows = funRows();
+  ctx.save();
+  funSafe("backdrop", () => { ctx.fillStyle = "rgba(18, 10, 24, 0.42)"; ctx.fillRect(0, 0, W, H); });
+  let rows = [];
+  funSafe("rows", () => { rows = funRows(); });
   const rowH = 52, gap = 6, pad = 14;
   const sheetH = pad + rows.length * (rowH + gap) - gap + 56;
   const sheetY = H - sheetH - 8;
   const sheetX = 16, sheetW = W - 32;
-  ctx.fillStyle = "rgba(255,250,245,0.97)";
-  roundRect(sheetX, sheetY, sheetW, sheetH, 16); ctx.fill();
-  ctx.strokeStyle = "#e0b0c8"; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = C.text; font(15, true); ctx.textAlign = "left"; ctx.textBaseline = "middle";
-  ctx.fillText("Fun", sheetX + 16, sheetY + 22);
-  // close
+  funSafe("panel", () => {
+    ctx.fillStyle = "rgba(255,250,245,0.97)";
+    roundRect(sheetX, sheetY, sheetW, sheetH, 16); ctx.fill();
+    ctx.strokeStyle = "#e0b0c8"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = C.text; font(15, true); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText("Fun", sheetX + 16, sheetY + 22);
+  });
   const cx = sheetX + sheetW - 44, cy = sheetY + 8;
   uiButtons.length = 0; // only sheet hits while open
-  uiButtons.push(btn(cx, cy, 36, 36, "✕", { id: "fun_close", size: 16, bg: "#ffe8f0", border: "#e090b0", r: 12 }));
+  funSafe("close", () => uiButtons.push(btn(cx, cy, 36, 36, "✕", { id: "fun_close", size: 16, bg: "#ffe8f0", border: "#e090b0", r: 12 })));
   let y = sheetY + 48;
   rows.forEach((it) => {
-    const st = funRowState(it[1]);
-    const bg = st.ok ? it[3] : "#ece4ea";
-    const bd = st.ok ? it[4] : "#c8b0bc";
-    const id = st.ok ? it[2] : "fun_nope";
-    uiButtons.push(btn(sheetX + 12, y, sheetW - 24, rowH, "", { id: id, size: 1, bg: bg, border: bd, r: 12 }));
-    // labels drawn on top of the btn fill (btn draws itself later via... wait, btn only stores; drawUI draws)
-    // Store label in button text so drawButtons shows it — use two-line via custom draw:
-    ctx.fillStyle = st.ok ? C.text : "#9a8090";
-    font(14, true); ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.fillText(it[0], sheetX + 24, y + 18);
-    font(11, false);
-    ctx.fillStyle = st.ok ? C.textSoft : "#b098a4";
-    ctx.fillText(st.why, sheetX + 24, y + 36);
+    // each row draws on its own: one failing activity can't blank the whole sheet
+    funSafe("row " + (it && it[1]), () => {
+      const st = funRowState(it[1]);
+      const bg = st.ok ? it[3] : "#ece4ea";
+      const bd = st.ok ? it[4] : "#c8b0bc";
+      const id = st.ok ? it[2] : "fun_nope";
+      uiButtons.push(btn(sheetX + 12, y, sheetW - 24, rowH, "", { id: id, size: 1, bg: bg, border: bd, r: 12 }));
+      ctx.fillStyle = st.ok ? C.text : "#9a8090";
+      font(14, true); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(it[0], sheetX + 24, y + 18);
+      font(11, false);
+      ctx.fillStyle = st.ok ? C.textSoft : "#b098a4";
+      ctx.fillText(st.why, sheetX + 24, y + 36);
+    });
     y += rowH + gap;
   });
-  // full-screen backdrop last so rows/close win first-match hit test
-  uiButtons.push(btn(0, 0, W, H, "", { id: "fun_bg", size: 1, bg: "rgba(0,0,0,0)", border: "rgba(0,0,0,0)" }));
+  // full-screen backdrop last so rows/close win first-match hit test (ghost: never painted)
+  uiButtons.push({ x: 0, y: 0, w: W, h: H, id: "fun_bg" });
+  ctx.restore();
 }
 function drawV154Meadow() {
   if (scene !== "play" || tut) return;
