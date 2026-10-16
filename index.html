@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.8-release">
+<meta name="hc-version" content="16.8.1-release">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.8 — release polish
+// Happy Critters v16.8.1 — release polish + Ko-fi link
 
 const W = 360;
 let H = 540;
@@ -9542,7 +9542,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 23;
-const APP_LABEL = "v16.8";
+const APP_LABEL = "v16.8.1";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "Coral Cove & Cozy Yards",
@@ -25665,7 +25665,7 @@ const v167Api = {
 // ===================== v16.8 — Release polish: first-10-minutes tips, About & credits, save reminders =====================
 // New state lives in hc168 (normalized on load): which tips were shown, which menus were visited, tip on/off, session count.
 // Tips never block play: one small card at a time (like the Morning note), dismissible, off in Settings.
-const TIP_URL = ""; // optional tip-jar link, e.g. "https://ko-fi.com/yourname". Leave "" for a placeholder. It never gates content.
+const TIP_URL = "https://ko-fi.com/gavenecko"; // optional tip jar (opens in a new tab). Set "" to hide the button. It never gates content.
 const CREATOR = "gavenecko";
 const TIP_MAX_TOTAL = 8, TIP_MAX_SESSION = 3, TIP_FIRST_AT = 30, TIP_GAP = 80, TIP_LIFE = 10;
 const TIP_KEYS = ["shop", "yard", "games", "goals", "album", "fun"];
@@ -25782,7 +25782,7 @@ function drawAbout() {
     ["Your save", "Your meadow is saved in this browser, on this device. Clearing site data, a private window or a different browser starts a fresh meadow. Copy a backup code now and then ♥", "v168_backup", "Save backup code"],
     ["Privacy", "No accounts, no tracking, no data collected. Nothing leaves your device unless you copy a code or postcard yourself."],
     ["Made with AI help", "The art, music, sounds, writing and code were made with AI tools, then shaped and finished by hand."],
-    ["Tip jar (optional)", TIP_URL ? "Enjoying it? A tip is a kind thank-you. It never unlocks anything." : "A tip jar may live here one day. It would only ever be a thank-you and never unlock or gate anything.", TIP_URL ? "v168_tip_url" : null, "Open tip jar"],
+    ["Tip jar (optional)", TIP_URL ? "Enjoying it? A ko-fi is a kind thank-you. It is optional and never unlocks or gates anything." : "A tip jar may live here one day. It would only ever be a thank-you and never unlock or gate anything.", TIP_URL ? "v168_tip_url" : null, "Buy me a ko-fi ♥"],
     ["Say hello", "Found a bug or have an idea? Leave a note on the game's itch.io page."],
   ];
   font(12, false);
