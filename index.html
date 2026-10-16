@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.8.3-release">
+<meta name="hc-version" content="16.8.4-release">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.8.3 — Add to home screen help
+// Happy Critters v16.8.4 — itch.io page link
 
 const W = 360;
 let H = 540;
@@ -9544,7 +9544,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 23;
-const APP_LABEL = "v16.8.3";
+const APP_LABEL = "v16.8.4";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "Coral Cove & Cozy Yards",
@@ -25676,6 +25676,7 @@ const v167Api = {
 // ===================== v16.8 — Release polish: first-10-minutes tips, About & credits, save reminders =====================
 // New state lives in hc168 (normalized on load): which tips were shown, which menus were visited, tip on/off, session count.
 // Tips never block play: one small card at a time (like the Morning note), dismissible, off in Settings.
+const ITCH_URL = "https://gavenecko.itch.io/happy-critters"; // the game's itch.io page (feedback + rating)
 const TIP_URL = "https://ko-fi.com/gavenecko"; // optional tip jar (opens in a new tab). Set "" to hide the button. It never gates content.
 const CREATOR = "gavenecko";
 const TIP_MAX_TOTAL = 8, TIP_MAX_SESSION = 3, TIP_FIRST_AT = 30, TIP_GAP = 80, TIP_LIFE = 10;
@@ -25794,7 +25795,7 @@ function drawAbout() {
     ["Privacy", "No accounts, no tracking, no data collected. Nothing leaves your device unless you copy a code or postcard yourself."],
     ["Made with AI help", "The art, music, sounds, writing and code were made with AI tools, then shaped and finished by hand."],
     ["Tip jar (optional)", TIP_URL ? "Enjoying it? A ko-fi is a kind thank-you. It is optional and never unlocks or gates anything." : "A tip jar may live here one day. It would only ever be a thank-you and never unlock or gate anything.", TIP_URL ? "v168_tip_url" : null, "Buy me a ko-fi ♥"],
-    ["Say hello", "Found a bug or have an idea? Leave a note on the game's itch.io page."],
+    ["Say hello", "Found a bug or have an idea? Leave a note on the game's itch.io page, and a rating there is a lovely thank-you too.", "v168_itch_url", "Play / rate on itch.io"],
   ];
   font(12, false);
   const layout = []; let y = 4;
@@ -25864,6 +25865,7 @@ function v168Action(id) {
   if (id === "v168_about") { openAbout(); return true; }
   if (id === "v168_a2hs") { openA2hs(); return true; }
   if (id === "v168_backup") { const keep = prevScene; ensureHc168().backup = true; openBackup(); prevScene = keep; kind.back = "about"; return true; }
+  if (id === "v168_itch_url") { try { window.open(ITCH_URL, "_blank", "noopener"); } catch (e) {} return true; }
   if (id === "v168_tip_url") { try { if (TIP_URL) window.open(TIP_URL, "_blank", "noopener"); } catch (e) {} return true; }
   return false;
 }
@@ -25883,7 +25885,7 @@ Object.assign(WHATS_NEW, {
 
 const v168Api = {
   TIPS, TIP_BY_ID, TIP_MAX_TOTAL, TIP_MAX_SESSION, TIP_FIRST_AT, TIP_GAP, normalizeHc168, ensureHc168, tipTick, pickTip, tipDismiss, openAbout, openA2hs, A2HS_BLOCKS, v168Action,
-  get hc168() { return hc168; }, get tipCard() { return tipCard; }, get tipClock() { return tipClock; }, TIP_URL,
+  get hc168() { return hc168; }, get tipCard() { return tipCard; }, get tipClock() { return tipClock; }, TIP_URL, ITCH_URL,
   resetSession() { tipCard = null; tipClock = 0; tipSince = 0; tipSessShown = 0; tipSessCounted = false; },
 };
 
