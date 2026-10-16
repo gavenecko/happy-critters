@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="hc-version" content="16.8.2-release">
+<meta name="hc-version" content="16.8.3-release">
 <meta name="description" content="A cozy pixel-art game: hug adorable critters, shoo the gloom clouds and bloom a gray meadow back to color.">
 <meta name="theme-color" content="#1a1420">
 <meta name="color-scheme" content="dark">
@@ -71,7 +71,7 @@
 <script>
 (() => {
 "use strict";
-// Happy Critters v16.8.2 — Fun sheet pink-flash fix
+// Happy Critters v16.8.3 — Add to home screen help
 
 const W = 360;
 let H = 540;
@@ -9243,7 +9243,7 @@ function canvasPos(e) {
   const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] && e.touches[0].clientY);
   return { x: ((clientX - r.left) / r.width) * W, y: ((clientY - r.top) / r.height) * H };
 }
-const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true, settings: true, wishes: true, market: true, dye: true, about: true };
+const LIST_SCENES = { shop: true, album: true, achievements: true, decor: true, settings: true, wishes: true, market: true, dye: true, about: true, a2hs: true };
 const dist2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
 
 function tapGloom(p) {
@@ -9544,7 +9544,7 @@ function frame(ts) {
 // Haptics, first-play tutorial, "What's new" card, PWA/service-worker glue.
 // Kept self-contained so later updates (garden, mini-games, seasons, story) can add scenes the same way.
 const APP_VERSION = 23;
-const APP_LABEL = "v16.8.2";
+const APP_LABEL = "v16.8.3";
 const WHATS_NEW = {
   title: "What's new ★",
   sub: "Coral Cove & Cozy Yards",
@@ -14679,6 +14679,7 @@ function drawKindSettings() {
     ["v162_twists", "☀  Daily Twists: " + (typeof hc162 !== "undefined" && hc162 && hc162.twOff ? "Off" : "On"), (typeof hc162 !== "undefined" && hc162 && hc162.twOff) ? "#f5e6ee" : "#fff4d0", (typeof hc162 !== "undefined" && hc162 && hc162.twOff) ? "#d0b0c0" : "#e0b040"],
     ["tut_replay", "Replay the tutorial", "#f5e6ee", "#d0b0c0"],
     ["whatsnew", "What's new", "#fff0b0", "#e0c060"],
+    ["v168_a2hs", "Add to home screen", "#e4f4ff", "#80b0e0"],
     ["v168_about", "About & credits", "#ffe0ee", "#ff90b8"],
   ];
   if (updateReady) rows.push(["sw_refresh", "Update ready ✨", "#d0ffd8", "#70c080"]);
@@ -14773,10 +14774,11 @@ function drawRename() {
 function drawKindScene() {
   if (scene === "backup") drawBackup();
   else if (scene === "about" && typeof drawAbout === "function") drawAbout();
+  else if (scene === "a2hs" && typeof drawA2hs === "function") drawA2hs();
   else if (scene === "jar") drawDreamScreen();
   else if (scene === "rename") drawRename();
 }
-const isKindScene = s => s === "backup" || s === "jar" || s === "rename" || s === "about";
+const isKindScene = s => s === "backup" || s === "jar" || s === "rename" || s === "about" || s === "a2hs";
 
 function openBackup() {
   kind.pending = null; kind.backupMode = "export";
@@ -14810,7 +14812,7 @@ function kindAction(id) {
   }
   if (id === "kind_no") { kind.pending = null; return true; }
   if (id === "kind_yes") { applyImportedSave(); return true; }
-  if (id === "close" && scene === "about") { scene = aboutBack || "settings"; hideNote(); return true; }
+  if (id === "close" && (scene === "about" || scene === "a2hs")) { scene = aboutBack || "settings"; hideNote(); return true; }
   if (id === "close" && (scene === "jar" || scene === "backup")) { scene = kind.back || prevScene || "title"; hideNote(); return true; }
   if (id === "kind_dream_save") { setDream(noteValue()); if (scene === "jar") scene = kind.back || prevScene || "play"; hideNote(); return true; }
   if (id === "kind_dream_clear") { kind.dream = ""; kind.dreamDay = ""; noteSet(""); save(); toast("The jar is empty again", C.textSoft); return true; }
@@ -25821,6 +25823,38 @@ function drawAbout() {
   drawScrollbar(top, bottom);
   panelFooter();
 }
+
+// ---------- Add to home screen help (Settings) ----------
+function openA2hs() { aboutBack = scene === "settings" ? "settings" : (scene === "a2hs" ? aboutBack : scene); if (scene !== "a2hs" && scene !== "settings") prevScene = scene; scene = "a2hs"; listScroll = 0; listMax = 0; }
+const A2HS_BLOCKS = [
+  ["Android · Chrome", ["1. Tap the three-dot menu at the top right.", "2. Tap Add to Home screen, or Install app.", "3. Tap Install, then Add. The game opens full screen from its own icon."]],
+  ["iPhone · Safari", ["1. Tap the Share button (the square with an arrow).", "2. Scroll down and tap Add to Home Screen.", "3. Tap Add at the top right."]],
+  ["Desktop · Chrome", ["1. Look for the install icon at the right end of the address bar.", "2. Click it, then click Install.", "Or open the three-dot menu and look for Install."]],
+  ["Playing inside itch.io?", ["Installing to the home screen isn't possible from inside itch.io, so use your browser's bookmark instead."]],
+];
+function drawA2hs() {
+  panelHeader("Add to home screen", "Play with one tap ♥");
+  const top = 78, bottom = H - 74, ts = textScale(), lh = Math.round(16 * ts), x0 = 30, bw = W - 60;
+  font(12, false);
+  const layout = []; let y = 4;
+  for (const b of A2HS_BLOCKS) {
+    const lines = []; for (const t of b[1]) for (const l of wrapText(t, bw)) lines.push(l);
+    layout.push({ b, lines, y }); y += Math.round(22 * ts) + lines.length * lh + 18;
+  }
+  setListExtent(top, bottom, y + 8);
+  listClip(top, bottom);
+  ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  for (const L of layout) {
+    const yy = top + L.y - listScroll;
+    if (yy > bottom || yy + 400 < top) continue;
+    ctx.fillStyle = C.text; font(13, true); ctx.fillText(L.b[0], x0, yy + 10);
+    ctx.fillStyle = C.textSoft; font(12, false);
+    L.lines.forEach((ln, i) => ctx.fillText(ln, x0, yy + Math.round(22 * ts) + 6 + i * lh));
+  }
+  ctx.restore();
+  drawScrollbar(top, bottom);
+  panelFooter();
+}
 function v168Action(id) {
   if (id === "v168_tip_ok") { tipDismiss(); return true; }
   if (id === "v168_tips") {
@@ -25828,6 +25862,7 @@ function v168Action(id) {
     toast(hc168.off ? "Tips off" : "Tips on", C.textSoft); return true;
   }
   if (id === "v168_about") { openAbout(); return true; }
+  if (id === "v168_a2hs") { openA2hs(); return true; }
   if (id === "v168_backup") { const keep = prevScene; ensureHc168().backup = true; openBackup(); prevScene = keep; kind.back = "about"; return true; }
   if (id === "v168_tip_url") { try { if (TIP_URL) window.open(TIP_URL, "_blank", "noopener"); } catch (e) {} return true; }
   return false;
@@ -25847,7 +25882,7 @@ Object.assign(WHATS_NEW, {
 });
 
 const v168Api = {
-  TIPS, TIP_BY_ID, TIP_MAX_TOTAL, TIP_MAX_SESSION, TIP_FIRST_AT, TIP_GAP, normalizeHc168, ensureHc168, tipTick, pickTip, tipDismiss, openAbout, v168Action,
+  TIPS, TIP_BY_ID, TIP_MAX_TOTAL, TIP_MAX_SESSION, TIP_FIRST_AT, TIP_GAP, normalizeHc168, ensureHc168, tipTick, pickTip, tipDismiss, openAbout, openA2hs, A2HS_BLOCKS, v168Action,
   get hc168() { return hc168; }, get tipCard() { return tipCard; }, get tipClock() { return tipClock; }, TIP_URL,
   resetSession() { tipCard = null; tipClock = 0; tipSince = 0; tipSessShown = 0; tipSessCounted = false; },
 };
